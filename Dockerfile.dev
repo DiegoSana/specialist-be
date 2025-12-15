@@ -1,0 +1,37 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install OpenSSL for Prisma (required for linux-musl binary)
+# Alpine 3.21 uses OpenSSL 3.x by default, but Prisma needs 1.1.x
+# Create symlinks for compatibility
+RUN apk add --no-cache openssl && \
+    ln -sf /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 && \
+    ln -sf /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1
+
+# Copy package files
+COPY package*.json ./
+
+# Copy Prisma schema
+COPY prisma ./prisma
+
+# Note: node_modules is mounted as volume from host
+# Prisma Client should be generated locally before starting container
+
+# Copy source code
+COPY . .
+
+# Create node user if it doesn't exist and set permissions
+RUN addgroup -g 1000 node 2>/dev/null || true && \
+    adduser -D -u 1000 -G node node 2>/dev/null || true
+
+# Expose port
+EXPOSE 3000
+
+# Switch to node user
+USER node
+
+# Start in development mode with hot-reload
+# Prisma Client should already be generated in node_modules from host
+# If not, it will fail - generate it locally first: npx prisma generate
+CMD ["npm", "run", "start:dev"]

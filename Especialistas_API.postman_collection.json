@@ -1,0 +1,992 @@
+{
+	"info": {
+		"_postman_id": "especialistas-api-collection",
+		"name": "Especialistas API",
+		"description": "Complete API collection for Especialistas - Professional Marketplace API\n\n## Setup\n1. Import this collection into Postman\n2. Create an environment with:\n   - `base_url`: http://localhost:5000 (development) or http://localhost:3000 (production)\n   - `token`: (will be set automatically after login)\n3. Start with Authentication endpoints to get a token",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register - Client",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"token\", response.accessToken);",
+									"    pm.environment.set(\"user_id\", response.user.id);",
+									"    pm.environment.set(\"user_role\", response.user.role);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"client@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"Juan\",\n  \"lastName\": \"Pérez\",\n  \"phone\": \"+5492944123456\",\n  \"role\": \"CLIENT\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Register a new client user"
+					},
+					"response": []
+				},
+				{
+					"name": "Register - Professional",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"token\", response.accessToken);",
+									"    pm.environment.set(\"user_id\", response.user.id);",
+									"    pm.environment.set(\"user_role\", response.user.role);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"professional@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"Carlos\",\n  \"lastName\": \"García\",\n  \"phone\": \"+5492944123457\",\n  \"role\": \"PROFESSIONAL\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Register a new professional user"
+					},
+					"response": []
+				},
+				{
+					"name": "Register - Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"token\", response.accessToken);",
+									"    pm.environment.set(\"user_id\", response.user.id);",
+									"    pm.environment.set(\"user_role\", response.user.role);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"Admin\",\n  \"lastName\": \"User\",\n  \"phone\": \"+5492944123458\",\n  \"role\": \"ADMIN\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Register a new admin user"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"token\", response.accessToken);",
+									"    pm.environment.set(\"user_id\", response.user.id);",
+									"    pm.environment.set(\"user_role\", response.user.role);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"client@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Login user and get JWT token"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints - Register and Login"
+		},
+		{
+			"name": "User Management",
+			"item": [
+				{
+					"name": "Get My Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "profile"]
+						},
+						"description": "Get current authenticated user profile"
+					},
+					"response": []
+				},
+				{
+					"name": "Update My Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Juan Updated\",\n  \"lastName\": \"Pérez Updated\",\n  \"phone\": \"+5492944123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "profile"]
+						},
+						"description": "Update current user profile"
+					},
+					"response": []
+				}
+			],
+			"description": "User profile management endpoints"
+		},
+		{
+			"name": "Service - Trades",
+			"item": [
+				{
+					"name": "Get All Trades",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/service/trades",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "trades"]
+						},
+						"description": "Get all available trades (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Trade by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/service/trades/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "trades", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "trade-uuid-here",
+									"description": "Trade ID"
+								}
+							]
+						},
+						"description": "Get trade details by ID (public)"
+					},
+					"response": []
+				}
+			],
+			"description": "Trade management endpoints"
+		},
+		{
+			"name": "Service - Professionals",
+			"item": [
+				{
+					"name": "Search Professionals",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/service/professionals?tradeId=&zone=&city=Bariloche&minRating=4.0",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "professionals"],
+							"query": [
+								{
+									"key": "tradeId",
+									"value": "",
+									"description": "Filter by trade ID",
+									"disabled": true
+								},
+								{
+									"key": "zone",
+									"value": "",
+									"description": "Filter by zone (e.g., Centro)",
+									"disabled": true
+								},
+								{
+									"key": "city",
+									"value": "Bariloche",
+									"description": "Filter by city"
+								},
+								{
+									"key": "minRating",
+									"value": "4.0",
+									"description": "Minimum rating (0-5)"
+								}
+							]
+						},
+						"description": "Search professionals with filters (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Professional by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/service/professionals/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "professionals", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "professional-uuid-here",
+									"description": "Professional ID"
+								}
+							]
+						},
+						"description": "Get professional details by ID (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Professional Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/service/professionals/me/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "professionals", "me", "profile"]
+						},
+						"description": "Get current professional's profile (authenticated, professional only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Professional Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tradeId\": \"trade-uuid-here\",\n  \"description\": \"Experienced electrician with 10+ years of experience in residential and commercial installations.\",\n  \"experienceYears\": 10,\n  \"zone\": \"Centro\",\n  \"city\": \"Bariloche\",\n  \"address\": \"Av. San Martín 123\",\n  \"whatsapp\": \"+5492944123456\",\n  \"website\": \"https://example.com\",\n  \"profileImage\": \"https://example.com/profile.jpg\",\n  \"gallery\": [\n    \"https://example.com/img1.jpg\",\n    \"https://example.com/img2.jpg\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/service/professionals/me/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "professionals", "me", "profile"]
+						},
+						"description": "Create professional profile (authenticated, professional only)\n\n**Note**: User must have role PROFESSIONAL"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Professional Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"description\": \"Updated description with more experience\",\n  \"experienceYears\": 12,\n  \"zone\": \"Barrio Norte\",\n  \"whatsapp\": \"+5492944123457\",\n  \"gallery\": [\n    \"https://example.com/new-img1.jpg\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/service/professionals/me/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "professionals", "me", "profile"]
+						},
+						"description": "Update professional profile (authenticated, professional only)"
+					},
+					"response": []
+				}
+			],
+			"description": "Professional management endpoints"
+		},
+		{
+			"name": "Service - Requests",
+			"item": [
+				{
+					"name": "Create Service Request",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"professionalId\": \"professional-uuid-here\",\n  \"description\": \"I need electrical work done in my house. Installation of new outlets and lighting fixtures.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/service/requests",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "requests"]
+						},
+						"description": "Create a service request (authenticated, client only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Requests",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/service/requests",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "requests"]
+						},
+						"description": "Get all requests for current user (as client or professional)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Request by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/service/requests/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "requests", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "request-uuid-here",
+									"description": "Request ID"
+								}
+							]
+						},
+						"description": "Get request details by ID (authenticated)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Request Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"ACCEPTED\",\n  \"quoteAmount\": 5000.0,\n  \"quoteNotes\": \"Estimated completion time: 2 weeks. Materials included.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/service/requests/:id/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "service", "requests", ":id", "status"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "request-uuid-here",
+									"description": "Request ID"
+								}
+							]
+						},
+						"description": "Update request status (authenticated, professional only)\n\n**Status values**: PENDING, ACCEPTED, IN_PROGRESS, DONE, CANCELLED"
+					},
+					"response": []
+				}
+			],
+			"description": "Service request management endpoints"
+		},
+		{
+			"name": "Reputation - Reviews",
+			"item": [
+				{
+					"name": "Get Professional Reviews",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/reputation/professionals/:professionalId/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reputation", "professionals", ":professionalId", "reviews"],
+							"variable": [
+								{
+									"key": "professionalId",
+									"value": "professional-uuid-here",
+									"description": "Professional ID"
+								}
+							]
+						},
+						"description": "Get all reviews for a professional (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Review by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/reputation/reviews/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reputation", "reviews", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "review-uuid-here",
+									"description": "Review ID"
+								}
+							]
+						},
+						"description": "Get review details by ID (authenticated)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Review",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"professionalId\": \"professional-uuid-here\",\n  \"rating\": 5,\n  \"comment\": \"Excellent work! Very professional and completed on time.\",\n  \"requestId\": \"request-uuid-here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/reputation/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reputation", "reviews"]
+						},
+						"description": "Create a review for a professional (authenticated)\n\n**Rating**: 1-5\n**requestId**: Optional, link review to a completed request"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Review",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": 4,\n  \"comment\": \"Updated comment: Good work overall\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/reputation/reviews/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reputation", "reviews", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "review-uuid-here",
+									"description": "Review ID"
+								}
+							]
+						},
+						"description": "Update own review (authenticated, reviewer only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Review",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/reputation/reviews/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reputation", "reviews", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "review-uuid-here",
+									"description": "Review ID"
+								}
+							]
+						},
+						"description": "Delete own review (authenticated, reviewer only)"
+					},
+					"response": []
+				}
+			],
+			"description": "Review and rating management endpoints"
+		},
+		{
+			"name": "Contact",
+			"item": [
+				{
+					"name": "Create Contact Request",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"toUserId\": \"user-uuid-here\",\n  \"contactType\": \"whatsapp\",\n  \"message\": \"Hello, I would like to contact you about your services.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/contact",
+							"host": ["{{base_url}}"],
+							"path": ["api", "contact"]
+						},
+						"description": "Create a contact request to another user (authenticated)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Contacts",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/contact",
+							"host": ["{{base_url}}"],
+							"path": ["api", "contact"]
+						},
+						"description": "Get all contact requests for current user (authenticated)"
+					},
+					"response": []
+				}
+			],
+			"description": "Contact management endpoints"
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Get all users with pagination (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user-uuid-here",
+									"description": "User ID"
+								}
+							]
+						},
+						"description": "Get user details by ID (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"ACTIVE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/:id/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", ":id", "status"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user-uuid-here",
+									"description": "User ID"
+								}
+							]
+						},
+						"description": "Update user status (admin only)\n\n**Status values**: PENDING, ACTIVE, SUSPENDED, BANNED"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Professionals",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/professionals?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "professionals"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Get all professional profiles with pagination (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Professional Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"VERIFIED\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/professionals/:id/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "professionals", ":id", "status"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "professional-uuid-here",
+									"description": "Professional ID"
+								}
+							]
+						},
+						"description": "Update professional verification status (admin only)\n\n**Status values**: PENDING_VERIFICATION, VERIFIED, REJECTED"
+					},
+					"response": []
+				}
+			],
+			"description": "Admin endpoints for user and professional moderation"
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
