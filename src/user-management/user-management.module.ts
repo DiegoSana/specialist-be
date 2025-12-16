@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
 import { UserManagementService } from './application/services/user-management.service';
 import { AuthenticationService } from './application/services/authentication.service';
 import { UserManagementController } from './presentation/user-management.controller';
@@ -17,6 +18,7 @@ import { PrismaClientRepository } from './infrastructure/repositories/prisma-cli
 
 @Module({
   imports: [
+    PrismaModule,
     PassportModule.register({ session: false }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

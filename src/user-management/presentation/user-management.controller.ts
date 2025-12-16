@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Body,
   UseGuards,
   HttpCode,
@@ -39,6 +40,16 @@ export class UserManagementController {
     @Body() updateDto: UpdateUserDto,
   ): Promise<UserProfileResponseDto> {
     const updatedProfile = await this.userManagementService.updateProfile(user.id, updateDto);
+    return this.toResponseDto(updatedProfile);
+  }
+
+  @Post('profile/client')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Activate client profile for current user' })
+  @ApiResponse({ status: 201, description: 'Client profile activated successfully', type: UserProfileResponseDto })
+  @ApiResponse({ status: 409, description: 'Client profile already exists' })
+  async activateClientProfile(@CurrentUser() user: UserEntity): Promise<UserProfileResponseDto> {
+    const updatedProfile = await this.userManagementService.activateClientProfile(user.id);
     return this.toResponseDto(updatedProfile);
   }
 
