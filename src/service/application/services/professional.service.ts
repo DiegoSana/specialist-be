@@ -45,8 +45,8 @@ export class ProfessionalService {
    * Removes contact info (whatsapp, website, address) 
    * Contact info is only visible after creating a request
    */
-  private sanitizeForPublic(professional: ProfessionalEntity): Partial<ProfessionalEntity> & { combinedGallery: string[] } {
-    return {
+  private sanitizeForPublic(professional: ProfessionalEntity): Partial<ProfessionalEntity> & { combinedGallery: string[]; user?: any } {
+    const sanitized: any = {
       id: professional.id,
       userId: professional.userId,
       trades: professional.trades,
@@ -65,6 +65,13 @@ export class ProfessionalService {
       updatedAt: professional.updatedAt,
       combinedGallery: professional.gallery || [],
     };
+
+    // Include user data (name and profile picture are public)
+    if ((professional as any).user) {
+      sanitized.user = (professional as any).user;
+    }
+
+    return sanitized;
   }
 
   // Get professional with full combined gallery (for authenticated users with access)
