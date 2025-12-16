@@ -18,34 +18,53 @@ export class ProfessionalService {
     @Inject(REQUEST_REPOSITORY) private readonly requestRepository: RequestRepository,
   ) {}
 
-  async search(searchDto: SearchProfessionalsDto): Promise<ProfessionalEntity[]> {
+  async search(searchDto: SearchProfessionalsDto): Promise<Partial<ProfessionalEntity>[]> {
     const professionals = await this.professionalRepository.search({
       search: searchDto.search,
       tradeId: searchDto.tradeId,
       active: true, // Only show active professionals
     });
 
-    // For public search, only return the professional's own gallery (which is public)
-    // Request photos are private and should not be included in public search results
-    professionals.forEach((professional) => {
-      // The professional's gallery contains public URLs (stored in public/projects/...)
-      // We don't include request photos here as they are private
-      (professional as any).combinedGallery = professional.gallery || [];
-    });
-
-    return professionals;
+    // For public search, sanitize contact info and only return public gallery
+    // Contact info (whatsapp, website, address) requires an active request
+    return professionals.map((professional) => this.sanitizeForPublic(professional));
   }
 
-  async findById(id: string): Promise<ProfessionalEntity> {
+  async findById(id: string): Promise<Partial<ProfessionalEntity>> {
     const professional = await this.professionalRepository.findById(id);
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }
     
-    // For public access, only return the professional's own gallery
-    (professional as any).combinedGallery = professional.gallery || [];
-    
-    return professional;
+    // For public access, sanitize contact info
+    return this.sanitizeForPublic(professional);
+  }
+
+  /**
+   * Sanitize professional data for public access
+   * Removes contact info (whatsapp, website, address) 
+   * Contact info is only visible after creating a request
+   */
+  private sanitizeForPublic(professional: ProfessionalEntity): Partial<ProfessionalEntity> & { combinedGallery: string[] } {
+    return {
+      id: professional.id,
+      userId: professional.userId,
+      trades: professional.trades,
+      description: professional.description,
+      experienceYears: professional.experienceYears,
+      status: professional.status,
+      zone: professional.zone,
+      city: professional.city,
+      // address, whatsapp, website are intentionally omitted for public access
+      averageRating: professional.averageRating,
+      totalReviews: professional.totalReviews,
+      profileImage: professional.profileImage,
+      gallery: professional.gallery,
+      active: professional.active,
+      createdAt: professional.createdAt,
+      updatedAt: professional.updatedAt,
+      combinedGallery: professional.gallery || [],
+    };
   }
 
   // Get professional with full combined gallery (for authenticated users with access)
