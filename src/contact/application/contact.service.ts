@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { ContactRepository, CONTACT_REPOSITORY } from '../domain/repositories/contact.repository';
 import { ContactEntity } from '../domain/entities/contact.entity';
-import { UserRepository, USER_REPOSITORY } from '../../user-management/domain/repositories/user.repository';
+import { UserRepository, USER_REPOSITORY } from '../../identity/domain/repositories/user.repository';
 import { CreateContactDto } from './dto/create-contact.dto';
 
 @Injectable()

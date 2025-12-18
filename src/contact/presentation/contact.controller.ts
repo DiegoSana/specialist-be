@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../shared/presentation/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
-import { UserEntity } from '../../user-management/domain/entities/user.entity';
+import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { ContactService } from '../application/contact.service';
 import { CreateContactDto } from '../application/dto/create-contact.dto';
 

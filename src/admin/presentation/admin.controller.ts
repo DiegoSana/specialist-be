@@ -13,7 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 import { AdminService } from '../application/admin.service';
 import { UpdateUserStatusDto } from '../application/dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from '../application/dto/update-professional-status.dto';
-import { JwtAuthGuard } from '../../shared/presentation/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
 
 @ApiTags('Admin')

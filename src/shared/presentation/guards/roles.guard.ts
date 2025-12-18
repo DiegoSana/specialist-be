@@ -1,7 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '../../domain/value-objects/user-role.vo';
-import { UserEntity } from '../../../user-management/domain/entities/user.entity';
+import { UserEntity } from '../../../identity/domain/entities/user.entity';
 
 export const ROLES_KEY = 'roles';
 

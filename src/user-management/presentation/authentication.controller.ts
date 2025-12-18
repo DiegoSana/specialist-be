@@ -1,13 +1,14 @@
 import { Controller, Post, Body, Get, UseGuards, HttpCode, HttpStatus, Req, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
-import { AuthenticationService } from '../application/services/authentication.service';
-import { RegisterDto } from '../application/dto/register.dto';
-import { LoginDto } from '../application/dto/login.dto';
-import { AuthResponseDto } from '../application/dto/auth-response.dto';
+// Import from identity module
+import { AuthenticationService } from '../../identity/application/services/authentication.service';
+import { RegisterDto } from '../../identity/application/dto/register.dto';
+import { LoginDto } from '../../identity/application/dto/login.dto';
+import { AuthResponseDto } from '../../identity/application/dto/auth-response.dto';
+import { GoogleAuthGuard } from '../../identity/infrastructure/guards/google-auth.guard';
+import { FacebookAuthGuard } from '../../identity/infrastructure/guards/facebook-auth.guard';
 import { Public } from '../../shared/presentation/decorators/public.decorator';
-import { GoogleAuthGuard } from '../infrastructure/guards/google-auth.guard';
-import { FacebookAuthGuard } from '../infrastructure/guards/facebook-auth.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -80,4 +81,3 @@ export class AuthenticationController {
     return res.redirect(redirectUrl);
   }
 }
-

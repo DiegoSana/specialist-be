@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { UserRepository, USER_REPOSITORY } from '../../user-management/domain/repositories/user.repository';
-import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../service/domain/repositories/professional.repository';
+import { UserRepository, USER_REPOSITORY } from '../../identity/domain/repositories/user.repository';
+import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../profiles/domain/repositories/professional.repository';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from './dto/update-professional-status.dto';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';

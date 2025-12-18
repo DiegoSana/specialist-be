@@ -5,7 +5,7 @@ import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { AuthenticationService } from './authentication.service';
 import { USER_REPOSITORY } from '../../domain/repositories/user.repository';
-import { CLIENT_REPOSITORY } from '../../domain/repositories/client.repository';
+import { CLIENT_REPOSITORY } from '../../../profiles/domain/repositories/client.repository';
 import { createMockUser } from '../../../__mocks__/test-utils';
 import { UserStatus, AuthProvider } from '@prisma/client';
 

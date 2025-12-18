@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { FileStorageService } from '../../application/services/file-storage.service';
-import { UserEntity } from '../../../user-management/domain/entities/user.entity';
+import { UserEntity } from '../../../identity/domain/entities/user.entity';
 
 @Injectable()
 export class FileAccessGuard implements CanActivate {

@@ -8,9 +8,9 @@ import {
 } from '@nestjs/common';
 import { ReviewRepository, REVIEW_REPOSITORY } from '../../domain/repositories/review.repository';
 import { ReviewEntity } from '../../domain/entities/review.entity';
-import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../../service/domain/repositories/professional.repository';
-import { RequestRepository, REQUEST_REPOSITORY } from '../../../service/domain/repositories/request.repository';
-import { UserRepository, USER_REPOSITORY } from '../../../user-management/domain/repositories/user.repository';
+import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../../profiles/domain/repositories/professional.repository';
+import { RequestRepository, REQUEST_REPOSITORY } from '../../../requests/domain/repositories/request.repository';
+import { UserRepository, USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
 import { CreateReviewDto } from '../dto/create-review.dto';
 import { UpdateReviewDto } from '../dto/update-review.dto';
 import { Rating } from '../../domain/value-objects/rating.vo';

@@ -13,24 +13,29 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../shared/presentation/guards/jwt-auth.guard';
+// Import from new modules
+import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
-import { UserEntity } from '../../user-management/domain/entities/user.entity';
-import { TradeService } from '../application/services/trade.service';
-import { ProfessionalService } from '../application/services/professional.service';
-import { RequestService } from '../application/services/request.service';
-import { RequestInterestService } from '../application/services/request-interest.service';
-import { CreateTradeDto } from '../application/dto/create-trade.dto';
-import { UpdateTradeDto } from '../application/dto/update-trade.dto';
-import { CreateProfessionalDto } from '../application/dto/create-professional.dto';
-import { UpdateProfessionalDto } from '../application/dto/update-professional.dto';
-import { SearchProfessionalsDto } from '../application/dto/search-professionals.dto';
-import { CreateRequestDto } from '../application/dto/create-request.dto';
-import { UpdateRequestDto } from '../application/dto/update-request.dto';
-import { AddGalleryItemDto } from '../application/dto/add-gallery-item.dto';
-import { AddRequestPhotoDto } from '../application/dto/add-completed-work-photo.dto';
-import { ExpressInterestDto, AssignProfessionalDto } from '../application/dto/express-interest.dto';
+import { UserEntity } from '../../identity/domain/entities/user.entity';
+import { TradeService } from '../../profiles/application/services/trade.service';
+import { ProfessionalService } from '../../profiles/application/services/professional.service';
+import { RequestService } from '../../requests/application/services/request.service';
+import { RequestInterestService } from '../../requests/application/services/request-interest.service';
+import { CreateTradeDto } from '../../profiles/application/dto/create-trade.dto';
+import { UpdateTradeDto } from '../../profiles/application/dto/update-trade.dto';
+import { CreateProfessionalDto } from '../../profiles/application/dto/create-professional.dto';
+import { UpdateProfessionalDto } from '../../profiles/application/dto/update-professional.dto';
+import { SearchProfessionalsDto } from '../../profiles/application/dto/search-professionals.dto';
+import { CreateRequestDto } from '../../requests/application/dto/create-request.dto';
+import { UpdateRequestDto } from '../../requests/application/dto/update-request.dto';
+import { AddGalleryItemDto } from '../../profiles/application/dto/add-gallery-item.dto';
+import { ExpressInterestDto, AssignProfessionalDto } from '../../requests/application/dto/express-interest.dto';
 import { Public } from '../../shared/presentation/decorators/public.decorator';
+
+// DTO for request photos (keeping local as it's simple)
+class AddRequestPhotoDto {
+  url: string;
+}
 
 @ApiTags('Service')
 @Controller('service')
@@ -163,7 +168,6 @@ export class ServiceController {
   @ApiOperation({ summary: 'Get my requests' })
   @ApiResponse({ status: 200, description: 'List of requests' })
   async getMyRequests(@CurrentUser() user: UserEntity) {
-    // User entity should already have profile flags loaded from JWT strategy
     if (user.isClient()) {
       return this.requestService.findByClientId(user.id);
     } else if (user.isProfessional()) {
@@ -184,7 +188,6 @@ export class ServiceController {
     }
 
     const professional = await this.professionalService.findByUserId(user.id);
-    // Return public requests that match the professional's trades
     return this.requestService.findPublicRequests(professional.tradeIds);
   }
 
@@ -343,4 +346,3 @@ export class ServiceController {
     return this.requestInterestService.assignProfessional(id, user.id, dto.professionalId);
   }
 }
-

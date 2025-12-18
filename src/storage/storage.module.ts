@@ -8,10 +8,13 @@ import {
 } from './domain/repositories/file-storage.repository';
 import { LocalFileStorageRepository } from './infrastructure/repositories/local-file-storage.repository';
 import { FileAccessGuard } from './presentation/guards/file-access.guard';
-import { ServiceModule } from '../service/service.module';
+// Import new bounded context modules
+import { ProfilesModule } from '../profiles/profiles.module';
+import { RequestsModule } from '../requests/requests.module';
+import { IdentityModule } from '../identity/identity.module';
 
 @Module({
-  imports: [ConfigModule, ServiceModule],
+  imports: [ConfigModule, ProfilesModule, RequestsModule, IdentityModule],
   controllers: [FileStorageController],
   providers: [
     FileStorageService,

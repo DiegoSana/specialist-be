@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { RequestService } from './request.service';
 import { REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
-import { PROFESSIONAL_REPOSITORY } from '../../domain/repositories/professional.repository';
-import { USER_REPOSITORY } from '../../../user-management/domain/repositories/user.repository';
+import { PROFESSIONAL_REPOSITORY } from '../../../profiles/domain/repositories/professional.repository';
+import { USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
 import { createMockUser, createMockProfessional, createMockRequest } from '../../../__mocks__/test-utils';
 import { RequestStatus, ProfessionalStatus } from '@prisma/client';
 

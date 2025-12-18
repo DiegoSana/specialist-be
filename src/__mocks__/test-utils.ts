@@ -3,9 +3,9 @@
  * Common helpers for creating test data
  */
 import { UserStatus, AuthProvider, ProfessionalStatus, RequestStatus } from '@prisma/client';
-import { UserEntity } from '../user-management/domain/entities/user.entity';
-import { ProfessionalEntity, TradeInfo } from '../service/domain/entities/professional.entity';
-import { RequestEntity } from '../service/domain/entities/request.entity';
+import { UserEntity } from '../identity/domain/entities/user.entity';
+import { ProfessionalEntity, TradeInfo } from '../profiles/domain/entities/professional.entity';
+import { RequestEntity } from '../requests/domain/entities/request.entity';
 
 // Factory for creating test users
 export const createMockUser = (overrides: Partial<{

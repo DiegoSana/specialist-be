@@ -16,10 +16,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
-import { JwtAuthGuard } from '../../shared/presentation/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { Public } from '../../shared/presentation/decorators/public.decorator';
-import { UserEntity } from '../../user-management/domain/entities/user.entity';
+import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { FileStorageService } from '../application/services/file-storage.service';
 import { FileAccessGuard } from './guards/file-access.guard';
 import { UploadFileDto } from '../application/dto/upload-file.dto';

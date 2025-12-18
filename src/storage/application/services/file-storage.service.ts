@@ -6,10 +6,8 @@ import { FileCategory, FileCategoryVO } from '../../domain/value-objects/file-ca
 import { FileTypeVO } from '../../domain/value-objects/file-type.vo';
 import { FileSizeVO } from '../../domain/value-objects/file-size.vo';
 import { UploadFileDto } from '../dto/upload-file.dto';
-import { REQUEST_REPOSITORY } from '../../../service/domain/repositories/request.repository';
-import { RequestRepository } from '../../../service/domain/repositories/request.repository';
-import { PROFESSIONAL_REPOSITORY } from '../../../service/domain/repositories/professional.repository';
-import { ProfessionalRepository } from '../../../service/domain/repositories/professional.repository';
+import { REQUEST_REPOSITORY, RequestRepository } from '../../../requests/domain/repositories/request.repository';
+import { PROFESSIONAL_REPOSITORY, ProfessionalRepository } from '../../../profiles/domain/repositories/professional.repository';
 
 @Injectable()
 export class FileStorageService {

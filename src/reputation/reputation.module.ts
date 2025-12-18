@@ -3,11 +3,13 @@ import { ReputationController } from './presentation/reputation.controller';
 import { ReviewService } from './application/services/review.service';
 import { ReviewRepository, REVIEW_REPOSITORY } from './domain/repositories/review.repository';
 import { PrismaReviewRepository } from './infrastructure/repositories/prisma-review.repository';
-import { ServiceModule } from '../service/service.module';
-import { UserManagementModule } from '../user-management/user-management.module';
+// Import new bounded context modules
+import { ProfilesModule } from '../profiles/profiles.module';
+import { RequestsModule } from '../requests/requests.module';
+import { IdentityModule } from '../identity/identity.module';
 
 @Module({
-  imports: [ServiceModule, UserManagementModule],
+  imports: [ProfilesModule, RequestsModule, IdentityModule],
   controllers: [ReputationController],
   providers: [
     ReviewService,

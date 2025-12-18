@@ -12,9 +12,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../shared/presentation/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
-import { UserEntity } from '../../user-management/domain/entities/user.entity';
+import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { ReviewService } from '../application/services/review.service';
 import { CreateReviewDto } from '../application/dto/create-review.dto';
 import { UpdateReviewDto } from '../application/dto/update-review.dto';
