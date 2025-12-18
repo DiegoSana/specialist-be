@@ -16,7 +16,8 @@ import { PrismaProfessionalRepository } from './infrastructure/repositories/pris
 import { PrismaTradeRepository } from './infrastructure/repositories/prisma-trade.repository';
 
 // Presentation
-import { ClientController } from './presentation/client.controller';
+import { ProfessionalsController } from './presentation/professionals.controller';
+import { TradesController } from './presentation/trades.controller';
 
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
@@ -31,7 +32,7 @@ import { RequestsModule } from '../requests/requests.module';
     forwardRef(() => IdentityModule),
     forwardRef(() => RequestsModule),
   ],
-  controllers: [ClientController],
+  controllers: [ProfessionalsController, TradesController],
   providers: [
     ClientService,
     ProfessionalService,

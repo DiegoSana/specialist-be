@@ -11,9 +11,6 @@ import { StorageModule } from './storage/storage.module';
 import { HealthModule } from './health/health.module';
 // Shared Infrastructure
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
-// Legacy modules - keeping only for backwards-compatible API routes
-import { UserManagementModule } from './user-management/user-management.module';
-import { ServiceModule } from './service/service.module';
 
 @Module({
   imports: [
@@ -32,9 +29,6 @@ import { ServiceModule } from './service/service.module';
     ContactModule,
     AdminModule,
     StorageModule,
-    // Legacy modules (thin wrappers for API compatibility)
-    UserManagementModule,
-    ServiceModule,
   ],
 })
 export class AppModule {}

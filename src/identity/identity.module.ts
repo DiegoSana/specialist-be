@@ -19,6 +19,7 @@ import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard';
 
 // Presentation
 import { AuthController } from './presentation/auth.controller';
+import { UsersController } from './presentation/users.controller';
 
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
@@ -42,7 +43,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, UsersController],
   providers: [
     AuthenticationService,
     JwtStrategy,

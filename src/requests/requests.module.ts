@@ -12,6 +12,9 @@ import { RequestInterestService } from './application/services/request-interest.
 import { PrismaRequestRepository } from './infrastructure/repositories/prisma-request.repository';
 import { PrismaRequestInterestRepository } from './infrastructure/repositories/prisma-request-interest.repository';
 
+// Presentation
+import { RequestsController } from './presentation/requests.controller';
+
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
 
@@ -25,7 +28,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     forwardRef(() => IdentityModule),
     forwardRef(() => ProfilesModule),
   ],
-  controllers: [], // Controllers will be moved from service module later
+  controllers: [RequestsController],
   providers: [
     RequestService,
     RequestInterestService,
