@@ -230,6 +230,8 @@ export class PrismaRequestRepository implements RequestRepository {
     if (data.quoteNotes !== undefined) updateData.quoteNotes = data.quoteNotes;
     if (data.photos !== undefined) updateData.photos = data.photos;
     if (data.professionalId !== undefined) updateData.professionalId = data.professionalId;
+    if (data.clientRating !== undefined) updateData.clientRating = data.clientRating;
+    if (data.clientRatingComment !== undefined) updateData.clientRatingComment = data.clientRatingComment;
 
     const request = await this.prisma.request.update({
       where: { id },
@@ -282,6 +284,8 @@ export class PrismaRequestRepository implements RequestRepository {
       request.status as RequestStatus,
       request.quoteAmount,
       request.quoteNotes,
+      request.clientRating,
+      request.clientRatingComment,
       request.createdAt,
       request.updatedAt,
     );

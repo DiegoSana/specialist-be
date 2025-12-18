@@ -232,4 +232,42 @@ export class RequestService {
       photos: updatedPhotos,
     });
   }
+
+  async rateClient(
+    requestId: string,
+    userId: string,
+    rating: number,
+    comment?: string,
+  ): Promise<RequestEntity> {
+    const request = await this.requestRepository.findById(requestId);
+    if (!request) {
+      throw new NotFoundException('Request not found');
+    }
+
+    // Only the assigned professional can rate the client
+    const professional = await this.professionalRepository.findByUserId(userId);
+    if (!professional || professional.id !== request.professionalId) {
+      throw new ForbiddenException('Only the assigned professional can rate the client');
+    }
+
+    // Can only rate after work is done
+    if (request.status !== RequestStatus.DONE) {
+      throw new BadRequestException('Can only rate client after work is completed');
+    }
+
+    // Check if already rated
+    if (request.clientRating !== null) {
+      throw new BadRequestException('Client has already been rated for this request');
+    }
+
+    // Validate rating
+    if (rating < 1 || rating > 5) {
+      throw new BadRequestException('Rating must be between 1 and 5');
+    }
+
+    return this.requestRepository.update(requestId, {
+      clientRating: rating,
+      clientRatingComment: comment || null,
+    });
+  }
 }

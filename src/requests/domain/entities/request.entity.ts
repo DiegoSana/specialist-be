@@ -14,6 +14,8 @@ export class RequestEntity {
     public readonly status: RequestStatus,
     public readonly quoteAmount: number | null,
     public readonly quoteNotes: string | null,
+    public readonly clientRating: number | null,
+    public readonly clientRatingComment: string | null,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
   ) {}

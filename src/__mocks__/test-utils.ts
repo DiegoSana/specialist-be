@@ -145,6 +145,8 @@ export const createMockRequest = (overrides: Partial<{
   status: RequestStatus;
   quoteAmount: number | null;
   quoteNotes: string | null;
+  clientRating: number | null;
+  clientRatingComment: string | null;
   createdAt: Date;
   updatedAt: Date;
 }> = {}): RequestEntity => {
@@ -161,6 +163,8 @@ export const createMockRequest = (overrides: Partial<{
     status: RequestStatus.PENDING,
     quoteAmount: null,
     quoteNotes: null,
+    clientRating: null,
+    clientRatingComment: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -179,6 +183,8 @@ export const createMockRequest = (overrides: Partial<{
     defaults.status,
     defaults.quoteAmount,
     defaults.quoteNotes,
+    defaults.clientRating,
+    defaults.clientRatingComment,
     defaults.createdAt,
     defaults.updatedAt,
   );

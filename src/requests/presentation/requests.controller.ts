@@ -198,5 +198,19 @@ export class RequestsController {
   async acceptQuote(@Param('id') id: string, @CurrentUser() user: UserEntity) {
     return this.requestService.acceptQuote(id, user.id);
   }
+
+  // ==================== CLIENT RATING (by professional) ====================
+
+  @Post(':id/rate-client')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rate client (professional only, after work is done)' })
+  @ApiResponse({ status: 200, description: 'Client rated successfully' })
+  async rateClient(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+    @Body() body: { rating: number; comment?: string },
+  ) {
+    return this.requestService.rateClient(id, user.id, body.rating, body.comment);
+  }
 }
 

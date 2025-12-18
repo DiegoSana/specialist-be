@@ -114,6 +114,9 @@ model Request {
   status         RequestStatus @default(PENDING)
   quoteAmount    Float?
   quoteNotes     String?
+  // Client rating by professional (after work is done)
+  clientRating        Int?
+  clientRatingComment String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   client         User          @relation("Client", fields: [clientId], references: [id], onDelete: Cascade)
