@@ -19,11 +19,7 @@
 - [**MIGRATION_GUIDE.md**](./guides/MIGRATION_GUIDE.md) - Database migration guide
 
 ### Architecture Decision Records (ADRs)
-- [**DUAL_ROLE_OPTIONS.md**](./decisions/DUAL_ROLE_OPTIONS.md) - Client/Professional dual role analysis
-- [**OPTION1_VS_OPTION5_DEEP_DIVE.md**](./decisions/OPTION1_VS_OPTION5_DEEP_DIVE.md) - Architecture options comparison
-- [**OPTION5_IMPLEMENTATION_EXAMPLE.md**](./decisions/OPTION5_IMPLEMENTATION_EXAMPLE.md) - Selected architecture implementation
-- [**OPTION5_IMPLEMENTATION_SUMMARY.md**](./decisions/OPTION5_IMPLEMENTATION_SUMMARY.md) - Implementation summary
-- [**INHERITANCE_VS_COMPOSITION.md**](./decisions/INHERITANCE_VS_COMPOSITION.md) - Design pattern decision
+- [**ADR-001-DUAL-PROFILE-ARCHITECTURE.md**](./decisions/ADR-001-DUAL-PROFILE-ARCHITECTURE.md) - Dual profile system (client + professional)
 
 ---
 

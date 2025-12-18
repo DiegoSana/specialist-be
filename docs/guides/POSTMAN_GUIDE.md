@@ -1,126 +1,122 @@
 # Postman Collection Guide
 
-## 📦 Importar la Colección
+## 📦 Import the Collection
 
-1. Abre Postman
-2. Click en **Import** (botón superior izquierdo)
-3. Selecciona los archivos:
-   - `Especialistas_API.postman_collection.json` (Colección)
-   - `Especialistas_API.postman_environment.json` (Entorno - opcional pero recomendado)
+1. Open Postman
+2. Click on **Import** (top left button)
+3. Select the files:
+   - `Especialistas_API.postman_collection.json` (Collection)
+   - `Especialistas_API.postman_environment.json` (Environment - optional but recommended)
 
-## 🔧 Configurar el Entorno
+## 🔧 Configure the Environment
 
-### Variables del Entorno
+### Environment Variables
 
-- **`base_url`**: URL base de la API
-  - Desarrollo: `http://0.0.0.0:5000` (usa `0.0.0.0` en lugar de `localhost` o `127.0.0.1`)
-  - Producción: `http://localhost:3000` (o tu URL de producción)
+- **`base_url`**: API base URL
+  - Development: `http://0.0.0.0:5000` (use `0.0.0.0` instead of `localhost` or `127.0.0.1`)
+  - Production: `https://specialist-api.fly.dev`
 
-- **`token`**: JWT token (se establece automáticamente después de login)
-- **`user_id`**: ID del usuario actual (se establece automáticamente)
-- **`user_role`**: Rol del usuario actual (se establece automáticamente)
+- **`token`**: JWT token (automatically set after login)
+- **`user_id`**: Current user ID (automatically set)
 
-### Configuración Manual
+### Manual Configuration
 
-Si no importas el entorno, puedes crear uno manualmente:
+If you don't import the environment, you can create one manually:
 
-1. Click en el ícono de **engranaje** (⚙️) en la esquina superior derecha
-2. Click en **Add** para crear un nuevo entorno
-3. Agrega las variables mencionadas arriba
+1. Click the **gear icon** (⚙️) in the top right corner
+2. Click **Add** to create a new environment
+3. Add the variables mentioned above
 
-## 🚀 Flujo de Uso Recomendado
+## 🚀 Recommended Usage Flow
 
-### 1. Autenticación
+### 1. Authentication
 
-1. **Register - Client** o **Register - Professional**
-   - Crea un nuevo usuario
-   - El token se guarda automáticamente en la variable `token`
+1. **Register - Client** or **Register - Professional**
+   - Creates a new user
+   - Token is automatically saved in the `token` variable
 
 2. **Login**
-   - Si ya tienes un usuario, usa este endpoint
-   - El token se guarda automáticamente
+   - If you already have a user, use this endpoint
+   - Token is automatically saved
 
-### 2. Para Clientes (CLIENT role)
+### 2. For Clients
 
-1. **Get My Profile** - Ver tu perfil
-2. **Search Professionals** - Buscar profesionales
-3. **Get Professional by ID** - Ver detalles de un profesional
-4. **Create Service Request** - Crear una solicitud de servicio
-5. **Get My Requests** - Ver tus solicitudes
-6. **Create Review** - Dejar una reseña (después de completar un servicio)
+1. **Get My Profile** - View your profile
+2. **Search Professionals** - Search for professionals
+3. **Get Professional by ID** - View professional details
+4. **Create Service Request** - Create a service request
+5. **Get My Requests** - View your requests
+6. **Create Review** - Leave a review (after completing a service)
 
-### 3. Para Profesionales (PROFESSIONAL role)
+### 3. For Professionals
 
-1. **Get All Trades** - Ver oficios disponibles
-2. **Create Professional Profile** - Crear tu perfil profesional
-3. **Get My Professional Profile** - Ver tu perfil profesional
-4. **Update Professional Profile** - Actualizar tu perfil
-5. **Get My Requests** - Ver solicitudes recibidas
-6. **Update Request Status** - Aceptar/rechazar/completar solicitudes
+1. **Get All Trades** - View available trades
+2. **Create Professional Profile** - Create your professional profile
+3. **Get My Professional Profile** - View your professional profile
+4. **Update Professional Profile** - Update your profile
+5. **Get Available Requests** - View public requests matching your trades
+6. **Express Interest** - Show interest in a public request
+7. **Update Request Status** - Accept/complete requests
 
-### 4. Para Administradores (ADMIN role)
+### 4. For Administrators
 
-1. **Get All Users** - Ver todos los usuarios
-2. **Get User by ID** - Ver detalles de un usuario
-3. **Update User Status** - Cambiar estado de usuarios (ACTIVE, SUSPENDED, BANNED)
-4. **Get All Professionals** - Ver todos los perfiles profesionales
-5. **Update Professional Status** - Verificar/rechazar profesionales (VERIFIED, REJECTED)
+1. **Get All Users** - View all users
+2. **Get User by ID** - View user details
+3. **Update User Status** - Change user status (ACTIVE, SUSPENDED, BANNED)
+4. **Get All Professionals** - View all professional profiles
+5. **Update Professional Status** - Verify/reject professionals (VERIFIED, REJECTED)
 
-## 📋 Casos de Uso Completos
+## 📋 Complete Use Cases
 
-### Caso de Uso 1: Cliente busca y contrata un profesional
+### Use Case 1: Client searches and hires a professional
 
-1. **Register - Client** → Obtener token
-2. **Search Professionals** → Buscar por oficio, zona, rating
-3. **Get Professional by ID** → Ver detalles completos
-4. **Create Service Request** → Crear solicitud de servicio
-5. **Get My Requests** → Ver estado de la solicitud
-6. (Después de completar el servicio) **Create Review** → Dejar reseña
+1. **Register - Client** → Get token
+2. **Search Professionals** → Search by trade, zone, rating
+3. **Get Professional by ID** → View full details
+4. **Create Service Request** → Create service request
+5. **Get My Requests** → View request status
+6. (After service completion) **Create Review** → Leave review
 
-### Caso de Uso 2: Profesional se registra y crea perfil
+### Use Case 2: Professional registers and creates profile
 
-1. **Register - Professional** → Crear cuenta
-2. **Get All Trades** → Ver oficios disponibles
-3. **Create Professional Profile** → Crear perfil con oficio, descripción, etc.
-4. **Get My Professional Profile** → Verificar perfil creado
-5. **Get My Requests** → Ver solicitudes recibidas
-6. **Update Request Status** → Aceptar solicitud (status: ACCEPTED)
-7. **Update Request Status** → Completar trabajo (status: DONE)
+1. **Register** → Create account
+2. **Get All Trades** → View available trades
+3. **Create Professional Profile** → Create profile with trade, description, etc.
+4. **Get My Professional Profile** → Verify created profile
+5. **Get Available Requests** → View available public requests
+6. **Express Interest** → Show interest in a request
+7. **Update Request Status** → Accept request (status: ACCEPTED)
+8. **Update Request Status** → Complete work (status: DONE)
 
-### Caso de Uso 3: Admin verifica profesionales
+### Use Case 3: Admin verifies professionals
 
-1. **Login** (como admin) → Obtener token
-2. **Get All Professionals** → Ver profesionales pendientes
-3. **Get Professional by ID** → Revisar detalles
-4. **Update Professional Status** → Verificar (status: VERIFIED) o rechazar (status: REJECTED)
+1. **Login** (as admin) → Get token
+2. **Get All Professionals** → View pending professionals
+3. **Get Professional by ID** → Review details
+4. **Update Professional Status** → Verify (status: VERIFIED) or reject (status: REJECTED)
 
-### Caso de Uso 4: Contacto entre usuarios
+### Use Case 4: Contact between users
 
-1. **Login** → Obtener token
-2. **Search Professionals** → Encontrar profesional
-3. **Get Professional by ID** → Obtener userId del profesional
-4. **Create Contact Request** → Enviar mensaje de contacto
+1. **Login** → Get token
+2. **Search Professionals** → Find professional
+3. **Get Professional by ID** → Get professional's userId
+4. **Create Contact Request** → Send contact message
 
-## 🔐 Autenticación
+## 🔐 Authentication
 
-Todos los endpoints protegidos requieren el header:
+All protected endpoints require the header:
 
 ```
 Authorization: Bearer {{token}}
 ```
 
-Postman lo maneja automáticamente si:
-- Has importado el entorno
-- Has ejecutado un endpoint de login/register (el token se guarda automáticamente)
+Postman handles this automatically if:
+- You've imported the environment
+- You've executed a login/register endpoint (token is saved automatically)
 
-## 📝 Notas Importantes
+## 📝 Important Notes
 
-### Valores de Enums
-
-**UserRole:**
-- `CLIENT`
-- `PROFESSIONAL`
-- `ADMIN`
+### Enum Values
 
 **UserStatus:**
 - `PENDING`
@@ -140,7 +136,7 @@ Postman lo maneja automáticamente si:
 - `DONE`
 - `CANCELLED`
 
-### Endpoints Públicos (sin autenticación)
+### Public Endpoints (no authentication)
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
@@ -150,59 +146,67 @@ Postman lo maneja automáticamente si:
 - `GET /api/professionals/:id`
 - `GET /api/professionals/:professionalId/reviews`
 
-### Endpoints que Requieren Autenticación
+### Endpoints Requiring Authentication
 
-Todos los demás endpoints requieren JWT token.
+All other endpoints require JWT token.
 
-### Endpoints Específicos por Rol
+### Role-Specific Endpoints
 
-- **CLIENT**: Puede crear requests y reviews
-- **PROFESSIONAL**: Puede crear/actualizar su perfil y gestionar requests
-- **ADMIN**: Acceso completo a endpoints de administración
+- **Client**: Can create requests and reviews
+- **Professional**: Can create/update their profile and manage requests
+- **Admin**: Full access to admin endpoints
 
 ## 🧪 Testing
 
-Cada request de autenticación tiene un script de test que:
-- Guarda automáticamente el `token` en la variable de entorno
-- Guarda el `user_id` y `user_role` para uso posterior
+Each authentication request has a test script that:
+- Automatically saves the `token` in the environment variable
+- Saves the `user_id` for later use
 
-Puedes agregar más tests personalizados en la pestaña **Tests** de cada request.
+You can add more custom tests in the **Tests** tab of each request.
 
-## 🔄 Actualizar Variables
+## 🔄 Update Variables
 
-Si necesitas cambiar el `base_url` o usar un token diferente:
+If you need to change the `base_url` or use a different token:
 
-1. Selecciona el entorno en el dropdown superior derecho
-2. Click en el ícono de **ojo** (👁️) para ver/editar variables
-3. Modifica los valores necesarios
+1. Select the environment in the top right dropdown
+2. Click the **eye icon** (👁️) to view/edit variables
+3. Modify the values as needed
 
-## 📚 Estructura de la Colección
+## 📚 Collection Structure
 
 ```
-Especialistas API
+Specialist API
 ├── Authentication
-│   ├── Register - Client
-│   ├── Register - Professional
-│   ├── Register - Admin
+│   ├── Register
 │   └── Login
-├── User Management
+├── Users
 │   ├── Get My Profile
-│   └── Update My Profile
-├── Service - Trades
+│   ├── Update My Profile
+│   └── Activate Client Profile
+├── Trades
 │   ├── Get All Trades
-│   └── Get Trade by ID
-├── Service - Professionals
+│   ├── Get Trade by ID
+│   └── Get Trades with Professionals
+├── Professionals
 │   ├── Search Professionals
 │   ├── Get Professional by ID
 │   ├── Get My Professional Profile
 │   ├── Create Professional Profile
-│   └── Update Professional Profile
-├── Service - Requests
+│   ├── Update Professional Profile
+│   ├── Add Gallery Item
+│   └── Remove Gallery Item
+├── Requests
 │   ├── Create Service Request
 │   ├── Get My Requests
+│   ├── Get Available Requests
 │   ├── Get Request by ID
-│   └── Update Request Status
-├── Reputation - Reviews
+│   ├── Update Request Status
+│   ├── Accept Quote
+│   ├── Express Interest
+│   ├── Remove Interest
+│   ├── Get Interested Professionals
+│   └── Assign Professional
+├── Reviews
 │   ├── Get Professional Reviews
 │   ├── Get Review by ID
 │   ├── Create Review
@@ -211,6 +215,11 @@ Especialistas API
 ├── Contact
 │   ├── Create Contact Request
 │   └── Get My Contacts
+├── Storage
+│   ├── Upload File
+│   ├── Get Public File
+│   ├── Get Private File
+│   └── Delete File
 └── Admin
     ├── Get All Users
     ├── Get User by ID
@@ -222,26 +231,25 @@ Especialistas API
 ## 🐛 Troubleshooting
 
 ### Error 401 Unauthorized
-- Verifica que el token esté guardado en la variable `token`
-- Asegúrate de haber ejecutado login/register primero
-- Verifica que el token no haya expirado (por defecto expira en 7 días)
+- Verify token is saved in the `token` variable
+- Make sure you've executed login/register first
+- Check that the token hasn't expired (default expiration is 7 days)
 
 ### Error 403 Forbidden
-- Verifica que tu usuario tenga el rol correcto para el endpoint
-- Algunos endpoints requieren roles específicos (ADMIN, PROFESSIONAL, CLIENT)
+- Verify your user has the correct role for the endpoint
+- Some endpoints require specific roles (ADMIN, PROFESSIONAL, CLIENT)
 
 ### Error 404 Not Found
-- Verifica que el `base_url` sea correcto
-- Asegúrate de que la API esté corriendo
-- Verifica que los IDs en los parámetros sean válidos
+- Verify `base_url` is correct
+- Make sure the API is running
+- Verify IDs in parameters are valid
 
-### Variables no se actualizan
-- Asegúrate de tener el entorno correcto seleccionado
-- Verifica que los scripts de test estén ejecutándose correctamente
+### Variables not updating
+- Make sure you have the correct environment selected
+- Verify test scripts are executing correctly
 
-## 📞 Soporte
+## 📞 Support
 
-Si encuentras problemas o necesitas agregar más endpoints, revisa:
-- `README.md` - Documentación general de la API
-- Controladores en `src/*/presentation/*.controller.ts` - Endpoints disponibles
-
+If you encounter problems or need to add more endpoints, check:
+- `docs/API.md` - General API documentation
+- Controllers in `src/*/presentation/*.controller.ts` - Available endpoints

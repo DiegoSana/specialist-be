@@ -1,58 +1,58 @@
 # Storage Module - Implementation Documentation
 
-## 📋 Tabla de Contenidos
+## 📋 Table of Contents
 
-1. [Introducción](#introducción)
-2. [Arquitectura](#arquitectura)
-3. [Estructura del Módulo](#estructura-del-módulo)
-4. [Categorías de Archivos](#categorías-de-archivos)
-5. [Sistema de Permisos](#sistema-de-permisos)
+1. [Introduction](#introduction)
+2. [Architecture](#architecture)
+3. [Module Structure](#module-structure)
+4. [File Categories](#file-categories)
+5. [Permission System](#permission-system)
 6. [Value Objects](#value-objects)
-7. [Repositorio de Archivos](#repositorio-de-archivos)
-8. [Servicio de Storage](#servicio-de-storage)
-9. [Endpoints API](#endpoints-api)
-10. [Configuración](#configuración)
-11. [Uso y Ejemplos](#uso-y-ejemplos)
-12. [Extensibilidad](#extensibilidad)
-13. [Migración a S3/Azure](#migración-a-s3azure)
+7. [File Repository](#file-repository)
+8. [Storage Service](#storage-service)
+9. [API Endpoints](#api-endpoints)
+10. [Configuration](#configuration)
+11. [Usage and Examples](#usage-and-examples)
+12. [Extensibility](#extensibility)
+13. [Migration to S3/Azure](#migration-to-s3azure)
 
 ---
 
-## Introducción
+## Introduction
 
-El módulo de Storage proporciona una solución desacoplada y extensible para el manejo de archivos multimedia en la aplicación. Está diseñado siguiendo los principios de **Domain-Driven Design (DDD)** y el patrón **Repository**, permitiendo cambiar fácilmente el proveedor de almacenamiento sin afectar el código de negocio.
+The Storage module provides a decoupled and extensible solution for handling multimedia files in the application. It is designed following **Domain-Driven Design (DDD)** principles and the **Repository** pattern, allowing easy switching of storage providers without affecting business code.
 
-### Características Principales
+### Main Features
 
-- ✅ **Desacoplado**: Interfaz abstracta que permite cambiar el proveedor
-- ✅ **Extensible**: Fácil migración a S3, Azure Blob Storage, Google Cloud Storage, etc.
-- ✅ **Validación**: Validación de tipos MIME, tamaños y permisos
-- ✅ **Seguridad**: Sistema de permisos granular (público, privado, owner, admin)
-- ✅ **Organizado**: Estructura de carpetas clara por categoría
+- ✅ **Decoupled**: Abstract interface allowing provider changes
+- ✅ **Extensible**: Easy migration to S3, Azure Blob Storage, Google Cloud Storage, etc.
+- ✅ **Validation**: MIME type, size, and permission validation
+- ✅ **Security**: Granular permission system (public, private, owner, admin)
+- ✅ **Organized**: Clear folder structure by category
 
 ---
 
-## Arquitectura
+## Architecture
 
-El módulo sigue la arquitectura DDD del proyecto, dividido en capas:
+The module follows the project's DDD architecture, divided into layers:
 
 ```
 storage/
-├── domain/              # Lógica de dominio
-│   ├── entities/        # Entidades de negocio
-│   ├── repositories/    # Interfaces (contratos)
-│   └── value-objects/  # Objetos de valor
-├── application/         # Lógica de aplicación
-│   ├── services/       # Servicios de negocio
-│   └── dto/            # Data Transfer Objects
-├── infrastructure/      # Implementaciones técnicas
-│   └── repositories/   # Implementaciones concretas
-└── presentation/        # Capa de presentación
-    ├── controllers/    # Endpoints REST
-    └── guards/         # Guards de seguridad
+├── domain/              # Domain logic
+│   ├── entities/        # Business entities
+│   ├── repositories/    # Interfaces (contracts)
+│   └── value-objects/   # Value objects
+├── application/         # Application logic
+│   ├── services/        # Business services
+│   └── dto/             # Data Transfer Objects
+├── infrastructure/      # Technical implementations
+│   └── repositories/    # Concrete implementations
+└── presentation/        # Presentation layer
+    ├── controllers/     # REST endpoints
+    └── guards/          # Security guards
 ```
 
-### Flujo de Datos
+### Data Flow
 
 ```
 Controller → Service → Repository → FileSystem/S3/etc.
@@ -62,12 +62,12 @@ Controller → Service → Repository → FileSystem/S3/etc.
 
 ---
 
-## Estructura del Módulo
+## Module Structure
 
 ### Domain Layer
 
 #### `FileEntity`
-Entidad de dominio que representa un archivo con todos sus metadatos:
+Domain entity representing a file with all its metadata:
 
 ```typescript
 class FileEntity {
@@ -86,8 +86,8 @@ class FileEntity {
 }
 ```
 
-#### `FileStorageRepository` (Interfaz)
-Contrato que define las operaciones de almacenamiento:
+#### `FileStorageRepository` (Interface)
+Contract defining storage operations:
 
 ```typescript
 interface FileStorageRepository {
@@ -103,102 +103,102 @@ interface FileStorageRepository {
 ### Application Layer
 
 #### `FileStorageService`
-Servicio que contiene la lógica de negocio:
+Service containing business logic:
 
-- Validación de archivos
-- Control de permisos
-- Gestión de ownership
-- Integración con otros servicios (RequestRepository)
+- File validation
+- Permission control
+- Ownership management
+- Integration with other services (RequestRepository)
 
 ### Infrastructure Layer
 
 #### `LocalFileStorageRepository`
-Implementación actual que almacena archivos en el sistema de archivos local.
+Current implementation storing files on the local filesystem.
 
 ### Presentation Layer
 
 #### `FileStorageController`
-Controlador REST que expone los endpoints de la API.
+REST controller exposing API endpoints.
 
 #### `FileAccessGuard`
-Guard que valida los permisos de acceso a archivos.
+Guard validating file access permissions.
 
 ---
 
-## Categorías de Archivos
+## File Categories
 
-El sistema define 4 categorías principales:
+The system defines 4 main categories:
 
 ### 1. `PROFILE_PICTURE`
-- **Acceso**: Público
-- **Ubicación**: `public/profile-pictures/{userId}/{filename}`
-- **Tipos permitidos**: JPEG, PNG, WebP, GIF
-- **Tamaño máximo**: 10MB
-- **Uso**: Fotos de perfil de usuarios
+- **Access**: Public
+- **Location**: `public/profile-pictures/{userId}/{filename}`
+- **Allowed types**: JPEG, PNG, WebP, GIF
+- **Max size**: 10MB
+- **Usage**: User profile photos
 
 ### 2. `PROJECT_IMAGE`
-- **Acceso**: Público
-- **Ubicación**: `public/projects/images/{userId}/{filename}`
-- **Tipos permitidos**: JPEG, PNG, WebP, GIF
-- **Tamaño máximo**: 10MB
-- **Uso**: Imágenes de proyectos de profesionales
+- **Access**: Public
+- **Location**: `public/projects/images/{userId}/{filename}`
+- **Allowed types**: JPEG, PNG, WebP, GIF
+- **Max size**: 10MB
+- **Usage**: Professional project images
 
 ### 3. `PROJECT_VIDEO`
-- **Acceso**: Público
-- **Ubicación**: `public/projects/videos/{userId}/{filename}`
-- **Tipos permitidos**: MP4, WebM, QuickTime
-- **Tamaño máximo**: 100MB
-- **Uso**: Videos de proyectos de profesionales
+- **Access**: Public
+- **Location**: `public/projects/videos/{userId}/{filename}`
+- **Allowed types**: MP4, WebM, QuickTime
+- **Max size**: 100MB
+- **Usage**: Professional project videos
 
 ### 4. `REQUEST_PHOTO`
-- **Acceso**: Privado (solo participantes)
-- **Ubicación**: `private/requests/{requestId}/{filename}`
-- **Tipos permitidos**: JPEG, PNG, WebP, GIF
-- **Tamaño máximo**: 10MB
-- **Uso**: Fotos adjuntas a solicitudes de trabajo
+- **Access**: Private (participants only)
+- **Location**: `private/requests/{requestId}/{filename}`
+- **Allowed types**: JPEG, PNG, WebP, GIF
+- **Max size**: 10MB
+- **Usage**: Photos attached to service requests
 
 ---
 
-## Sistema de Permisos
+## Permission System
 
-### Niveles de Acceso
+### Access Levels
 
-| Nivel | Descripción | Ejemplo |
+| Level | Description | Example |
 |-------|-------------|---------|
-| **PUBLIC** | Accesible sin autenticación | Profile pictures, project images |
-| **AUTHENTICATED** | Requiere login | (Reservado para futuras categorías) |
-| **OWNER_ONLY** | Solo el dueño | Eliminación de archivos propios |
-| **PARTICIPANTS** | Dueño + participantes | Request photos (cliente + profesional) |
+| **PUBLIC** | Accessible without authentication | Profile pictures, project images |
+| **AUTHENTICATED** | Requires login | (Reserved for future categories) |
+| **OWNER_ONLY** | Owner only | Deleting own files |
+| **PARTICIPANTS** | Owner + participants | Request photos (client + professional) |
 
-### Reglas de Acceso
+### Access Rules
 
-1. **Archivos Públicos**:
-   - Cualquiera puede leer
-   - Solo el owner puede eliminar
-   - Solo el owner puede subir
+1. **Public Files**:
+   - Anyone can read
+   - Only owner can delete
+   - Only owner can upload
 
-2. **Archivos Privados** (Request Photos):
-   - Solo el cliente que creó la solicitud puede subir
-   - Solo el cliente y el profesional asignado pueden leer
-   - Solo el owner puede eliminar
+2. **Private Files** (Request Photos):
+   - Only the client who created the request can upload
+   - Only the client and assigned professional can read
+   - Only owner can delete
 
-3. **Administradores**:
-   - Pueden acceder a **todos** los archivos
-   - Pueden eliminar cualquier archivo
+3. **Administrators**:
+   - Can access **all** files
+   - Can delete any file
 
-### Validación de Permisos
+### Permission Validation
 
-El `FileAccessGuard` valida los permisos antes de permitir el acceso:
+The `FileAccessGuard` validates permissions before allowing access:
 
 ```typescript
-// Flujo de validación
-1. Extraer filePath de la request
-2. Obtener usuario (puede ser null si no está autenticado)
-3. Verificar si es admin → Permitir acceso
-4. Verificar si es público → Permitir acceso
-5. Verificar ownership → Permitir acceso
-6. Verificar participación (para requests) → Permitir acceso
-7. Denegar acceso
+// Validation flow
+1. Extract filePath from request
+2. Get user (can be null if not authenticated)
+3. Check if admin → Allow access
+4. Check if public → Allow access
+5. Check ownership → Allow access
+6. Check participation (for requests) → Allow access
+7. Deny access
 ```
 
 ---
@@ -206,7 +206,7 @@ El `FileAccessGuard` valida los permisos antes de permitir el acceso:
 ## Value Objects
 
 ### `FileCategoryVO`
-Encapsula la lógica relacionada con las categorías de archivos:
+Encapsulates logic related to file categories:
 
 ```typescript
 class FileCategoryVO {
@@ -218,7 +218,7 @@ class FileCategoryVO {
 ```
 
 ### `FileTypeVO`
-Valida tipos MIME y determina extensiones:
+Validates MIME types and determines extensions:
 
 ```typescript
 class FileTypeVO {
@@ -231,12 +231,12 @@ class FileTypeVO {
 }
 ```
 
-**Tipos MIME permitidos**:
-- **Imágenes**: `image/jpeg`, `image/png`, `image/webp`, `image/gif`
+**Allowed MIME types**:
+- **Images**: `image/jpeg`, `image/png`, `image/webp`, `image/gif`
 - **Videos**: `video/mp4`, `video/webm`, `video/quicktime`
 
 ### `FileSizeVO`
-Valida y formatea tamaños de archivo:
+Validates and formats file sizes:
 
 ```typescript
 class FileSizeVO {
@@ -246,17 +246,17 @@ class FileSizeVO {
 }
 ```
 
-**Límites**:
-- Imágenes: 10MB
+**Limits**:
+- Images: 10MB
 - Videos: 100MB
 
 ---
 
-## Repositorio de Archivos
+## File Repository
 
-### Interfaz `FileStorageRepository`
+### `FileStorageRepository` Interface
 
-Define el contrato que todas las implementaciones deben cumplir:
+Defines the contract all implementations must fulfill:
 
 ```typescript
 interface FileStorageRepository {
@@ -269,11 +269,11 @@ interface FileStorageRepository {
 }
 ```
 
-### Implementación Local
+### Local Implementation
 
-`LocalFileStorageRepository` almacena archivos en el sistema de archivos:
+`LocalFileStorageRepository` stores files on the filesystem:
 
-**Estructura de almacenamiento**:
+**Storage structure**:
 ```
 uploads/
 ├── public/
@@ -293,48 +293,48 @@ uploads/
             └── {uuid}.{ext}
 ```
 
-**Características**:
-- Genera nombres únicos usando UUID
-- Crea directorios automáticamente
-- Construye URLs públicas/privadas
+**Features**:
+- Generates unique names using UUID
+- Creates directories automatically
+- Builds public/private URLs
 
 ---
 
-## Servicio de Storage
+## Storage Service
 
 ### `FileStorageService`
 
-Contiene la lógica de negocio para el manejo de archivos:
+Contains business logic for file handling:
 
-#### Métodos Principales
+#### Main Methods
 
 ##### `uploadFile(file, uploadDto, userId)`
-Sube un archivo y valida:
-- Existencia del archivo
-- Tipo MIME permitido
-- Tamaño dentro del límite
-- Ownership (para request photos, valida que el usuario sea el cliente)
+Uploads a file and validates:
+- File existence
+- Allowed MIME type
+- Size within limit
+- Ownership (for request photos, validates user is the client)
 
 ##### `getFile(filePath)`
-Obtiene los metadatos de un archivo.
+Gets file metadata.
 
 ##### `deleteFile(filePath, userId, isAdmin)`
-Elimina un archivo validando:
-- Existencia del archivo
-- Permisos (owner o admin)
+Deletes a file validating:
+- File existence
+- Permissions (owner or admin)
 
 ##### `canAccessFile(filePath, userId, isAdmin)`
-Valida si un usuario puede acceder a un archivo:
-- Admin → Siempre permitido
-- Público → Siempre permitido
-- Owner → Permitido
-- Participant (para requests) → Permitido si es cliente o profesional
+Validates if a user can access a file:
+- Admin → Always allowed
+- Public → Always allowed
+- Owner → Allowed
+- Participant (for requests) → Allowed if client or professional
 
 ---
 
-## Endpoints API
+## API Endpoints
 
-### 1. Subir Archivo
+### 1. Upload File
 
 ```http
 POST /api/storage/upload
@@ -343,15 +343,15 @@ Content-Type: multipart/form-data
 ```
 
 **Body**:
-- `file`: Archivo (binary)
+- `file`: File (binary)
 - `category`: `profile-picture` | `project-image` | `project-video` | `request-photo`
-- `requestId`: UUID (opcional, solo para `request-photo`)
+- `requestId`: UUID (optional, only for `request-photo`)
 
 **Response** (201):
 ```json
 {
   "id": "uuid",
-  "originalFilename": "foto.jpg",
+  "originalFilename": "photo.jpg",
   "storedFilename": "abc123.jpg",
   "path": "public/profile-pictures/user123/abc123.jpg",
   "url": "http://localhost:5000/api/storage/public/profile-pictures/user123/abc123.jpg",
@@ -365,41 +365,41 @@ Content-Type: multipart/form-data
 }
 ```
 
-### 2. Obtener Archivo Público
+### 2. Get Public File
 
 ```http
 GET /api/storage/public/{path}
 ```
 
-**Ejemplo**:
+**Example**:
 ```
 GET /api/storage/public/profile-pictures/user123/abc123.jpg
 ```
 
-**Response**: Archivo binario (imagen/video)
+**Response**: Binary file (image/video)
 
-### 3. Obtener Archivo Privado
+### 3. Get Private File
 
 ```http
 GET /api/storage/private/{path}
 Authorization: Bearer {token}
 ```
 
-**Ejemplo**:
+**Example**:
 ```
 GET /api/storage/private/requests/req456/xyz789.jpg
 ```
 
-**Response**: Archivo binario (si tiene permisos)
+**Response**: Binary file (if authorized)
 
-### 4. Eliminar Archivo
+### 4. Delete File
 
 ```http
 DELETE /api/storage/{path}
 Authorization: Bearer {token}
 ```
 
-**Ejemplo**:
+**Example**:
 ```
 DELETE /api/storage/public/profile-pictures/user123/abc123.jpg
 ```
@@ -408,26 +408,26 @@ DELETE /api/storage/public/profile-pictures/user123/abc123.jpg
 
 ---
 
-## Configuración
+## Configuration
 
-### Variables de Entorno
+### Environment Variables
 
-Agregar al archivo `.env`:
+Add to `.env` file:
 
 ```env
-# Ruta donde se almacenan los archivos localmente
+# Path for local file storage
 STORAGE_LOCAL_PATH=./uploads
 
-# URL base para generar URLs de archivos
+# Base URL for generating file URLs
 STORAGE_BASE_URL=http://localhost:5000/api/storage
 
-# Proveedor de almacenamiento (futuro)
+# Storage provider (future)
 STORAGE_PROVIDER=local
 ```
 
-### Configuración del Módulo
+### Module Configuration
 
-El módulo se registra automáticamente en `app.module.ts`:
+The module is automatically registered in `app.module.ts`:
 
 ```typescript
 @Module({
@@ -441,9 +441,9 @@ export class AppModule {}
 
 ---
 
-## Uso y Ejemplos
+## Usage and Examples
 
-### Ejemplo 1: Subir Foto de Perfil
+### Example 1: Upload Profile Picture
 
 ```typescript
 // Frontend (React/Next.js)
@@ -463,7 +463,7 @@ const fileEntity = await response.json();
 console.log('File URL:', fileEntity.url);
 ```
 
-### Ejemplo 2: Subir Foto de Solicitud
+### Example 2: Upload Request Photo
 
 ```typescript
 const formData = new FormData();
@@ -480,38 +480,38 @@ const response = await fetch('/api/storage/upload', {
 });
 ```
 
-### Ejemplo 3: Obtener Archivo Público
+### Example 3: Get Public File
 
 ```typescript
-// No requiere autenticación
+// No authentication required
 const imageUrl = 'http://localhost:5000/api/storage/public/profile-pictures/user123/abc123.jpg';
 <img src={imageUrl} alt="Profile" />
 ```
 
-### Ejemplo 4: Obtener Archivo Privado
+### Example 4: Get Private File
 
 ```typescript
-// Requiere autenticación y permisos
+// Requires authentication and permissions
 const imageUrl = 'http://localhost:5000/api/storage/private/requests/req456/xyz789.jpg';
-// Usar con token en headers o como query param
+// Use with token in headers or as query param
 ```
 
 ---
 
-## Extensibilidad
+## Extensibility
 
-### Agregar Nueva Categoría
+### Adding a New Category
 
-1. **Agregar al enum**:
+1. **Add to enum**:
 ```typescript
 // domain/value-objects/file-category.vo.ts
 export enum FileCategory {
-  // ... existentes
+  // ... existing
   NEW_CATEGORY = 'new-category',
 }
 ```
 
-2. **Definir acceso y path**:
+2. **Define access and path**:
 ```typescript
 getAccessLevel(): FileAccessLevel {
   switch (this.category) {
@@ -530,26 +530,26 @@ getStoragePath(): string {
 }
 ```
 
-3. **Actualizar validaciones** en `FileTypeVO` si es necesario.
+3. **Update validations** in `FileTypeVO` if necessary.
 
-### Agregar Nuevo Tipo MIME
+### Adding a New MIME Type
 
-1. **Agregar al enum**:
+1. **Add to enum**:
 ```typescript
 // domain/value-objects/file-type.vo.ts
 export enum AllowedMimeType {
-  // ... existentes
+  // ... existing
   IMAGE_SVG = 'image/svg+xml',
 }
 ```
 
-2. **Actualizar validaciones**:
+2. **Update validations**:
 ```typescript
 private getAllowedTypesForCategory(): AllowedMimeType[] {
   switch (this.category) {
     case 'profile-picture':
       return [
-        // ... existentes
+        // ... existing
         AllowedMimeType.IMAGE_SVG,
       ];
   }
@@ -558,11 +558,11 @@ private getAllowedTypesForCategory(): AllowedMimeType[] {
 
 ---
 
-## Migración a S3/Azure
+## Migration to S3/Azure
 
-### Paso 1: Crear Nueva Implementación
+### Step 1: Create New Implementation
 
-Crear `S3FileStorageRepository`:
+Create `S3FileStorageRepository`:
 
 ```typescript
 // infrastructure/repositories/s3-file-storage.repository.ts
@@ -584,7 +584,7 @@ export class S3FileStorageRepository implements FileStorageRepository {
     });
 
     const url = this.getPublicUrl(key);
-    // ... crear FileEntity
+    // ... create FileEntity
   }
 
   async delete(filePath: string): Promise<void> {
@@ -594,11 +594,11 @@ export class S3FileStorageRepository implements FileStorageRepository {
     });
   }
 
-  // ... implementar otros métodos
+  // ... implement other methods
 }
 ```
 
-### Paso 2: Actualizar Módulo
+### Step 2: Update Module
 
 ```typescript
 // storage.module.ts
@@ -612,7 +612,7 @@ const repositoryProvider = {
 };
 ```
 
-### Paso 3: Configuración
+### Step 3: Configuration
 
 ```env
 STORAGE_PROVIDER=s3
@@ -622,51 +622,51 @@ AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 ```
 
-### Ventajas del Diseño
+### Design Benefits
 
-- ✅ **Sin cambios en el código de negocio**: El servicio y controlador no cambian
-- ✅ **Intercambiable**: Solo cambiar la implementación del repositorio
-- ✅ **Testeable**: Fácil de mockear en tests
-- ✅ **Múltiples proveedores**: Puede tener varias implementaciones activas
+- ✅ **No changes to business code**: Service and controller remain unchanged
+- ✅ **Interchangeable**: Only change repository implementation
+- ✅ **Testable**: Easy to mock in tests
+- ✅ **Multiple providers**: Can have several active implementations
 
 ---
 
-## Consideraciones Futuras
+## Future Considerations
 
-### 1. Base de Datos para Metadatos
+### 1. Database for Metadata
 
-Actualmente, los metadatos se extraen del sistema de archivos. Para producción, considerar:
+Currently, metadata is extracted from the filesystem. For production, consider:
 
-- Crear tabla `files` en Prisma
-- Almacenar metadatos al subir
-- Consultar desde DB en lugar del filesystem
+- Create `files` table in Prisma
+- Store metadata on upload
+- Query from DB instead of filesystem
 
-### 2. URLs Firmadas
+### 2. Signed URLs
 
-Para archivos privados, implementar URLs con expiración:
+For private files, implement URLs with expiration:
 
 ```typescript
 GET /api/storage/generate-signed-url/:path
 → { url: "https://...?token=...&expires=..." }
 ```
 
-### 3. Optimización de Imágenes
+### 3. Image Optimization
 
-- Redimensionamiento automático
-- Generación de thumbnails
-- Conversión de formatos
+- Automatic resizing
+- Thumbnail generation
+- Format conversion
 
 ### 4. CDN Integration
 
-- Configurar CDN para archivos públicos
-- Invalidación de caché
-- Distribución geográfica
+- Configure CDN for public files
+- Cache invalidation
+- Geographic distribution
 
 ---
 
 ## Testing
 
-### Ejemplo de Test Unitario
+### Unit Test Example
 
 ```typescript
 describe('FileStorageService', () => {
@@ -697,28 +697,27 @@ describe('FileStorageService', () => {
 ## Troubleshooting
 
 ### Error: "File not found"
-- Verificar que el archivo existe en la ruta especificada
-- Verificar permisos del sistema de archivos
-- Verificar que `STORAGE_LOCAL_PATH` está configurado correctamente
+- Verify file exists at specified path
+- Check filesystem permissions
+- Verify `STORAGE_LOCAL_PATH` is configured correctly
 
 ### Error: "Mime type not allowed"
-- Verificar que el tipo MIME está en la lista permitida para la categoría
-- Verificar que el archivo no está corrupto
+- Verify MIME type is in allowed list for the category
+- Verify file is not corrupted
 
 ### Error: "File size exceeds maximum"
-- Verificar límites: 10MB para imágenes, 100MB para videos
-- Comprimir archivos antes de subir si es necesario
+- Check limits: 10MB for images, 100MB for videos
+- Compress files before uploading if necessary
 
 ### Error: "You do not have permission"
-- Verificar que el usuario está autenticado (para archivos privados)
-- Verificar ownership o participación en la solicitud
-- Verificar si el usuario es admin
+- Verify user is authenticated (for private files)
+- Check ownership or request participation
+- Check if user is admin
 
 ---
 
-## Conclusión
+## Conclusion
 
-El módulo de Storage proporciona una solución robusta, extensible y segura para el manejo de archivos multimedia. Su diseño desacoplado permite migrar fácilmente a proveedores cloud sin afectar el código de negocio, mientras que el sistema de permisos granular asegura que solo los usuarios autorizados puedan acceder a los archivos.
+The Storage module provides a robust, extensible, and secure solution for handling multimedia files. Its decoupled design allows easy migration to cloud providers without affecting business code, while the granular permission system ensures only authorized users can access files.
 
-Para más información o soporte, consultar la documentación del proyecto o contactar al equipo de desarrollo.
-
+For more information or support, consult the project documentation or contact the development team.
