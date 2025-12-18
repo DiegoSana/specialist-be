@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+// Legacy modules (will be deprecated)
 import { UserManagementModule } from './user-management/user-management.module';
 import { ServiceModule } from './service/service.module';
+// New bounded context modules
+import { IdentityModule } from './identity/identity.module';
+import { ProfilesModule } from './profiles/profiles.module';
+import { RequestsModule } from './requests/requests.module';
+// Other modules
 import { ReputationModule } from './reputation/reputation.module';
 import { ContactModule } from './contact/contact.module';
 import { AdminModule } from './admin/admin.module';
@@ -17,8 +23,14 @@ import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
     }),
     PrismaModule,
     HealthModule,
+    // New modules
+    IdentityModule,
+    ProfilesModule,
+    RequestsModule,
+    // Legacy modules (keeping for controllers)
     UserManagementModule,
     ServiceModule,
+    // Other modules
     ReputationModule,
     ContactModule,
     AdminModule,
