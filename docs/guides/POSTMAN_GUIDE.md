@@ -144,11 +144,11 @@ Postman lo maneja automáticamente si:
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
-- `GET /api/service/trades`
-- `GET /api/service/trades/:id`
-- `GET /api/service/professionals`
-- `GET /api/service/professionals/:id`
-- `GET /api/reputation/professionals/:professionalId/reviews`
+- `GET /api/trades`
+- `GET /api/trades/:id`
+- `GET /api/professionals`
+- `GET /api/professionals/:id`
+- `GET /api/professionals/:professionalId/reviews`
 
 ### Endpoints que Requieren Autenticación
 

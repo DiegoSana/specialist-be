@@ -1,224 +1,178 @@
-# Roles Architecture - Especialistas API
+# User Profiles Architecture - Specialist
 
-## Approach: Hybrid with Base Entity + Composition
+> Updated December 2024 - Dual Profile System
 
-### Design Decision
+## Design: Dual Profile Model
 
-A **hybrid approach** has been chosen that combines:
+### Overview
 
-1. **Unified Base Entity (User)**: All users share authentication and basic data
-2. **Role-based Composition**: Each role has its own specialized entities and services
-3. **Specific Guards**: Granular access control by role
+Users can have **zero, one, or both** profiles:
+- **Client Profile**: Can create service requests
+- **Professional Profile**: Can receive and work on requests
 
-### Advantages of this Approach
+This allows a single user to be both a client (seeking services) and a professional (offering services).
 
-✅ **Simplicity**: Single user table, easy to maintain
-✅ **Flexibility**: A user can change roles without complex migration
-✅ **Separation of Concerns**: Each module handles its specific domain
-✅ **Scalability**: Easy to add new roles or permissions
-✅ **DDD Compliant**: Maintains domain cohesion
+### Profile Flags
 
-### Role Structure
+```typescript
+User {
+  hasClientProfile: boolean;      // Has activated client profile
+  hasProfessionalProfile: boolean; // Has professional profile
+  isAdmin: boolean;               // Admin privileges
+}
+```
+
+### Profile Structure
 
 ```
-User (Base Entity)
-├── role: UserRole enum
-├── status: UserStatus
-└── Basic data (email, password, firstName, lastName, phone)
+User (Identity)
+├── Basic data (email, name, phone, auth)
+├── hasClientProfile: boolean
+├── hasProfessionalProfile: boolean
+└── isAdmin: boolean
 
 ┌─────────────────────────────────────────────────────────┐
-│                    ROLES                                │
+│                     PROFILES                            │
 ├─────────────────────────────────────────────────────────┤
 │                                                          │
-│  ADMIN                                                   │
-│  ├── Full system access                                 │
-│  ├── User moderation                                    │
-│  └── Professional verification                          │
+│  Client Profile (if hasClientProfile)                   │
+│  ├── Can search professionals                          │
+│  ├── Can create requests (public or direct)            │
+│  ├── Can accept quotes                                 │
+│  ├── Can leave reviews                                 │
+│  └── Can view interested professionals                 │
 │                                                          │
-│  PROFESSIONAL                                           │
-│  ├── User base                                          │
-│  └── ProfessionalProfile (composition)                 │
-│      ├── Specialties                                   │
-│      ├── Experience                                    │
-│      ├── Ratings                                       │
-│      └── Verification status                           │
+│  Professional Profile (if hasProfessionalProfile)      │
+│  ├── Has trades/specialties                            │
+│  ├── Has gallery and description                       │
+│  ├── Can receive direct requests                       │
+│  ├── Can express interest in public requests          │
+│  ├── Can submit quotes                                 │
+│  └── Has ratings and reviews                           │
 │                                                          │
-│  CLIENT (USER)                                          │
-│  ├── User base                                          │
-│  └── Basic functionalities                             │
-│      ├── Search professionals                          │
-│      ├── Create reviews                                │
-│      └── Contact professionals                         │
+│  Admin (if isAdmin)                                     │
+│  ├── Full system access                                │
+│  ├── User management                                   │
+│  └── Professional verification                         │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Implementation
+## Implementation
 
-#### 1. Base Entity (UserEntity)
+### 1. User Entity
 
 ```typescript
-// src/user-management/domain/entities/user.entity.ts
+// src/identity/domain/entities/user.entity.ts
 export class UserEntity {
-  // Data shared by all roles
-  role: UserRole;
-  status: UserStatus;
+  id: string;
+  email: string;
+  hasClientProfile: boolean;
+  hasProfessionalProfile: boolean;
+  isAdmin: boolean;
   
-  // Verification methods
-  isAdmin(): boolean
-  isProfessional(): boolean
-  isClient(): boolean
+  isClient(): boolean {
+    return this.hasClientProfile;
+  }
+  
+  isProfessional(): boolean {
+    return this.hasProfessionalProfile;
+  }
+  
+  isAdminUser(): boolean {
+    return this.isAdmin;
+  }
 }
 ```
 
-#### 2. Value Objects for Roles
+### 2. Profile Entities
 
 ```typescript
-// src/shared/domain/value-objects/user-role.vo.ts
-export class UserRoleVO {
-  // Business logic specific to role
-  canAccessAdminPanel(): boolean
-  canCreateProfessionalProfile(): boolean
-  canReviewProfessionals(): boolean
+// src/profiles/domain/entities/client.entity.ts
+export class ClientEntity {
+  id: string;
+  userId: string;
+  createdAt: Date;
+}
+
+// src/profiles/domain/entities/professional.entity.ts
+export class ProfessionalEntity {
+  id: string;
+  userId: string;
+  trades: TradeInfo[];
+  description: string;
+  status: ProfessionalStatus;
+  // ... other fields
 }
 ```
 
-#### 3. Specific Guards
+### 3. Guards
 
 ```typescript
-// Specialized guards
-- AdminGuard: Only admins
-- ProfessionalGuard: Only professionals
-- RolesGuard: Multiple roles with @Roles() decorator
-```
+// JWT Guard - Basic authentication
+@UseGuards(JwtAuthGuard)
 
-#### 4. Module-based Composition
-
-```
-user-management/     → User base (all roles)
-service/             → Professionals (User + ProfessionalProfile)
-admin/               → Administrators (User base with permissions)
-```
-
-### Access Control
-
-#### Option 1: Specific Guards (Recommended)
-
-```typescript
+// Admin Guard - Requires isAdmin: true
 @UseGuards(JwtAuthGuard, AdminGuard)
-@Get('admin/users')
-async getUsers() { ... }
-```
 
-#### Option 2: Roles Decorator
-
-```typescript
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.PROFESSIONAL)
-@Get('special-endpoint')
-async specialEndpoint() { ... }
-```
-
-### Comparison with Other Approaches
-
-#### ❌ Approach 1: Separate Entities
-```typescript
-Admin extends User
-Professional extends User
-Client extends User
-```
-**Problems:**
-- Code duplication
-- Complex migrations
-- Difficult to change roles
-
-#### ❌ Approach 2: Separate Roles Table
-```sql
-users table
-roles table
-user_roles junction table
-```
-**Problems:**
-- Unnecessary overhead for 3 fixed roles
-- More complex queries
-- Over-engineering
-
-#### ✅ Chosen Approach: Enum + Composition
-```typescript
-User { role: UserRole }
-ProfessionalProfile { userId }
-```
-**Advantages:**
-- Simple and direct
-- Easy to understand
-- Scalable if you need more roles
-- DDD compliant
-
-### Use Cases
-
-#### 1. User becomes Professional
-```typescript
-// Change role
-user.role = UserRole.PROFESSIONAL
-// Create professional profile
-professionalProfile = createProfile(userId, data)
-```
-
-#### 2. Professional needs Admin permissions
-```typescript
-// Change role (requires validation)
-if (canPromoteToAdmin(user)) {
-  user.role = UserRole.ADMIN
-}
-```
-
-#### 3. Verify Permissions
-```typescript
-// In services
-if (!user.isProfessional()) {
-  throw new ForbiddenException()
-}
-
-// In guards
+// Professional Guard - Requires hasProfessionalProfile: true
 @UseGuards(JwtAuthGuard, ProfessionalGuard)
 ```
 
-### Future Migrations
+## Profile Activation Flow
 
-If in the future you need:
-- **More roles**: Add to `UserRole` enum
-- **Granular permissions**: Use `RolesGuard` with `@Roles()` decorator
-- **Complex role logic**: Create specific Domain Services
-- **Temporary roles**: Add `temporaryRole` field or `role_history` table
+### Client Profile
 
-### Recommendations
-
-1. ✅ **Keep User as base entity** - All share authentication
-2. ✅ **Use composition for specific data** - Separate ProfessionalProfile
-3. ✅ **Specific guards for access control** - Clearer and more maintainable
-4. ✅ **Value Objects for role logic** - Encapsulates business rules
-5. ✅ **Avoid inheritance** - Composition is more flexible in DDD
-
-### Complete Example
-
-```typescript
-// Controller
-@Controller('service')
-@UseGuards(JwtAuthGuard)
-export class ServiceController {
-  
-  @Get('professionals/me/profile')
-  @UseGuards(ProfessionalGuard) // Only professionals
-  async getMyProfile(@CurrentUser() user: UserEntity) {
-    return this.service.getProfile(user.id);
-  }
-  
-  @Get('professionals')
-  @Public() // Public
-  async findAll() {
-    return this.service.findAll();
-  }
-}
+```
+User registers
+    │
+    ▼
+POST /api/users/me/client-profile
+    │
+    ▼
+Client record created
+hasClientProfile = true
 ```
 
-This approach provides the best combination of simplicity, flexibility, and maintainability following DDD principles.
+### Professional Profile
+
+```
+User registers
+    │
+    ▼
+POST /api/professionals/me
+    │
+    ▼
+Professional record created
+hasProfessionalProfile = true
+status = PENDING_VERIFICATION
+    │
+    ▼
+Admin reviews
+    │
+    ├──► VERIFIED (can work)
+    └──► REJECTED (cannot work)
+```
+
+## Advantages
+
+✅ **Flexibility**: One user can be both client and professional
+✅ **Simplicity**: Single authentication, multiple capabilities
+✅ **Scalability**: Easy to add new profile types
+✅ **UX**: Seamless switching between modes
+✅ **Data Integrity**: Clear separation of profile data
+
+## API Permissions
+
+| Endpoint | Client | Professional | Admin |
+|----------|--------|--------------|-------|
+| `GET /professionals` | ✅ | ✅ | ✅ |
+| `POST /requests` | ✅ | ❌ | ✅ |
+| `GET /requests/available` | ❌ | ✅ | ✅ |
+| `POST /requests/:id/interest` | ❌ | ✅ | ❌ |
+| `POST /reviews` | ✅ | ❌ | ✅ |
+| `GET /admin/*` | ❌ | ❌ | ✅ |
+
+---
+
+*Last Updated: December 2024*

@@ -562,51 +562,50 @@ npm test -- --coverage
 
 ---
 
-## API Endpoints (After Refactor)
+## API Endpoints
 
-### Identity
+> Ver documentación completa en [API.md](../API.md)
+
+### Identity (`/auth`, `/users`)
 ```
 POST   /api/auth/register
 POST   /api/auth/login
 GET    /api/auth/google
-GET    /api/auth/google/callback
 GET    /api/auth/facebook
-GET    /api/auth/facebook/callback
+GET    /api/users/me                   # Get current user
+PATCH  /api/users/me                   # Update current user
+POST   /api/users/me/client-profile    # Activate client profile
 ```
 
-### Profiles
+### Profiles (`/professionals`, `/trades`)
 ```
-GET    /api/users/profile              # Get current user profile
-PATCH  /api/users/profile              # Update user profile
-POST   /api/users/profile/client       # Activate client profile
-
 GET    /api/professionals              # Search professionals
 GET    /api/professionals/:id          # Get professional details
-POST   /api/professionals              # Create professional profile
-PATCH  /api/professionals/:id          # Update professional profile
-POST   /api/professionals/gallery      # Add gallery item
-DELETE /api/professionals/gallery      # Remove gallery item
-
+GET    /api/professionals/me/profile   # Get my professional profile
+POST   /api/professionals/me           # Create professional profile
+PATCH  /api/professionals/me           # Update professional profile
+POST   /api/professionals/me/gallery   # Add gallery item
+DELETE /api/professionals/me/gallery   # Remove gallery item
 GET    /api/trades                     # List all trades
 ```
 
-### Requests
+### Requests (`/requests`)
 ```
-GET    /api/requests                   # Get user's requests
+GET    /api/requests                   # Get my requests
 POST   /api/requests                   # Create request
 GET    /api/requests/:id               # Get request details
-PATCH  /api/requests/:id               # Update request (status, quote)
-POST   /api/requests/:id/photos        # Add photo to request
-DELETE /api/requests/:id/photos        # Remove photo from request
-
-GET    /api/requests/public            # Get public requests (job board)
-POST   /api/requests/:id/interest      # Express interest in public request
-GET    /api/requests/:id/interests     # Get interests for a request
+PATCH  /api/requests/:id               # Update request
+GET    /api/requests/available         # Get available requests (professionals)
+POST   /api/requests/:id/interest      # Express interest
+DELETE /api/requests/:id/interest      # Remove interest
+GET    /api/requests/:id/interests     # List interested professionals
+POST   /api/requests/:id/assign        # Assign professional to request
 ```
 
-### Reputation
+### Reputation (`/reviews`)
 ```
 POST   /api/reviews                    # Create review
+GET    /api/reviews?requestId=xxx      # Get review by request
 GET    /api/professionals/:id/reviews  # Get professional's reviews
 ```
 

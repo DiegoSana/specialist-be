@@ -1,230 +1,187 @@
-# Migration Guide - DDD Refactoring
+# Migration Guide
 
-## Overview
+> Guide for database migrations using Prisma ORM.
 
-The application has been refactored to follow **Domain-Driven Design (DDD)** principles with clear **bounded contexts**.
+## Prerequisites
 
-## New Structure
+- Node.js 18+
+- PostgreSQL database
+- Prisma CLI (`npm install -D prisma`)
 
-### Bounded Contexts
+## Environment Setup
 
-1. **User Management Context** (`src/user-management/`)
-   - Manages user identity, authentication, and roles
-   - Aggregate Root: `User`
-   - Endpoints: `/api/auth/*`, `/api/users/*`
+Create a `.env` file with your database connection:
 
-2. **Service Context** (`src/service/`)
-   - Manages professionals, trades, and service requests
-   - Aggregate Roots: `Professional`, `Trade`, `Request`
-   - Endpoints: `/api/service/*`
+```env
+# Local development
+DATABASE_URL="postgresql://user:password@localhost:5432/specialist?schema=public"
 
-3. **Reputation Context** (`src/reputation/`)
-   - Manages reviews and ratings
-   - Aggregate Root: `Review`
-   - Endpoints: `/api/reputation/*`
-
-4. **Contact Context** (`src/contact/`)
-   - Manages contact requests between users
-   - Endpoints: `/api/contact/*`
-
-5. **Admin Context** (`src/admin/`)
-   - Administrative functions
-   - Endpoints: `/api/admin/*`
-
-## Key Changes
-
-### Database Schema
-
-- **User** model now has a `role` enum: `CLIENT`, `PROFESSIONAL`, `ADMIN`
-- **Professional** is now linked to `User` via `userId` (1:1 relationship)
-- **Trade** model added for service categories
-- **Request** model added for service requests
-- **Review** can optionally link to a `Request`
-
-### Domain Entities
-
-All entities are now in their respective bounded contexts:
-- `UserEntity` → `src/user-management/domain/entities/user.entity.ts`
-- `ProfessionalEntity` → `src/service/domain/entities/professional.entity.ts`
-- `TradeEntity` → `src/service/domain/entities/trade.entity.ts`
-- `RequestEntity` → `src/service/domain/entities/request.entity.ts`
-- `ReviewEntity` → `src/reputation/domain/entities/review.entity.ts`
-
-### Repositories
-
-Repository interfaces are in the domain layer, implementations in infrastructure:
-- Example: `UserRepository` (interface) → `PrismaUserRepository` (implementation)
-- All repositories use dependency injection tokens (e.g., `USER_REPOSITORY`)
-
-### Authentication
-
-- Authentication is now part of the **User Management Context**
-- JWT payload includes `role` field
-- `CurrentUser` decorator returns `UserEntity` with role methods
-
-## Migration Steps
-
-### First Time Setup
-
-1. **Start Docker containers**
-   ```bash
-   docker-compose -f docker-compose.dev.yml up -d
-   ```
-
-2. **Wait for PostgreSQL to be ready** (5-10 seconds)
-
-3. **Create initial migration**
-   ```bash
-   docker-compose -f docker-compose.dev.yml exec app npx prisma migrate dev --name init
-   ```
-
-4. **Verify migration status**
-   ```bash
-   docker-compose -f docker-compose.dev.yml exec app npx prisma migrate status
-   ```
-
-### Development Workflow
-
-When making changes to `schema.prisma`:
-
-```bash
-# Create and apply new migration
-docker-compose -f docker-compose.dev.yml exec app npx prisma migrate dev --name descriptive_name
+# Supabase (production)
+DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres?pgbouncer=true"
 ```
 
-This will:
-- Create a new migration
-- Apply it automatically
-- Regenerate Prisma Client
+## Common Commands
 
-### Production Deployment
+### Generate Prisma Client
 
-In production, only apply existing migrations:
+After modifying `schema.prisma`:
 
-```bash
-docker-compose exec app npx prisma migrate deploy
-```
-
-## Prisma Configuration
-
-### Binary Targets for Docker
-
-The Prisma schema includes `binaryTargets` for Docker compatibility:
-
-```prisma
-generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
-}
-```
-
-- `native`: For local development (host OS)
-- `linux-musl-openssl-3.0.x`: For Alpine Linux containers (Docker)
-
-**Important**: After changing `binaryTargets`, regenerate Prisma Client:
 ```bash
 npx prisma generate
 ```
 
-## API Endpoints
+### Create a New Migration
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-
-### User Management
-- `GET /api/users/profile` - Get current user profile
-- `PUT /api/users/profile` - Update user profile
-
-### Service
-- `GET /api/service/trades` - List all trades
-- `GET /api/service/trades/:id` - Get trade by ID
-- `GET /api/service/professionals` - Search professionals
-- `GET /api/service/professionals/:id` - Get professional details
-- `GET /api/service/professionals/me/profile` - Get my professional profile
-- `POST /api/service/professionals/me/profile` - Create professional profile
-- `PUT /api/service/professionals/me/profile` - Update professional profile
-- `POST /api/service/requests` - Create service request
-- `GET /api/service/requests` - Get my requests
-- `GET /api/service/requests/:id` - Get request by ID
-- `PUT /api/service/requests/:id` - Update request status
-
-### Reputation
-- `GET /api/reputation/professionals/:id/reviews` - Get professional reviews
-- `GET /api/reputation/reviews/:id` - Get review by ID
-- `POST /api/reputation/reviews` - Create review
-- `PUT /api/reputation/reviews/:id` - Update review
-- `DELETE /api/reputation/reviews/:id` - Delete review
-
-### Contact
-- `POST /api/contact` - Create contact request
-- `GET /api/contact` - Get my contacts
-
-### Admin
-- `GET /api/admin/users` - List all users
-- `GET /api/admin/users/:id` - Get user by ID
-- `PUT /api/admin/users/:id/status` - Update user status
-- `GET /api/admin/professionals` - List all professionals
-- `PUT /api/admin/professionals/:id/status` - Update professional status
-
-## Common Commands
-
-### View migration status
 ```bash
-docker-compose -f docker-compose.dev.yml exec app npx prisma migrate status
+npx prisma migrate dev --name <migration_name>
 ```
 
-### Open Prisma Studio
+Examples:
 ```bash
-docker-compose -f docker-compose.dev.yml exec app npx prisma studio
-```
-Then open http://localhost:5555 in your browser
-
-### Reset database (⚠️ WARNING: deletes all data)
-```bash
-docker-compose -f docker-compose.dev.yml exec app npx prisma migrate reset
+npx prisma migrate dev --name add_user_phone
+npx prisma migrate dev --name create_request_interest_table
 ```
 
-### Regenerate Prisma Client
+### Apply Migrations (Production)
+
 ```bash
-docker-compose -f docker-compose.dev.yml exec app npx prisma generate
+npx prisma migrate deploy
+```
+
+### Reset Database (Development Only)
+
+⚠️ **Warning**: This will delete all data!
+
+```bash
+npx prisma migrate reset
+```
+
+### View Database
+
+```bash
+npx prisma studio
+```
+
+## Migration Workflow
+
+### 1. Development
+
+```bash
+# 1. Edit prisma/schema.prisma
+# 2. Create migration
+npx prisma migrate dev --name your_change_description
+
+# 3. Test locally
+npm run start:dev
+```
+
+### 2. Production (Fly.io)
+
+```bash
+# Option A: Manual (one-time)
+fly ssh console
+cd /app
+npx prisma migrate deploy
+
+# Option B: Via local connection
+DATABASE_URL="postgresql://..." npx prisma migrate deploy
+```
+
+### 3. Supabase Direct Connection
+
+For migrations, use the direct connection (port 5432), not the pooler:
+
+```bash
+# Direct connection for migrations
+DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres" npx prisma migrate deploy
+```
+
+## Seeding Data
+
+### Run Seed
+
+```bash
+npx prisma db seed
+```
+
+### Seed File Location
+
+```
+prisma/seed.ts
+```
+
+### Configure Seed in package.json
+
+```json
+{
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
+  }
+}
 ```
 
 ## Troubleshooting
 
-### Error: "Database schema is not in sync"
+### Error: "Database schema is not empty"
 
-This means `schema.prisma` doesn't match the database. Solutions:
+The database has existing tables. Options:
 
-1. **If you're in development and don't mind losing data:**
+1. **Reset** (dev only): `npx prisma migrate reset`
+2. **Baseline**: Mark existing schema as migrated
    ```bash
-   docker-compose -f docker-compose.dev.yml exec app npx prisma migrate reset
+   npx prisma migrate resolve --applied <migration_name>
    ```
 
-2. **If you want to create a migration to sync:**
-   ```bash
-   docker-compose -f docker-compose.dev.yml exec app npx prisma migrate dev --name sync_schema
-   ```
+### Error: "Migration not found"
 
-### Error: "Migration X is in a failed state"
+Migrations in `prisma/migrations/` don't match the database. Options:
 
-If a migration failed:
+1. Reset the database (dev only)
+2. Manually sync the `_prisma_migrations` table
 
-```bash
-docker-compose -f docker-compose.dev.yml exec app npx prisma migrate resolve --rolled-back X
+### Error: "Can't reach database server"
+
+1. Check `DATABASE_URL` is correct
+2. For Supabase: use direct connection (5432), not pooler (6543)
+3. Check firewall/network settings
+
+### PgBouncer Issues
+
+If using Supabase with connection pooling:
+
+```env
+# For normal operations (with pooler)
+DATABASE_URL="postgresql://...@db.[PROJECT].supabase.co:6543/postgres?pgbouncer=true"
+
+# For migrations (direct connection)
+DIRECT_URL="postgresql://...@db.[PROJECT].supabase.co:5432/postgres"
 ```
 
-Then try again.
+In `schema.prisma`:
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+```
 
-### Error: "Prisma Client binary compatibility"
+## Current Schema
 
-If you see errors about Prisma Client binaries:
-- Ensure `binaryTargets` in `schema.prisma` includes `linux-musl-openssl-3.0.x`
-- Regenerate Prisma Client: `npx prisma generate`
+See `prisma/schema.prisma` for the current database schema.
 
-## Important Notes
+Main models:
+- `User` - User accounts
+- `Client` - Client profiles
+- `Professional` - Professional profiles
+- `Trade` - Service categories
+- `ProfessionalTrade` - Professional-Trade relationship
+- `Request` - Service requests
+- `RequestInterest` - Professional interests in public requests
+- `Review` - Reviews and ratings
+- `File` - Uploaded files
+- `Contact` - Contact requests
 
-- ✅ **Always** create migrations before making changes in production
-- ✅ **Never** edit migrations that have already been applied
-- ✅ **Always** test migrations in development first
-- ❌ **Never** use `prisma db push` in production (only for quick prototyping)
+---
+
+*Last Updated: December 2024*

@@ -1,61 +1,63 @@
-# Domain Model - Especialistas
+# Domain Model - Specialist
+
+> Updated December 2024 - Reflects current bounded contexts architecture
 
 ## Bounded Contexts
 
-### 1. User Management Context
-**Purpose**: Manages user identity, authentication, and roles.
+### 1. Identity Context
+**Purpose**: Manages user identity and authentication.
 
 **Aggregate Root**: `User`
 
 **Entities**:
-- `User` - Base user entity with role (CLIENT | PROFESSIONAL | ADMIN)
+- `User` - Base user with authentication data
 
-**Value Objects**:
-- `Email`
-- `Phone`
-
-**Domain Services**:
-- `UserRegistrationService`
-- `AuthenticationService`
+**Key Fields**:
+- email, password (optional for OAuth)
+- firstName, lastName, phone
+- authProvider: LOCAL | GOOGLE | FACEBOOK
+- hasClientProfile, hasProfessionalProfile (flags)
+- isAdmin, status
 
 ---
 
-### 2. Service Context
-**Purpose**: Manages professionals, trades, and service requests.
+### 2. Profiles Context
+**Purpose**: Manages business profiles (Client and Professional).
 
 **Aggregate Roots**:
-- `Professional` - Professional profile
-- `Trade` - Service category (Electrician, Plumber, etc.)
-- `Request` - Service request from client to professional
-
-**Entities**:
-- `Professional` - Belongs to User and Trade
+- `Client` - Client profile (can create requests)
+- `Professional` - Professional profile (can receive work)
 - `Trade` - Service category
-- `Request` - Service request
 
-**Value Objects**:
-- `Zone` (location)
-- `ServiceDescription`
-
-**Domain Services**:
-- `ProfessionalRegistrationService`
-- `RequestManagementService`
+**Key Relationships**:
+- User 1:0..1 Client
+- User 1:0..1 Professional
+- Professional N:M Trade
 
 ---
 
-### 3. Reputation Context
-**Purpose**: Manages reviews, ratings, and feedback.
+### 3. Requests Context
+**Purpose**: Manages service requests lifecycle.
+
+**Aggregate Roots**:
+- `Request` - Service request (public or direct)
+- `RequestInterest` - Professional interest in public request
+
+**Request Types**:
+- **Direct** (isPublic: false) - Client → specific Professional
+- **Public** (isPublic: true) - Client → any Professional (via interests)
+
+---
+
+### 4. Reputation Context
+**Purpose**: Reviews and ratings system.
 
 **Aggregate Root**: `Review`
 
-**Entities**:
-- `Review` - Links User (reviewer) with Professional
-
-**Value Objects**:
-- `Rating` (1-5)
-
-**Domain Services**:
-- `RatingCalculationService`
+**Rules**:
+- Only after Request is DONE
+- One Review per Request
+- Updates Professional's averageRating
 
 ---
 
@@ -63,69 +65,86 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              USER MANAGEMENT CONTEXT                        │
+│                      IDENTITY CONTEXT                        │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  User (Aggregate Root)                                      │
+│  User                                                        │
 │  ├── id: UUID                                               │
-│  ├── email: Email (VO)                                      │
-│  ├── password: string                                       │
-│  ├── firstName: string                                       │
-│  ├── lastName: string                                       │
-│  ├── phone: Phone? (VO)                                      │
-│  ├── role: 'CLIENT' | 'PROFESSIONAL' | 'ADMIN'             │
-│  ├── status: 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'BANNED'  │
-│  └── createdAt, updatedAt                                    │
+│  ├── email: string (unique)                                 │
+│  ├── password: string | null (OAuth users)                  │
+│  ├── firstName, lastName: string                            │
+│  ├── phone: string | null                                   │
+│  ├── authProvider: LOCAL | GOOGLE | FACEBOOK                │
+│  ├── hasClientProfile: boolean                              │
+│  ├── hasProfessionalProfile: boolean                        │
+│  ├── isAdmin: boolean                                       │
+│  └── status: PENDING | ACTIVE | SUSPENDED | BANNED          │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
-                            │
-                            │ 1:1 (if role = PROFESSIONAL)
-                            ▼
+                           │
+           ┌───────────────┼───────────────┐
+           │ 1:0..1        │               │ 1:0..1
+           ▼               │               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    SERVICE CONTEXT                            │
+│                      PROFILES CONTEXT                        │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  Trade (Aggregate Root)                                      │
-│  ├── id: UUID                                               │
-│  ├── name: string (e.g., "Electrician", "Plumber")         │
-│  ├── category?: string                                       │
-│  └── createdAt, updatedAt                                    │
+│  Client                    Professional                      │
+│  ├── id: UUID              ├── id: UUID                     │
+│  ├── userId: FK            ├── userId: FK                   │
+│  └── createdAt             ├── trades: Trade[]              │
+│                            ├── description: string          │
+│       Trade                ├── experienceYears: number      │
+│       ├── id: UUID         ├── status: ProfessionalStatus   │
+│       ├── name             ├── city, zone, address          │
+│       ├── category         ├── whatsapp, website            │
+│       └── description      ├── gallery: string[]            │
+│                            ├── averageRating: number        │
+│                            └── totalReviews: number         │
 │                                                              │
-│  Professional (Aggregate Root)                              │
-│  ├── id: UUID                                               │
-│  ├── userId: UUID (FK to User)                              │
-│  ├── tradeId: UUID (FK to Trade)                            │
-│  ├── description?: string                                    │
-│  ├── experienceYears?: number                                │
-│  ├── zone?: string                                          │
-│  ├── active: boolean                                        │
-│  ├── averageRating: number                                  │
-│  ├── totalReviews: number                                   │
-│  └── createdAt, updatedAt                                   │
+└─────────────────────────────────────────────────────────────┘
+           │                               │
+           │ creates                       │ receives
+           ▼                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      REQUESTS CONTEXT                        │
+├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  Request (Aggregate Root)                                   │
+│  Request                                                     │
 │  ├── id: UUID                                               │
-│  ├── clientId: UUID (FK to User)                            │
-│  ├── professionalId: UUID (FK to Professional)              │
+│  ├── clientId: FK → Client                                  │
+│  ├── professionalId: FK → Professional | null               │
+│  ├── tradeId: FK → Trade | null                             │
+│  ├── isPublic: boolean                                      │
 │  ├── description: string                                     │
-│  ├── status: 'PENDING' | 'ACCEPTED' | 'DONE' | 'CANCELLED'│
+│  ├── address, availability                                   │
+│  ├── photos: string[]                                        │
+│  ├── status: PENDING | ACCEPTED | IN_PROGRESS | DONE | CANCEL│
+│  ├── quoteAmount, quoteNotes                                │
 │  └── createdAt, updatedAt                                   │
 │                                                              │
+│  RequestInterest (only for public requests)                 │
+│  ├── id: UUID                                               │
+│  ├── requestId: FK → Request                                │
+│  ├── professionalId: FK → Professional                      │
+│  ├── message: string | null                                 │
+│  └── createdAt                                              │
+│                                                              │
 └─────────────────────────────────────────────────────────────┘
-                            │
-                            │ N:1
-                            ▼
+                           │
+                           │ after DONE
+                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  REPUTATION CONTEXT                          │
+│                     REPUTATION CONTEXT                       │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  Review (Aggregate Root)                                     │
+│  Review                                                      │
 │  ├── id: UUID                                               │
-│  ├── reviewerId: UUID (FK to User)                         │
-│  ├── professionalId: UUID (FK to Professional)              │
-│  ├── requestId?: UUID (FK to Request) - optional           │
-│  ├── rating: Rating (VO) - 1 to 5                           │
-│  ├── comment?: string                                        │
+│  ├── requestId: FK → Request                                │
+│  ├── reviewerId: FK → User                                  │
+│  ├── professionalId: FK → Professional                      │
+│  ├── rating: 1-5                                            │
+│  ├── comment: string                                        │
 │  └── createdAt, updatedAt                                   │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -133,75 +152,42 @@
 
 ## Business Rules
 
-### User Management
-- A `User` with role `PROFESSIONAL` must have exactly one `Professional` profile
-- A `User` with role `CLIENT` cannot have a `Professional` profile
-- A `User` with role `ADMIN` has elevated permissions but no special entity
+### Identity
+- Email must be unique
+- OAuth users may not have password
+- User can have 0, 1, or both profiles (Client AND Professional)
 
-### Service Context
-- A `Professional` must belong to at least one `Trade`
-- A `Request` can only be accepted by one `Professional`
-- A `Request` must have a `clientId` (User with role CLIENT)
-- A `Request` must have a `professionalId` (Professional)
+### Profiles
+- Professional must have at least one Trade
+- Professional status: PENDING_VERIFICATION → VERIFIED | REJECTED
+- Only VERIFIED professionals appear in search
 
-### Reputation Context
-- A `Review` can only be created if there's a completed `Request` between the parties (optional for MVP)
-- A `Review` cannot be created by a Professional reviewing themselves
-- A `Review` rating must be between 1 and 5
-- The `averageRating` of a `Professional` is calculated from all `Review` ratings
+### Requests
+- Direct Request: professionalId required, tradeId optional
+- Public Request: tradeId required, professionalId null initially
+- Only client can accept quote
+- Only assigned professional can update status
 
-## Context Boundaries
-
-Each bounded context:
-- Has its own domain entities
-- Has its own repositories (interfaces in domain, implementations in infrastructure)
-- Has its own application services
-- Can communicate with other contexts through application services (not directly)
+### Reputation
+- Review only after Request status = DONE
+- One Review per Request
+- Review updates Professional's averageRating
 
 ## Module Structure
 
 ```
 src/
-├── user-management/          # User Management Context
-│   ├── domain/
-│   │   ├── entities/
-│   │   │   └── user.entity.ts
-│   │   ├── value-objects/
-│   │   │   ├── email.vo.ts
-│   │   │   └── phone.vo.ts
-│   │   └── repositories/
-│   │       └── user.repository.ts
-│   ├── application/
-│   │   ├── services/
-│   │   │   ├── user-registration.service.ts
-│   │   │   └── authentication.service.ts
-│   │   └── dto/
-│   └── infrastructure/
-│       └── repositories/
-│           └── prisma-user.repository.ts
-│
-├── service/                   # Service Context
-│   ├── domain/
-│   │   ├── entities/
-│   │   │   ├── professional.entity.ts
-│   │   │   ├── trade.entity.ts
-│   │   │   └── request.entity.ts
-│   │   └── repositories/
-│   │       ├── professional.repository.ts
-│   │       ├── trade.repository.ts
-│   │       └── request.repository.ts
-│   ├── application/
-│   └── infrastructure/
-│
-└── reputation/                # Reputation Context
-    ├── domain/
-    │   ├── entities/
-    │   │   └── review.entity.ts
-    │   ├── value-objects/
-    │   │   └── rating.vo.ts
-    │   └── repositories/
-    │       └── review.repository.ts
-    ├── application/
-    └── infrastructure/
+├── identity/           # User auth & management
+├── profiles/           # Client, Professional, Trade
+├── requests/           # Request, RequestInterest
+├── reputation/         # Review
+├── storage/            # File management
+├── admin/              # Admin operations
+├── contact/            # Contact requests
+├── health/             # Health checks
+└── shared/             # Common utilities
 ```
 
+---
+
+*Last Updated: December 2024*
