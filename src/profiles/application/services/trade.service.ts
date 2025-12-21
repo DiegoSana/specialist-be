@@ -11,6 +11,7 @@ import {
 import { TradeEntity } from '../../domain/entities/trade.entity';
 import { CreateTradeDto } from '../dto/create-trade.dto';
 import { UpdateTradeDto } from '../dto/update-trade.dto';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class TradeService {
@@ -40,11 +41,14 @@ export class TradeService {
       throw new ConflictException('Trade with this name already exists');
     }
 
-    return this.tradeRepository.create({
-      name: createDto.name,
-      category: createDto.category || null,
-      description: createDto.description || null,
-    });
+    return this.tradeRepository.save(
+      TradeEntity.create({
+        id: randomUUID(),
+        name: createDto.name,
+        category: createDto.category || null,
+        description: createDto.description || null,
+      }),
+    );
   }
 
   async update(id: string, updateDto: UpdateTradeDto): Promise<TradeEntity> {
@@ -60,6 +64,12 @@ export class TradeService {
       }
     }
 
-    return this.tradeRepository.update(id, updateDto);
+    return this.tradeRepository.save(
+      trade.withChanges({
+        name: updateDto.name,
+        category: updateDto.category,
+        description: updateDto.description,
+      }),
+    );
   }
 }

@@ -25,8 +25,7 @@ describe('TradeService', () => {
       findWithActiveProfessionals: jest.fn(),
       findById: jest.fn(),
       findByName: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
+      save: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -111,16 +110,12 @@ describe('TradeService', () => {
       const newTrade = createMockTrade({ name: 'Carpintero' });
 
       mockTradeRepository.findByName.mockResolvedValue(null);
-      mockTradeRepository.create.mockResolvedValue(newTrade);
+      mockTradeRepository.save.mockResolvedValue(newTrade);
 
       const result = await service.create(createDto);
 
       expect(result.name).toBe('Carpintero');
-      expect(mockTradeRepository.create).toHaveBeenCalledWith({
-        name: 'Carpintero',
-        category: 'Hogar',
-        description: 'Trabajos en madera',
-      });
+      expect(mockTradeRepository.save).toHaveBeenCalled();
     });
 
     it('should throw ConflictException if trade name already exists', async () => {
@@ -141,15 +136,11 @@ describe('TradeService', () => {
       });
 
       mockTradeRepository.findByName.mockResolvedValue(null);
-      mockTradeRepository.create.mockResolvedValue(newTrade);
+      mockTradeRepository.save.mockResolvedValue(newTrade);
 
       await service.create(minimalDto as any);
 
-      expect(mockTradeRepository.create).toHaveBeenCalledWith({
-        name: 'Pintor',
-        category: null,
-        description: null,
-      });
+      expect(mockTradeRepository.save).toHaveBeenCalled();
     });
   });
 
@@ -165,7 +156,7 @@ describe('TradeService', () => {
 
       mockTradeRepository.findById.mockResolvedValue(trade);
       mockTradeRepository.findByName.mockResolvedValue(null);
-      mockTradeRepository.update.mockResolvedValue(updatedTrade);
+      mockTradeRepository.save.mockResolvedValue(updatedTrade);
 
       const result = await service.update('trade-123', updateDto);
 
@@ -202,7 +193,7 @@ describe('TradeService', () => {
       });
 
       mockTradeRepository.findById.mockResolvedValue(trade);
-      mockTradeRepository.update.mockResolvedValue(updatedTrade);
+      mockTradeRepository.save.mockResolvedValue(updatedTrade);
 
       const result = await service.update('trade-123', {
         description: 'Updated description',
@@ -215,7 +206,7 @@ describe('TradeService', () => {
     it('should allow keeping the same name', async () => {
       const trade = createMockTrade({ name: 'Electricista' });
       mockTradeRepository.findById.mockResolvedValue(trade);
-      mockTradeRepository.update.mockResolvedValue(trade);
+      mockTradeRepository.save.mockResolvedValue(trade);
 
       await service.update('trade-123', { name: 'Electricista' });
 

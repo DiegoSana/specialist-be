@@ -22,6 +22,14 @@ export class PrismaTradeMapper {
     };
   }
 
+  static toPersistenceSave(trade: TradeEntity): Record<string, unknown> {
+    return {
+      name: trade.name,
+      category: trade.category,
+      description: trade.description,
+    };
+  }
+
   static toPersistenceUpdate(
     partial: Partial<TradeEntity>,
   ): Record<string, unknown> {

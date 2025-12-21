@@ -56,26 +56,20 @@ export class PrismaTradeRepository implements TradeRepository {
     return trades.map((trade) => PrismaTradeMapper.toDomain(trade));
   }
 
-  async create(
-    tradeData: Omit<TradeEntity, 'id' | 'createdAt' | 'updatedAt'>,
-  ): Promise<TradeEntity> {
-    const trade = await this.prisma.trade.create({
-      data: {
-        ...PrismaTradeMapper.toPersistenceCreate(tradeData),
+  async save(trade: TradeEntity): Promise<TradeEntity> {
+    const persistence = PrismaTradeMapper.toPersistenceSave(trade);
+
+    const saved = await this.prisma.trade.upsert({
+      where: { id: trade.id },
+      create: {
+        id: trade.id,
+        ...(persistence as any),
+      },
+      update: {
+        ...(persistence as any),
       },
     });
 
-    return PrismaTradeMapper.toDomain(trade);
-  }
-
-  async update(id: string, data: Partial<TradeEntity>): Promise<TradeEntity> {
-    const trade = await this.prisma.trade.update({
-      where: { id },
-      data: {
-        ...PrismaTradeMapper.toPersistenceUpdate(data),
-      },
-    });
-
-    return PrismaTradeMapper.toDomain(trade);
+    return PrismaTradeMapper.toDomain(saved);
   }
 }
