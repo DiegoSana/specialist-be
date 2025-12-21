@@ -132,3 +132,4 @@ See the full documentation in [`docs/`](./docs/README.md):
 - [Domain Model](./docs/architecture/DOMAIN_MODEL.md)
 - [Docker Guide](./docs/guides/DOCKER.md)
 - [Migration Guide](./docs/guides/MIGRATION_GUIDE.md)
+
