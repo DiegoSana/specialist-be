@@ -44,7 +44,7 @@ describe('RequestInterestService', () => {
 
     mockRequestRepository = {
       findById: jest.fn(),
-      update: jest.fn(),
+      save: jest.fn(),
     };
 
     mockProfessionalRepository = {
@@ -380,7 +380,7 @@ describe('RequestInterestService', () => {
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         interest,
       );
-      mockRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockRequestRepository.save.mockResolvedValue(updatedRequest);
       mockRequestInterestRepository.deleteAllByRequestId.mockResolvedValue(
         undefined,
       );

@@ -203,11 +203,13 @@ export class RequestInterestService {
 
     // Assign the professional and change status to ACCEPTED
     // Also mark as no longer public
-    const updatedRequest = await this.requestRepository.update(requestId, {
-      professionalId,
-      status: RequestStatus.ACCEPTED,
-      isPublic: false,
-    } as any);
+    const updatedRequest = await this.requestRepository.save(
+      request.withChanges({
+        professionalId,
+        status: RequestStatus.ACCEPTED,
+        isPublic: false,
+      }),
+    );
 
     // Clean up all interests for this request
     await this.requestInterestRepository.deleteAllByRequestId(requestId);

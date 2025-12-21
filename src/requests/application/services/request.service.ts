@@ -13,6 +13,7 @@ import { RequestEntity } from '../../domain/entities/request.entity';
 import { CreateRequestDto } from '../dto/create-request.dto';
 import { UpdateRequestDto } from '../dto/update-request.dto';
 import { RequestStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 // Cross-context dependencies
 import {
   ProfessionalRepository,
@@ -69,19 +70,19 @@ export class RequestService {
       throw new BadRequestException('tradeId is required for public requests');
     }
 
-    return this.requestRepository.create({
-      clientId,
-      professionalId: isPublic ? null : createDto.professionalId!,
-      tradeId: createDto.tradeId || null,
-      isPublic,
-      description: createDto.description,
-      address: createDto.address || null,
-      availability: createDto.availability || null,
-      photos: createDto.photos || [],
-      status: RequestStatus.PENDING,
-      quoteAmount: null,
-      quoteNotes: null,
-    });
+    return this.requestRepository.save(
+      RequestEntity.createPending({
+        id: randomUUID(),
+        clientId,
+        professionalId: isPublic ? null : createDto.professionalId!,
+        tradeId: createDto.tradeId || null,
+        isPublic,
+        description: createDto.description,
+        address: createDto.address || null,
+        availability: createDto.availability || null,
+        photos: createDto.photos || [],
+      }),
+    );
   }
 
   async findById(id: string): Promise<RequestEntity> {
@@ -133,11 +134,13 @@ export class RequestService {
       );
     }
 
-    return this.requestRepository.update(requestId, {
-      status: updateDto.status,
-      quoteAmount: updateDto.quoteAmount,
-      quoteNotes: updateDto.quoteNotes,
-    });
+    return this.requestRepository.save(
+      request.withChanges({
+        status: updateDto.status,
+        quoteAmount: updateDto.quoteAmount,
+        quoteNotes: updateDto.quoteNotes,
+      }),
+    );
   }
 
   async acceptQuote(requestId: string, userId: string): Promise<RequestEntity> {
@@ -160,9 +163,11 @@ export class RequestService {
       );
     }
 
-    return this.requestRepository.update(requestId, {
-      status: RequestStatus.ACCEPTED,
-    });
+    return this.requestRepository.save(
+      request.withChanges({
+        status: RequestStatus.ACCEPTED,
+      }),
+    );
   }
 
   async updateStatusByClient(
@@ -202,9 +207,11 @@ export class RequestService {
       }
     }
 
-    return this.requestRepository.update(requestId, {
-      status: updateDto.status,
-    });
+    return this.requestRepository.save(
+      request.withChanges({
+        status: updateDto.status,
+      }),
+    );
   }
 
   async addRequestPhoto(
@@ -255,9 +262,11 @@ export class RequestService {
 
     const updatedPhotos = [...currentPhotos, url];
 
-    return this.requestRepository.update(requestId, {
-      photos: updatedPhotos,
-    });
+    return this.requestRepository.save(
+      request.withChanges({
+        photos: updatedPhotos,
+      }),
+    );
   }
 
   async removeRequestPhoto(
@@ -290,9 +299,11 @@ export class RequestService {
     const currentPhotos = request.photos || [];
     const updatedPhotos = currentPhotos.filter((photo) => photo !== url);
 
-    return this.requestRepository.update(requestId, {
-      photos: updatedPhotos,
-    });
+    return this.requestRepository.save(
+      request.withChanges({
+        photos: updatedPhotos,
+      }),
+    );
   }
 
   async rateClient(
@@ -333,9 +344,11 @@ export class RequestService {
       throw new BadRequestException('Rating must be between 1 and 5');
     }
 
-    return this.requestRepository.update(requestId, {
-      clientRating: rating,
-      clientRatingComment: comment || null,
-    });
+    return this.requestRepository.save(
+      request.withChanges({
+        clientRating: rating,
+        clientRatingComment: comment || null,
+      }),
+    );
   }
 }

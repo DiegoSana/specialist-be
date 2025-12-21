@@ -9,37 +9,41 @@ import { PrismaRequestMapper } from '../mappers/request.prisma-mapper';
 export class PrismaRequestRepository implements RequestRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findById(id: string): Promise<RequestEntity | null> {
-    const request = await this.prisma.request.findUnique({
-      where: { id },
+  private readonly fullInclude = {
+    client: {
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        profilePictureUrl: true,
+      },
+    },
+    professional: {
       include: {
-        client: {
+        trades: {
+          include: {
+            trade: true,
+          },
+        },
+        user: {
           select: {
             id: true,
             firstName: true,
             lastName: true,
             email: true,
-            profilePictureUrl: true,
           },
         },
-        professional: {
-          include: {
-            trades: {
-              include: {
-                trade: true,
-              },
-            },
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
-        trade: true,
+      },
+    },
+    trade: true,
+  } as const;
+
+  async findById(id: string): Promise<RequestEntity | null> {
+    const request = await this.prisma.request.findUnique({
+      where: { id },
+      include: {
+        ...this.fullInclude,
       },
     });
 
@@ -52,33 +56,7 @@ export class PrismaRequestRepository implements RequestRepository {
     const requests = await this.prisma.request.findMany({
       where: { clientId },
       include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            profilePictureUrl: true,
-          },
-        },
-        professional: {
-          include: {
-            trades: {
-              include: {
-                trade: true,
-              },
-            },
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
-        trade: true,
+        ...this.fullInclude,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -90,33 +68,7 @@ export class PrismaRequestRepository implements RequestRepository {
     const requests = await this.prisma.request.findMany({
       where: { professionalId },
       include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            profilePictureUrl: true,
-          },
-        },
-        professional: {
-          include: {
-            trades: {
-              include: {
-                trade: true,
-              },
-            },
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
-        trade: true,
+        ...this.fullInclude,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -192,71 +144,36 @@ export class PrismaRequestRepository implements RequestRepository {
     return requests.map((r) => PrismaRequestMapper.toDomain(r));
   }
 
-  async create(requestData: {
-    clientId: string;
-    professionalId: string | null;
-    tradeId: string | null;
-    isPublic: boolean;
-    description: string;
-    address: string | null;
-    availability: string | null;
-    photos: string[];
-    status: RequestStatus;
-    quoteAmount: number | null;
-    quoteNotes: string | null;
-  }): Promise<RequestEntity> {
-    const request = await this.prisma.request.create({
-      data: {
-        ...PrismaRequestMapper.toPersistenceCreate(requestData),
-      },
-      include: {
-        trade: true,
-      },
+  async save(request: RequestEntity): Promise<RequestEntity> {
+    const createData: any = {
+      id: request.id,
+      clientId: request.clientId,
+      professionalId: request.professionalId,
+      tradeId: request.tradeId,
+      isPublic: request.isPublic,
+      description: request.description,
+      address: request.address,
+      availability: request.availability,
+      photos: request.photos || [],
+      status: request.status,
+      quoteAmount: request.quoteAmount,
+      quoteNotes: request.quoteNotes,
+      clientRating: request.clientRating,
+      clientRatingComment: request.clientRatingComment,
+    };
+
+    // No permitir cambiar el "owner" de la request vía save/update.
+    const updateData = { ...createData };
+    delete updateData.id;
+    delete updateData.clientId;
+
+    const saved = await this.prisma.request.upsert({
+      where: { id: request.id },
+      create: createData,
+      update: updateData,
+      include: this.fullInclude,
     });
 
-    return PrismaRequestMapper.toDomain(request);
-  }
-
-  async update(
-    id: string,
-    data: Partial<RequestEntity>,
-  ): Promise<RequestEntity> {
-    const updateData = PrismaRequestMapper.toPersistenceUpdate(data);
-
-    const request = await this.prisma.request.update({
-      where: { id },
-      data: updateData,
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            profilePictureUrl: true,
-          },
-        },
-        professional: {
-          include: {
-            trades: {
-              include: {
-                trade: true,
-              },
-            },
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
-        trade: true,
-      },
-    });
-
-    return PrismaRequestMapper.toDomain(request);
+    return PrismaRequestMapper.toDomain(saved);
   }
 }

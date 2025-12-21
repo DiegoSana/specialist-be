@@ -1,5 +1,4 @@
 import { RequestEntity } from '../entities/request.entity';
-import { RequestStatus } from '@prisma/client';
 
 export interface RequestRepository {
   findById(id: string): Promise<RequestEntity | null>;
@@ -11,20 +10,12 @@ export interface RequestRepository {
     city?: string,
     zone?: string,
   ): Promise<RequestEntity[]>;
-  create(request: {
-    clientId: string;
-    professionalId: string | null;
-    tradeId: string | null;
-    isPublic: boolean;
-    description: string;
-    address: string | null;
-    availability: string | null;
-    photos: string[];
-    status: RequestStatus;
-    quoteAmount: number | null;
-    quoteNotes: string | null;
-  }): Promise<RequestEntity>;
-  update(id: string, data: Partial<RequestEntity>): Promise<RequestEntity>;
+
+  /**
+   * Opción A (colección de agregados): persiste el aggregate completo.
+   * La implementación decide create vs update.
+   */
+  save(request: RequestEntity): Promise<RequestEntity>;
 }
 
 // Token for dependency injection
