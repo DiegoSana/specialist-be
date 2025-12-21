@@ -17,4 +17,3 @@ export class AuthResponseDto {
     isAdmin: boolean;
   };
 }
-

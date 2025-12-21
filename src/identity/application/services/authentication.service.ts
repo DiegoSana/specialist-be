@@ -1,40 +1,55 @@
-import { Injectable, UnauthorizedException, ConflictException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  Inject,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
-import { UserRepository, USER_REPOSITORY } from '../../domain/repositories/user.repository';
+import {
+  UserRepository,
+  USER_REPOSITORY,
+} from '../../domain/repositories/user.repository';
 import { UserEntity } from '../../domain/entities/user.entity';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { UserStatus, AuthProvider } from '@prisma/client';
-// Cross-context dependency - using Service instead of Repository (DDD best practice)
+import { randomUUID } from 'crypto';
 import { ClientService } from '../../../profiles/application/services/client.service';
+import { forwardRef } from '@nestjs/common';
 
 @Injectable()
 export class AuthenticationService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    @Inject(forwardRef(() => ClientService))
     private readonly clientService: ClientService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const existingUser = await this.userRepository.findByEmail(registerDto.email);
+    const existingUser = await this.userRepository.findByEmail(
+      registerDto.email,
+    );
     if (existingUser) {
       throw new ConflictException('Email already registered');
     }
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    const user = await this.userRepository.create({
-      email: registerDto.email,
-      password: hashedPassword,
-      firstName: registerDto.firstName,
-      lastName: registerDto.lastName,
-      phone: registerDto.phone || null,
-      status: UserStatus.PENDING,
-    });
+    const user = await this.userRepository.save(
+      UserEntity.createLocal({
+        id: randomUUID(),
+        email: registerDto.email,
+        password: hashedPassword,
+        firstName: registerDto.firstName,
+        lastName: registerDto.lastName,
+        phone: registerDto.phone || null,
+        status: UserStatus.PENDING,
+      }),
+    );
 
     // Only create client profile if not registering as professional
     // If registering as professional, client profile will not be created
@@ -71,7 +86,10 @@ export class AuthenticationService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -101,7 +119,10 @@ export class AuthenticationService {
     };
   }
 
-  async validateUser(email: string, password: string): Promise<UserEntity | null> {
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<UserEntity | null> {
     const user = await this.userRepository.findByEmail(email, true);
     if (!user) {
       return null;
@@ -136,31 +157,36 @@ export class AuthenticationService {
 
     if (!user) {
       // Check if user exists with this email
-      const existingUser = await this.userRepository.findByEmail(googleUser.email, true);
-      
+      const existingUser = await this.userRepository.findByEmail(
+        googleUser.email,
+        true,
+      );
+
       if (existingUser) {
-        // Link Google account to existing user
-        user = await this.userRepository.update(existingUser.id, {
-          googleId: googleUser.googleId,
-          profilePictureUrl: existingUser.profilePictureUrl || googleUser.profilePictureUrl,
-        });
-        // Reload to get updated data
+        // Link Google account to existing user (aggregate completo)
+        await this.userRepository.save(
+          existingUser.linkGoogle(
+            googleUser.googleId,
+            googleUser.profilePictureUrl,
+          ),
+        );
         user = await this.userRepository.findById(existingUser.id, true);
       } else {
-        // Create new user with Google account (without profile - user must choose)
-        user = await this.userRepository.create({
-          email: googleUser.email,
-          password: null, // No password for social login
-          firstName: googleUser.firstName,
-          lastName: googleUser.lastName,
-          profilePictureUrl: googleUser.profilePictureUrl,
-          googleId: googleUser.googleId,
-          authProvider: AuthProvider.GOOGLE,
-          status: UserStatus.ACTIVE, // Auto-activate Google users
-        });
+        // Create new user with Google account (no profiles by default)
+        user = await this.userRepository.save(
+          UserEntity.createOAuth({
+            id: randomUUID(),
+            email: googleUser.email,
+            firstName: googleUser.firstName,
+            lastName: googleUser.lastName,
+            profilePictureUrl: googleUser.profilePictureUrl,
+            provider: AuthProvider.GOOGLE,
+            externalId: googleUser.googleId,
+            status: UserStatus.ACTIVE,
+          }),
+        );
 
         // Note: No profile is created here - user must complete profile setup
-        // Reload user (will have no profiles)
         user = await this.userRepository.findById(user.id, true);
       }
     }
@@ -175,7 +201,10 @@ export class AuthenticationService {
     }
 
     const token = this.generateToken(user);
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
 
     return {
       accessToken: token,
@@ -203,39 +232,49 @@ export class AuthenticationService {
     profilePictureUrl: string | null;
   }) {
     // Check if user already exists with this Facebook ID
-    let user = await this.userRepository.findByFacebookId(facebookUser.facebookId);
+    let user = await this.userRepository.findByFacebookId(
+      facebookUser.facebookId,
+    );
 
     if (!user) {
       // If we have an email, check if user exists with this email
       if (facebookUser.email) {
-        const existingUser = await this.userRepository.findByEmail(facebookUser.email, true);
-        
+        const existingUser = await this.userRepository.findByEmail(
+          facebookUser.email,
+          true,
+        );
+
         if (existingUser) {
-          // Link Facebook account to existing user
-          user = await this.userRepository.update(existingUser.id, {
-            facebookId: facebookUser.facebookId,
-            profilePictureUrl: existingUser.profilePictureUrl || facebookUser.profilePictureUrl,
-          });
-          // Reload to get updated data
+          // Link Facebook account to existing user (aggregate completo)
+          await this.userRepository.save(
+            existingUser.linkFacebook(
+              facebookUser.facebookId,
+              facebookUser.profilePictureUrl,
+            ),
+          );
           user = await this.userRepository.findById(existingUser.id, true);
         }
       }
-      
+
       if (!user) {
         // Create new user with Facebook account (without profile - user must choose)
         // Generate a placeholder email if Facebook didn't provide one
-        const email = facebookUser.email || `fb_${facebookUser.facebookId}@placeholder.local`;
-        
-        user = await this.userRepository.create({
-          email,
-          password: null, // No password for social login
-          firstName: facebookUser.firstName || 'Usuario',
-          lastName: facebookUser.lastName || 'Facebook',
-          profilePictureUrl: facebookUser.profilePictureUrl,
-          facebookId: facebookUser.facebookId,
-          authProvider: AuthProvider.FACEBOOK,
-          status: UserStatus.ACTIVE, // Auto-activate Facebook users
-        });
+        const email =
+          facebookUser.email ||
+          `fb_${facebookUser.facebookId}@placeholder.local`;
+
+        user = await this.userRepository.save(
+          UserEntity.createOAuth({
+            id: randomUUID(),
+            email,
+            firstName: facebookUser.firstName || 'Usuario',
+            lastName: facebookUser.lastName || 'Facebook',
+            profilePictureUrl: facebookUser.profilePictureUrl,
+            provider: AuthProvider.FACEBOOK,
+            externalId: facebookUser.facebookId,
+            status: UserStatus.ACTIVE,
+          }),
+        );
 
         // Note: No profile is created here - user must complete profile setup
         // Reload user (will have no profiles)
@@ -253,7 +292,10 @@ export class AuthenticationService {
     }
 
     const token = this.generateToken(user);
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
 
     return {
       accessToken: token,

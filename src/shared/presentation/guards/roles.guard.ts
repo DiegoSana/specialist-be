@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '../../domain/value-objects/user-role.vo';
 import { UserEntity } from '../../../identity/domain/entities/user.entity';
@@ -10,10 +15,10 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (!requiredRoles) {
       return true;
@@ -27,7 +32,9 @@ export class RolesGuard implements CanActivate {
     }
 
     // Only ADMIN role is supported now
-    const hasRole = requiredRoles.some((role) => role === UserRole.ADMIN && user.isAdminUser());
+    const hasRole = requiredRoles.some(
+      (role) => role === UserRole.ADMIN && user.isAdminUser(),
+    );
 
     if (!hasRole) {
       throw new ForbiddenException('Insufficient permissions');

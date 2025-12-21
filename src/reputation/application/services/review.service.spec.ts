@@ -10,7 +10,11 @@ import { REVIEW_REPOSITORY } from '../../domain/repositories/review.repository';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { RequestService } from '../../../requests/application/services/request.service';
 import { UserService } from '../../../identity/application/services/user.service';
-import { createMockUser, createMockProfessional, createMockRequest } from '../../../__mocks__/test-utils';
+import {
+  createMockUser,
+  createMockProfessional,
+  createMockRequest,
+} from '../../../__mocks__/test-utils';
 import { ReviewEntity } from '../../domain/entities/review.entity';
 import { RequestStatus } from '@prisma/client';
 
@@ -39,13 +43,12 @@ describe('ReviewService', () => {
       findByProfessionalId: jest.fn(),
       findById: jest.fn(),
       findByRequestId: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
+      save: jest.fn(),
       delete: jest.fn(),
     };
 
     mockProfessionalService = {
-      findById: jest.fn(),
+      getByIdOrFail: jest.fn(),
       updateRating: jest.fn(),
     };
 
@@ -85,7 +88,9 @@ describe('ReviewService', () => {
       const result = await service.findByProfessionalId('prof-123');
 
       expect(result).toHaveLength(2);
-      expect(mockReviewRepository.findByProfessionalId).toHaveBeenCalledWith('prof-123');
+      expect(mockReviewRepository.findByProfessionalId).toHaveBeenCalledWith(
+        'prof-123',
+      );
     });
 
     it('should return empty array when no reviews', async () => {
@@ -110,7 +115,9 @@ describe('ReviewService', () => {
     it('should throw NotFoundException when review not found', async () => {
       mockReviewRepository.findById.mockResolvedValue(null);
 
-      await expect(service.findById('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -151,38 +158,50 @@ describe('ReviewService', () => {
       const review = createMockReview();
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.findById.mockResolvedValue(professional);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
       mockReviewRepository.findByRequestId.mockResolvedValue(null);
-      mockReviewRepository.create.mockResolvedValue(review);
+      mockReviewRepository.save.mockResolvedValue(review);
       mockReviewRepository.findByProfessionalId.mockResolvedValue([review]);
       mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       const result = await service.create('user-123', createDto);
 
       expect(result).toEqual(review);
-      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith('prof-123', 5, 1);
+      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith(
+        'prof-123',
+        5,
+        1,
+      );
     });
 
     it('should throw BadRequestException if user is not a client', async () => {
       const user = createMockUser({ hasClientProfile: false });
       mockUserService.findById.mockResolvedValue(user);
 
-      await expect(service.create('user-123', createDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-123', createDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if user not found', async () => {
       mockUserService.findById.mockResolvedValue(null);
 
-      await expect(service.create('user-123', createDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-123', createDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException if professional not found', async () => {
       const user = createMockUser({ hasClientProfile: true });
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.findById.mockRejectedValue(new NotFoundException('Professional not found'));
+      mockProfessionalService.getByIdOrFail.mockRejectedValue(
+        new NotFoundException('Professional not found'),
+      );
 
-      await expect(service.create('user-123', createDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create('user-123', createDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException if requestId is not provided', async () => {
@@ -190,11 +209,13 @@ describe('ReviewService', () => {
       const professional = createMockProfessional();
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.findById.mockResolvedValue(professional);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
 
       const dtoWithoutRequest = { ...createDto, requestId: undefined };
 
-      await expect(service.create('user-123', dtoWithoutRequest as any)).rejects.toThrow(BadRequestException);
+      await expect(
+        service.create('user-123', dtoWithoutRequest as any),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if request not found', async () => {
@@ -202,10 +223,14 @@ describe('ReviewService', () => {
       const professional = createMockProfessional();
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.findById.mockResolvedValue(professional);
-      mockRequestService.findById.mockRejectedValue(new NotFoundException('Request not found'));
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockRequestService.findById.mockRejectedValue(
+        new NotFoundException('Request not found'),
+      );
 
-      await expect(service.create('user-123', createDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create('user-123', createDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ForbiddenException if user is not request owner', async () => {
@@ -214,10 +239,12 @@ describe('ReviewService', () => {
       const request = createMockRequest({ clientId: 'other-user' });
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.findById.mockResolvedValue(professional);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
 
-      await expect(service.create('user-123', createDto)).rejects.toThrow(ForbiddenException);
+      await expect(service.create('user-123', createDto)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw BadRequestException if request is not completed', async () => {
@@ -229,10 +256,12 @@ describe('ReviewService', () => {
       });
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.findById.mockResolvedValue(professional);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
 
-      await expect(service.create('user-123', createDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-123', createDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw ConflictException if request already has a review', async () => {
@@ -245,11 +274,13 @@ describe('ReviewService', () => {
       const existingReview = createMockReview();
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.findById.mockResolvedValue(professional);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
       mockReviewRepository.findByRequestId.mockResolvedValue(existingReview);
 
-      await expect(service.create('user-123', createDto)).rejects.toThrow(ConflictException);
+      await expect(service.create('user-123', createDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should throw Error for invalid rating (value object validation)', async () => {
@@ -261,13 +292,15 @@ describe('ReviewService', () => {
       });
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.findById.mockResolvedValue(professional);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
       mockReviewRepository.findByRequestId.mockResolvedValue(null);
 
       const invalidDto = { ...createDto, rating: 6 };
 
-      await expect(service.create('user-123', invalidDto)).rejects.toThrow('Rating must be between 1 and 5');
+      await expect(service.create('user-123', invalidDto)).rejects.toThrow(
+        'Rating must be between 1 and 5',
+      );
     });
   });
 
@@ -279,11 +312,17 @@ describe('ReviewService', () => {
 
     it('should update review successfully', async () => {
       const review = createMockReview({ reviewerId: 'user-123' });
-      const updatedReview = createMockReview({ ...review, rating: 4, comment: 'Updated comment' });
+      const updatedReview = createMockReview({
+        ...review,
+        rating: 4,
+        comment: 'Updated comment',
+      });
 
       mockReviewRepository.findById.mockResolvedValue(review);
-      mockReviewRepository.update.mockResolvedValue(updatedReview);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue([updatedReview]);
+      mockReviewRepository.save.mockResolvedValue(updatedReview);
+      mockReviewRepository.findByProfessionalId.mockResolvedValue([
+        updatedReview,
+      ]);
       mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       const result = await service.update('review-123', 'user-123', updateDto);
@@ -295,14 +334,18 @@ describe('ReviewService', () => {
     it('should throw NotFoundException if review not found', async () => {
       mockReviewRepository.findById.mockResolvedValue(null);
 
-      await expect(service.update('non-existent', 'user-123', updateDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update('non-existent', 'user-123', updateDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ForbiddenException if user is not review owner', async () => {
       const review = createMockReview({ reviewerId: 'other-user' });
       mockReviewRepository.findById.mockResolvedValue(review);
 
-      await expect(service.update('review-123', 'user-123', updateDto)).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.update('review-123', 'user-123', updateDto),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should update only rating', async () => {
@@ -310,25 +353,34 @@ describe('ReviewService', () => {
       const updatedReview = createMockReview({ ...review, rating: 3 });
 
       mockReviewRepository.findById.mockResolvedValue(review);
-      mockReviewRepository.update.mockResolvedValue(updatedReview);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue([updatedReview]);
+      mockReviewRepository.save.mockResolvedValue(updatedReview);
+      mockReviewRepository.findByProfessionalId.mockResolvedValue([
+        updatedReview,
+      ]);
 
       await service.update('review-123', 'user-123', { rating: 3 });
 
-      expect(mockReviewRepository.update).toHaveBeenCalledWith('review-123', { rating: 3 });
+      expect(mockReviewRepository.save).toHaveBeenCalled();
     });
 
     it('should update only comment', async () => {
       const review = createMockReview({ reviewerId: 'user-123' });
-      const updatedReview = createMockReview({ ...review, comment: 'New comment' });
+      const updatedReview = createMockReview({
+        ...review,
+        comment: 'New comment',
+      });
 
       mockReviewRepository.findById.mockResolvedValue(review);
-      mockReviewRepository.update.mockResolvedValue(updatedReview);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue([updatedReview]);
+      mockReviewRepository.save.mockResolvedValue(updatedReview);
+      mockReviewRepository.findByProfessionalId.mockResolvedValue([
+        updatedReview,
+      ]);
 
-      await service.update('review-123', 'user-123', { comment: 'New comment' });
+      await service.update('review-123', 'user-123', {
+        comment: 'New comment',
+      });
 
-      expect(mockReviewRepository.update).toHaveBeenCalledWith('review-123', { comment: 'New comment' });
+      expect(mockReviewRepository.save).toHaveBeenCalled();
     });
   });
 
@@ -344,24 +396,35 @@ describe('ReviewService', () => {
       await service.delete('review-123', 'user-123');
 
       expect(mockReviewRepository.delete).toHaveBeenCalledWith('review-123');
-      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith('prof-123', 0, 0);
+      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith(
+        'prof-123',
+        0,
+        0,
+      );
     });
 
     it('should throw NotFoundException if review not found', async () => {
       mockReviewRepository.findById.mockResolvedValue(null);
 
-      await expect(service.delete('non-existent', 'user-123')).rejects.toThrow(NotFoundException);
+      await expect(service.delete('non-existent', 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ForbiddenException if user is not review owner', async () => {
       const review = createMockReview({ reviewerId: 'other-user' });
       mockReviewRepository.findById.mockResolvedValue(review);
 
-      await expect(service.delete('review-123', 'user-123')).rejects.toThrow(ForbiddenException);
+      await expect(service.delete('review-123', 'user-123')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should recalculate professional rating after delete', async () => {
-      const review = createMockReview({ reviewerId: 'user-123', professionalId: 'prof-123' });
+      const review = createMockReview({
+        reviewerId: 'user-123',
+        professionalId: 'prof-123',
+      });
       const remainingReviews = [
         createMockReview({ rating: 4 }),
         createMockReview({ rating: 5 }),
@@ -369,12 +432,17 @@ describe('ReviewService', () => {
 
       mockReviewRepository.findById.mockResolvedValue(review);
       mockReviewRepository.delete.mockResolvedValue(undefined);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue(remainingReviews);
+      mockReviewRepository.findByProfessionalId.mockResolvedValue(
+        remainingReviews,
+      );
 
       await service.delete('review-123', 'user-123');
 
-      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith('prof-123', 4.5, 2);
+      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith(
+        'prof-123',
+        4.5,
+        2,
+      );
     });
   });
 });
-

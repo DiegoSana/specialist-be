@@ -22,7 +22,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
     done: (error: any, user?: any) => void,
   ): Promise<any> {
     const { id, name, emails, photos } = profile;
-    
+
     const user = {
       facebookId: id,
       email: emails?.[0]?.value || null,
@@ -30,8 +30,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
       lastName: name?.familyName || '',
       profilePictureUrl: photos?.[0]?.value || null,
     };
-    
+
     done(null, user);
   }
 }
-

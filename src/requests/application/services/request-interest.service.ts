@@ -1,6 +1,19 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
-import { RequestInterestRepository, REQUEST_INTEREST_REPOSITORY } from '../../domain/repositories/request-interest.repository';
-import { RequestRepository, REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
+import {
+  RequestInterestRepository,
+  REQUEST_INTEREST_REPOSITORY,
+} from '../../domain/repositories/request-interest.repository';
+import {
+  RequestRepository,
+  REQUEST_REPOSITORY,
+} from '../../domain/repositories/request.repository';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
 import { RequestEntity } from '../../domain/entities/request.entity';
 import { ExpressInterestDto } from '../dto/express-interest.dto';
@@ -15,7 +28,8 @@ export class RequestInterestService {
     private readonly requestInterestRepository: RequestInterestRepository,
     @Inject(REQUEST_REPOSITORY)
     private readonly requestRepository: RequestRepository,
-    @Inject(forwardRef(() => ProfessionalService)) private readonly professionalService: ProfessionalService,
+    @Inject(forwardRef(() => ProfessionalService))
+    private readonly professionalService: ProfessionalService,
   ) {}
 
   /**
@@ -27,7 +41,12 @@ export class RequestInterestService {
     dto: ExpressInterestDto,
   ): Promise<RequestInterestEntity> {
     // Get professional profile
-    const professional = await this.professionalService.findByUserId(userId);
+    let professional: any;
+    try {
+      professional = await this.professionalService.findByUserId(userId);
+    } catch {
+      throw new ForbiddenException('Only specialists can express interest');
+    }
     if (!professional) {
       throw new ForbiddenException('Only specialists can express interest');
     }
@@ -40,7 +59,9 @@ export class RequestInterestService {
 
     // Validate request is public and pending
     if (!request.isPublic) {
-      throw new BadRequestException('Can only express interest in public requests');
+      throw new BadRequestException(
+        'Can only express interest in public requests',
+      );
     }
 
     if (request.status !== RequestStatus.PENDING) {
@@ -48,23 +69,28 @@ export class RequestInterestService {
     }
 
     // Check if already expressed interest
-    const existingInterest = await this.requestInterestRepository.findByRequestAndProfessional(
-      requestId,
-      professional.id,
-    );
+    const existingInterest =
+      await this.requestInterestRepository.findByRequestAndProfessional(
+        requestId,
+        professional.id,
+      );
     if (existingInterest) {
-      throw new BadRequestException('You have already expressed interest in this request');
+      throw new BadRequestException(
+        'You have already expressed interest in this request',
+      );
     }
 
     // Validate professional has matching trade
     if (request.tradeId) {
       const hasTrade = professional.tradeIds.includes(request.tradeId);
       if (!hasTrade) {
-        throw new BadRequestException('You do not have the required trade for this request');
+        throw new BadRequestException(
+          'You do not have the required trade for this request',
+        );
       }
     }
 
-    return this.requestInterestRepository.create({
+    return this.requestInterestRepository.add({
       requestId,
       professionalId: professional.id,
       message: dto.message || null,
@@ -75,26 +101,35 @@ export class RequestInterestService {
    * Specialist removes their interest
    */
   async removeInterest(requestId: string, userId: string): Promise<void> {
-    const professional = await this.professionalService.findByUserId(userId);
+    let professional: any;
+    try {
+      professional = await this.professionalService.findByUserId(userId);
+    } catch {
+      throw new ForbiddenException('Only specialists can remove interest');
+    }
     if (!professional) {
       throw new ForbiddenException('Only specialists can remove interest');
     }
 
-    const interest = await this.requestInterestRepository.findByRequestAndProfessional(
-      requestId,
-      professional.id,
-    );
+    const interest =
+      await this.requestInterestRepository.findByRequestAndProfessional(
+        requestId,
+        professional.id,
+      );
     if (!interest) {
       throw new NotFoundException('Interest not found');
     }
 
-    await this.requestInterestRepository.delete(requestId, professional.id);
+    await this.requestInterestRepository.remove(requestId, professional.id);
   }
 
   /**
    * Get all interested specialists for a request (for client)
    */
-  async getInterestedProfessionals(requestId: string, userId: string): Promise<RequestInterestEntity[]> {
+  async getInterestedProfessionals(
+    requestId: string,
+    userId: string,
+  ): Promise<RequestInterestEntity[]> {
     const request = await this.requestRepository.findById(requestId);
     if (!request) {
       throw new NotFoundException('Request not found');
@@ -102,7 +137,9 @@ export class RequestInterestService {
 
     // Only the client can see interested professionals
     if (request.clientId !== userId) {
-      throw new ForbiddenException('Only the request owner can view interested specialists');
+      throw new ForbiddenException(
+        'Only the request owner can view interested specialists',
+      );
     }
 
     return this.requestInterestRepository.findByRequestId(requestId);
@@ -111,16 +148,25 @@ export class RequestInterestService {
   /**
    * Check if current user has expressed interest
    */
-  async hasExpressedInterest(requestId: string, userId: string): Promise<boolean> {
-    const professional = await this.professionalService.findByUserId(userId);
+  async hasExpressedInterest(
+    requestId: string,
+    userId: string,
+  ): Promise<boolean> {
+    let professional: any;
+    try {
+      professional = await this.professionalService.findByUserId(userId);
+    } catch {
+      return false;
+    }
     if (!professional) {
       return false;
     }
 
-    const interest = await this.requestInterestRepository.findByRequestAndProfessional(
-      requestId,
-      professional.id,
-    );
+    const interest =
+      await this.requestInterestRepository.findByRequestAndProfessional(
+        requestId,
+        professional.id,
+      );
     return interest !== null;
   }
 
@@ -139,12 +185,16 @@ export class RequestInterestService {
 
     // Only the client can assign
     if (request.clientId !== userId) {
-      throw new ForbiddenException('Only the request owner can assign a specialist');
+      throw new ForbiddenException(
+        'Only the request owner can assign a specialist',
+      );
     }
 
     // Must be a public request
     if (!request.isPublic) {
-      throw new BadRequestException('Can only assign specialists to public requests');
+      throw new BadRequestException(
+        'Can only assign specialists to public requests',
+      );
     }
 
     // Must be pending
@@ -153,28 +203,30 @@ export class RequestInterestService {
     }
 
     // Verify professional exists and has expressed interest
-    const interest = await this.requestInterestRepository.findByRequestAndProfessional(
-      requestId,
-      professionalId,
-    );
+    const interest =
+      await this.requestInterestRepository.findByRequestAndProfessional(
+        requestId,
+        professionalId,
+      );
     if (!interest) {
-      throw new BadRequestException('This specialist has not expressed interest in this request');
+      throw new BadRequestException(
+        'This specialist has not expressed interest in this request',
+      );
     }
 
     // Assign the professional and change status to ACCEPTED
     // Also mark as no longer public
-    const updatedRequest = await this.requestRepository.update(requestId, {
-      professionalId,
-      status: RequestStatus.ACCEPTED,
-      isPublic: false,
-    } as any);
+    const updatedRequest = await this.requestRepository.save(
+      request.withChanges({
+        professionalId,
+        status: RequestStatus.ACCEPTED,
+        isPublic: false,
+      }),
+    );
 
     // Clean up all interests for this request
-    await this.requestInterestRepository.deleteAllByRequestId(requestId);
+    await this.requestInterestRepository.removeAllByRequestId(requestId);
 
     return updatedRequest;
   }
 }
-
-
-

@@ -1,4 +1,14 @@
-import { Controller, Post, Body, Get, UseGuards, HttpCode, HttpStatus, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AuthenticationService } from '../application/services/authentication.service';
@@ -18,7 +28,11 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ status: 201, description: 'User registered successfully', type: AuthResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'User registered successfully',
+    type: AuthResponseDto,
+  })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
     return this.authenticationService.register(registerDto);
@@ -28,7 +42,11 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
-  @ApiResponse({ status: 200, description: 'Login successful', type: AuthResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful',
+    type: AuthResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
     return this.authenticationService.login(loginDto);
@@ -50,10 +68,10 @@ export class AuthController {
   @ApiResponse({ status: 302, description: 'Redirects to frontend with token' })
   async googleAuthCallback(@Req() req: any, @Res() res: Response) {
     const result = await this.authenticationService.googleLogin(req.user);
-    
+
     // Redirect to frontend with token in URL
     const redirectUrl = `${result.redirectUrl}/es/auth/callback?token=${result.accessToken}&user=${encodeURIComponent(JSON.stringify(result.user))}`;
-    
+
     return res.redirect(redirectUrl);
   }
 
@@ -73,11 +91,10 @@ export class AuthController {
   @ApiResponse({ status: 302, description: 'Redirects to frontend with token' })
   async facebookAuthCallback(@Req() req: any, @Res() res: Response) {
     const result = await this.authenticationService.facebookLogin(req.user);
-    
+
     // Redirect to frontend with token in URL
     const redirectUrl = `${result.redirectUrl}/es/auth/callback?token=${result.accessToken}&user=${encodeURIComponent(JSON.stringify(result.user))}`;
-    
+
     return res.redirect(redirectUrl);
   }
 }
-

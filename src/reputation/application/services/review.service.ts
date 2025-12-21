@@ -6,11 +6,15 @@ import {
   ConflictException,
   Inject,
 } from '@nestjs/common';
-import { ReviewRepository, REVIEW_REPOSITORY } from '../../domain/repositories/review.repository';
+import {
+  ReviewRepository,
+  REVIEW_REPOSITORY,
+} from '../../domain/repositories/review.repository';
 import { ReviewEntity } from '../../domain/entities/review.entity';
 import { CreateReviewDto } from '../dto/create-review.dto';
 import { UpdateReviewDto } from '../dto/update-review.dto';
 import { Rating } from '../../domain/value-objects/rating.vo';
+import { randomUUID } from 'crypto';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { RequestService } from '../../../requests/application/services/request.service';
@@ -19,7 +23,8 @@ import { UserService } from '../../../identity/application/services/user.service
 @Injectable()
 export class ReviewService {
   constructor(
-    @Inject(REVIEW_REPOSITORY) private readonly reviewRepository: ReviewRepository,
+    @Inject(REVIEW_REPOSITORY)
+    private readonly reviewRepository: ReviewRepository,
     private readonly professionalService: ProfessionalService,
     private readonly requestService: RequestService,
     private readonly userService: UserService,
@@ -41,18 +46,23 @@ export class ReviewService {
     return this.reviewRepository.findByRequestId(requestId);
   }
 
-  async create(reviewerId: string, createDto: CreateReviewDto): Promise<ReviewEntity> {
+  async create(
+    reviewerId: string,
+    createDto: CreateReviewDto,
+  ): Promise<ReviewEntity> {
     const reviewer = await this.userService.findById(reviewerId, true);
     if (!reviewer || !reviewer.hasClientProfile) {
       throw new BadRequestException('Only clients can create reviews');
     }
 
     // Validate professional exists
-    await this.professionalService.findById(createDto.professionalId);
+    await this.professionalService.getByIdOrFail(createDto.professionalId);
 
     // Validate request if provided (required for reviews)
     if (!createDto.requestId) {
-      throw new BadRequestException('Request ID is required to create a review');
+      throw new BadRequestException(
+        'Request ID is required to create a review',
+      );
     }
 
     const request = await this.requestService.findById(createDto.requestId);
@@ -62,11 +72,15 @@ export class ReviewService {
     }
 
     if (!request.canBeReviewed()) {
-      throw new BadRequestException('Request must be completed before reviewing');
+      throw new BadRequestException(
+        'Request must be completed before reviewing',
+      );
     }
 
     // Check if this request already has a review (one review per request)
-    const existingReview = await this.reviewRepository.findByRequestId(createDto.requestId);
+    const existingReview = await this.reviewRepository.findByRequestId(
+      createDto.requestId,
+    );
     if (existingReview) {
       throw new ConflictException('This request already has a review');
     }
@@ -74,13 +88,16 @@ export class ReviewService {
     // Validate rating
     const rating = new Rating(createDto.rating);
 
-    const review = await this.reviewRepository.create({
-      reviewerId,
-      professionalId: createDto.professionalId,
-      requestId: createDto.requestId || null,
-      rating: rating.getValue(),
-      comment: createDto.comment || null,
-    });
+    const review = await this.reviewRepository.save(
+      ReviewEntity.create({
+        id: randomUUID(),
+        reviewerId,
+        professionalId: createDto.professionalId,
+        requestId: createDto.requestId || null,
+        rating: rating.getValue(),
+        comment: createDto.comment || null,
+      }),
+    );
 
     // Update professional rating
     await this.updateProfessionalRating(createDto.professionalId);
@@ -88,7 +105,11 @@ export class ReviewService {
     return review;
   }
 
-  async update(id: string, reviewerId: string, updateDto: UpdateReviewDto): Promise<ReviewEntity> {
+  async update(
+    id: string,
+    reviewerId: string,
+    updateDto: UpdateReviewDto,
+  ): Promise<ReviewEntity> {
     const review = await this.reviewRepository.findById(id);
     if (!review) {
       throw new NotFoundException('Review not found');
@@ -98,10 +119,7 @@ export class ReviewService {
       throw new ForbiddenException('You can only update your own reviews');
     }
 
-    const updateData: {
-      rating?: number;
-      comment?: string | null;
-    } = {};
+    const updateData: { rating?: number; comment?: string | null } = {};
 
     if (updateDto.rating !== undefined) {
       const rating = new Rating(updateDto.rating);
@@ -112,7 +130,9 @@ export class ReviewService {
       updateData.comment = updateDto.comment;
     }
 
-    const updatedReview = await this.reviewRepository.update(id, updateData);
+    const updatedReview = await this.reviewRepository.save(
+      review.withChanges(updateData),
+    );
 
     // Update professional rating
     await this.updateProfessionalRating(review.professionalId);
@@ -138,8 +158,11 @@ export class ReviewService {
     await this.updateProfessionalRating(professionalId);
   }
 
-  private async updateProfessionalRating(professionalId: string): Promise<void> {
-    const reviews = await this.reviewRepository.findByProfessionalId(professionalId);
+  private async updateProfessionalRating(
+    professionalId: string,
+  ): Promise<void> {
+    const reviews =
+      await this.reviewRepository.findByProfessionalId(professionalId);
 
     if (reviews.length === 0) {
       await this.professionalService.updateRating(professionalId, 0, 0);
@@ -150,7 +173,10 @@ export class ReviewService {
     const averageRating = totalRating / reviews.length;
     const totalReviews = reviews.length;
 
-    await this.professionalService.updateRating(professionalId, averageRating, totalReviews);
+    await this.professionalService.updateRating(
+      professionalId,
+      averageRating,
+      totalReviews,
+    );
   }
 }
-

@@ -7,4 +7,3 @@ export class UpdateProfessionalStatusDto {
   @IsEnum(ProfessionalStatus)
   status: ProfessionalStatus;
 }
-

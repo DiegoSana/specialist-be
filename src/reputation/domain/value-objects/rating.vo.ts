@@ -35,4 +35,3 @@ export class Rating {
     return this.value <= 2;
   }
 }
-

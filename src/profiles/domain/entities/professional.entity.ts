@@ -50,4 +50,3 @@ export class ProfessionalEntity {
     return this.active && this.isVerified();
   }
 }
-

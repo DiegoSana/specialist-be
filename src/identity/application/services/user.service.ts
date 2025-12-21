@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { UserRepository, USER_REPOSITORY } from '../../domain/repositories/user.repository';
+import {
+  UserRepository,
+  USER_REPOSITORY,
+} from '../../domain/repositories/user.repository';
 import { UserEntity } from '../../domain/entities/user.entity';
 
 /**
@@ -19,7 +22,10 @@ export class UserService {
    * @param includeProfiles - Whether to include client/professional profile info
    * @returns User entity or null
    */
-  async findById(userId: string, includeProfiles = false): Promise<UserEntity | null> {
+  async findById(
+    userId: string,
+    includeProfiles = false,
+  ): Promise<UserEntity | null> {
     return this.userRepository.findById(userId, includeProfiles);
   }
 
@@ -30,7 +36,10 @@ export class UserService {
    * @returns User entity
    * @throws NotFoundException if user not found
    */
-  async findByIdOrFail(userId: string, includeProfiles = false): Promise<UserEntity> {
+  async findByIdOrFail(
+    userId: string,
+    includeProfiles = false,
+  ): Promise<UserEntity> {
     const user = await this.userRepository.findById(userId, includeProfiles);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -44,7 +53,10 @@ export class UserService {
    * @param includeProfiles - Whether to include client/professional profile info
    * @returns User entity or null
    */
-  async findByEmail(email: string, includeProfiles = false): Promise<UserEntity | null> {
+  async findByEmail(
+    email: string,
+    includeProfiles = false,
+  ): Promise<UserEntity | null> {
     return this.userRepository.findByEmail(email, includeProfiles);
   }
 
@@ -55,11 +67,36 @@ export class UserService {
    * @returns Updated user entity
    */
   async update(userId: string, data: Partial<UserEntity>): Promise<UserEntity> {
-    const user = await this.userRepository.findById(userId);
+    const user = await this.userRepository.findById(userId, true);
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return this.userRepository.update(userId, data);
+
+    // Apply supported mutations via domain methods (immutability)
+    let next = user;
+
+    if (data.status !== undefined && data.status !== null) {
+      next = next.withStatus(data.status as any);
+    }
+
+    const hasProfileUpdate =
+      data.firstName !== undefined ||
+      data.lastName !== undefined ||
+      data.phone !== undefined ||
+      (data as any).profilePictureUrl !== undefined;
+
+    if (hasProfileUpdate) {
+      next = next.withUpdatedProfile({
+        firstName: data.firstName ?? user.firstName,
+        lastName: data.lastName ?? user.lastName,
+        phone: data.phone ?? user.phone,
+        profilePictureUrl:
+          (data as any).profilePictureUrl ?? user.profilePictureUrl,
+        now: new Date(),
+      });
+    }
+
+    return this.userRepository.save(next);
   }
 
   /**
@@ -72,4 +109,3 @@ export class UserService {
     return !!user;
   }
 }
-

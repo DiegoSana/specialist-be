@@ -14,9 +14,11 @@ export class UpdateRequestDto {
   @Min(0)
   quoteAmount?: number;
 
-  @ApiProperty({ example: 'Estimated completion time: 2 weeks', required: false })
+  @ApiProperty({
+    example: 'Estimated completion time: 2 weeks',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   quoteNotes?: string;
 }
-

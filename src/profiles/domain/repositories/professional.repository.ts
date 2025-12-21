@@ -1,32 +1,31 @@
 import { ProfessionalEntity } from '../entities/professional.entity';
-import { ProfessionalStatus } from '@prisma/client';
 
 export interface ProfessionalRepository {
   findById(id: string): Promise<ProfessionalEntity | null>;
   findByUserId(userId: string): Promise<ProfessionalEntity | null>;
+  /**
+   * Queries (read-model). En una separación más estricta, esto viviría
+   * en un "ProfessionalQueryRepository" fuera del contrato de aggregate.
+   */
   findByTradeId(tradeId: string): Promise<ProfessionalEntity[]>;
   search(criteria: {
     search?: string;
     tradeId?: string;
     active?: boolean;
   }): Promise<ProfessionalEntity[]>;
-  create(professional: {
-    userId: string;
-    tradeIds: string[];
-    description: string | null;
-    experienceYears: number | null;
-    status: ProfessionalStatus;
-    zone: string | null;
-    city: string;
-    address: string | null;
-    whatsapp: string | null;
-    website: string | null;
-    profileImage: string | null;
-    gallery: string[];
-    active: boolean;
-  }): Promise<ProfessionalEntity>;
-  update(id: string, data: Partial<ProfessionalEntity> & { tradeIds?: string[] }): Promise<ProfessionalEntity>;
-  updateRating(id: string, averageRating: number, totalReviews: number): Promise<void>;
+
+  /**
+   * Opción A (colección de agregados): persistir el aggregate completo.
+   * La implementación se encarga de create vs update.
+   */
+  save(professional: ProfessionalEntity): Promise<ProfessionalEntity>;
+
+  // Mantener por ahora (derivado), pero idealmente se actualiza vía dominio/eventos.
+  updateRating(
+    id: string,
+    averageRating: number,
+    totalReviews: number,
+  ): Promise<void>;
 }
 
 // Token for dependency injection

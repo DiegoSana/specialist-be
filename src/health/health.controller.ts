@@ -14,7 +14,7 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Service is healthy' })
   async check() {
     const startTime = Date.now();
-    
+
     // Check database connection
     let dbStatus = 'ok';
     try {
@@ -39,11 +39,14 @@ export class HealthController {
   @Public()
   @Get('ready')
   @ApiOperation({ summary: 'Readiness check - verifies all dependencies' })
-  @ApiResponse({ status: 200, description: 'Service is ready to receive traffic' })
+  @ApiResponse({
+    status: 200,
+    description: 'Service is ready to receive traffic',
+  })
   async ready() {
     // Verify database is connected and ready
     await this.prisma.$queryRaw`SELECT 1`;
-    
+
     return {
       status: 'ready',
       timestamp: new Date().toISOString(),
@@ -61,4 +64,3 @@ export class HealthController {
     };
   }
 }
-

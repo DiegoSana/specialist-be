@@ -12,7 +12,13 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
@@ -21,7 +27,10 @@ import { RequestInterestService } from '../application/services/request-interest
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
 import { CreateRequestDto } from '../application/dto/create-request.dto';
 import { UpdateRequestDto } from '../application/dto/update-request.dto';
-import { ExpressInterestDto, AssignProfessionalDto } from '../application/dto/express-interest.dto';
+import {
+  ExpressInterestDto,
+  AssignProfessionalDto,
+} from '../application/dto/express-interest.dto';
 
 @ApiTags('Requests')
 @ApiBearerAuth()
@@ -40,7 +49,10 @@ export class RequestsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new request' })
   @ApiResponse({ status: 201, description: 'Request created successfully' })
-  async create(@CurrentUser() user: UserEntity, @Body() createDto: CreateRequestDto) {
+  async create(
+    @CurrentUser() user: UserEntity,
+    @Body() createDto: CreateRequestDto,
+  ) {
     return this.requestService.create(user.id, createDto);
   }
 
@@ -56,12 +68,12 @@ export class RequestsController {
     if (role === 'client' || (!role && user.isClient())) {
       return this.requestService.findByClientId(user.id);
     }
-    
+
     if (role === 'professional' || (!role && user.isProfessional())) {
       const professional = await this.professionalService.findByUserId(user.id);
       return this.requestService.findByProfessionalId(professional.id);
     }
-    
+
     return [];
   }
 
@@ -76,7 +88,9 @@ export class RequestsController {
     @Query('zone') zone?: string,
   ) {
     if (!user.hasProfessionalProfile) {
-      throw new BadRequestException('Only professionals can view available requests');
+      throw new BadRequestException(
+        'Only professionals can view available requests',
+      );
     }
 
     const professional = await this.professionalService.findByUserId(user.id);
@@ -106,11 +120,11 @@ export class RequestsController {
   ) {
     // Determine if user is client or professional and route accordingly
     const request = await this.requestService.findById(id);
-    
+
     if (request.clientId === user.id) {
       return this.requestService.updateStatusByClient(id, user.id, updateDto);
     }
-    
+
     return this.requestService.updateStatus(id, user.id, updateDto);
   }
 
@@ -144,7 +158,9 @@ export class RequestsController {
 
   @Post(':id/interest')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Express interest in a public request (professional only)' })
+  @ApiOperation({
+    summary: 'Express interest in a public request (professional only)',
+  })
   @ApiResponse({ status: 201, description: 'Interest expressed successfully' })
   async expressInterest(
     @Param('id') id: string,
@@ -158,35 +174,54 @@ export class RequestsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove interest from a public request' })
   @ApiResponse({ status: 204, description: 'Interest removed successfully' })
-  async removeInterest(@Param('id') id: string, @CurrentUser() user: UserEntity) {
+  async removeInterest(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+  ) {
     await this.requestInterestService.removeInterest(id, user.id);
   }
 
   @Get(':id/interest')
   @ApiOperation({ summary: 'Check if I have expressed interest' })
   @ApiResponse({ status: 200, description: 'Interest status' })
-  async checkMyInterest(@Param('id') id: string, @CurrentUser() user: UserEntity) {
-    const hasInterest = await this.requestInterestService.hasExpressedInterest(id, user.id);
+  async checkMyInterest(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+  ) {
+    const hasInterest = await this.requestInterestService.hasExpressedInterest(
+      id,
+      user.id,
+    );
     return { hasInterest };
   }
 
   @Get(':id/interests')
   @ApiOperation({ summary: 'Get all interested professionals (client only)' })
   @ApiResponse({ status: 200, description: 'List of interested professionals' })
-  async getInterestedProfessionals(@Param('id') id: string, @CurrentUser() user: UserEntity) {
+  async getInterestedProfessionals(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+  ) {
     return this.requestInterestService.getInterestedProfessionals(id, user.id);
   }
 
   @Post(':id/assign')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Assign a professional to request (client only)' })
-  @ApiResponse({ status: 200, description: 'Professional assigned successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Professional assigned successfully',
+  })
   async assignProfessional(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
     @Body() dto: AssignProfessionalDto,
   ) {
-    return this.requestInterestService.assignProfessional(id, user.id, dto.professionalId);
+    return this.requestInterestService.assignProfessional(
+      id,
+      user.id,
+      dto.professionalId,
+    );
   }
 
   // ==================== ACCEPT QUOTE ====================
@@ -203,14 +238,20 @@ export class RequestsController {
 
   @Post(':id/rate-client')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Rate client (professional only, after work is done)' })
+  @ApiOperation({
+    summary: 'Rate client (professional only, after work is done)',
+  })
   @ApiResponse({ status: 200, description: 'Client rated successfully' })
   async rateClient(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
     @Body() body: { rating: number; comment?: string },
   ) {
-    return this.requestService.rateClient(id, user.id, body.rating, body.comment);
+    return this.requestService.rateClient(
+      id,
+      user.id,
+      body.rating,
+      body.comment,
+    );
   }
 }
-

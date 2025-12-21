@@ -4,7 +4,7 @@ export enum AllowedMimeType {
   IMAGE_PNG = 'image/png',
   IMAGE_WEBP = 'image/webp',
   IMAGE_GIF = 'image/gif',
-  
+
   // Videos
   VIDEO_MP4 = 'video/mp4',
   VIDEO_WEBM = 'video/webm',
@@ -88,4 +88,3 @@ export class FileTypeVO {
     return mimeToExt[this.mimeType] || 'bin';
   }
 }
-

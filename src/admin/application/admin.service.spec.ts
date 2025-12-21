@@ -4,7 +4,10 @@ import { AdminService } from './admin.service';
 import { UserService } from '../../identity/application/services/user.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
-import { createMockUser, createMockProfessional } from '../../__mocks__/test-utils';
+import {
+  createMockUser,
+  createMockProfessional,
+} from '../../__mocks__/test-utils';
 import { UserStatus, ProfessionalStatus } from '@prisma/client';
 
 describe('AdminService', () => {
@@ -55,8 +58,26 @@ describe('AdminService', () => {
   describe('getAllUsers', () => {
     it('should return paginated users', async () => {
       const users = [
-        { id: 'user-1', email: 'user1@test.com', firstName: 'User', lastName: 'One', status: 'ACTIVE', createdAt: new Date(), client: null, professional: null },
-        { id: 'user-2', email: 'user2@test.com', firstName: 'User', lastName: 'Two', status: 'ACTIVE', createdAt: new Date(), client: { id: 'client-1' }, professional: null },
+        {
+          id: 'user-1',
+          email: 'user1@test.com',
+          firstName: 'User',
+          lastName: 'One',
+          status: 'ACTIVE',
+          createdAt: new Date(),
+          client: null,
+          professional: null,
+        },
+        {
+          id: 'user-2',
+          email: 'user2@test.com',
+          firstName: 'User',
+          lastName: 'Two',
+          status: 'ACTIVE',
+          createdAt: new Date(),
+          client: { id: 'client-1' },
+          professional: null,
+        },
       ];
 
       mockPrismaService.user.findMany.mockResolvedValue(users);
@@ -123,9 +144,13 @@ describe('AdminService', () => {
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockUserService.findByIdOrFail.mockRejectedValue(new NotFoundException('User not found'));
+      mockUserService.findByIdOrFail.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
 
-      await expect(service.getUserById('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.getUserById('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -134,17 +159,25 @@ describe('AdminService', () => {
       const updatedUser = createMockUser({ status: UserStatus.SUSPENDED });
       mockUserService.update.mockResolvedValue(updatedUser);
 
-      const result = await service.updateUserStatus('user-123', { status: UserStatus.SUSPENDED });
+      const result = await service.updateUserStatus('user-123', {
+        status: UserStatus.SUSPENDED,
+      });
 
       expect(result.status).toBe(UserStatus.SUSPENDED);
-      expect(mockUserService.update).toHaveBeenCalledWith('user-123', { status: UserStatus.SUSPENDED });
+      expect(mockUserService.update).toHaveBeenCalledWith('user-123', {
+        status: UserStatus.SUSPENDED,
+      });
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockUserService.update.mockRejectedValue(new NotFoundException('User not found'));
+      mockUserService.update.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
 
       await expect(
-        service.updateUserStatus('non-existent', { status: UserStatus.SUSPENDED }),
+        service.updateUserStatus('non-existent', {
+          status: UserStatus.SUSPENDED,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -155,7 +188,12 @@ describe('AdminService', () => {
         {
           id: 'prof-1',
           userId: 'user-1',
-          user: { id: 'user-1', email: 'pro1@test.com', firstName: 'Pro', lastName: 'One' },
+          user: {
+            id: 'user-1',
+            email: 'pro1@test.com',
+            firstName: 'Pro',
+            lastName: 'One',
+          },
           trades: [{ trade: { id: 'trade-1', name: 'Electricista' } }],
           createdAt: new Date(),
         },
@@ -200,28 +238,43 @@ describe('AdminService', () => {
 
   describe('updateProfessionalStatus', () => {
     it('should update professional status successfully', async () => {
-      const updatedProfessional = createMockProfessional({ status: ProfessionalStatus.VERIFIED });
-      mockProfessionalService.updateStatus.mockResolvedValue(updatedProfessional);
+      const updatedProfessional = createMockProfessional({
+        status: ProfessionalStatus.VERIFIED,
+      });
+      mockProfessionalService.updateStatus.mockResolvedValue(
+        updatedProfessional,
+      );
 
       const result = await service.updateProfessionalStatus('prof-123', {
         status: ProfessionalStatus.VERIFIED,
       });
 
       expect(result.status).toBe(ProfessionalStatus.VERIFIED);
-      expect(mockProfessionalService.updateStatus).toHaveBeenCalledWith('prof-123', ProfessionalStatus.VERIFIED);
+      expect(mockProfessionalService.updateStatus).toHaveBeenCalledWith(
+        'prof-123',
+        ProfessionalStatus.VERIFIED,
+      );
     });
 
     it('should throw NotFoundException when professional not found', async () => {
-      mockProfessionalService.updateStatus.mockRejectedValue(new NotFoundException('Professional not found'));
+      mockProfessionalService.updateStatus.mockRejectedValue(
+        new NotFoundException('Professional not found'),
+      );
 
       await expect(
-        service.updateProfessionalStatus('non-existent', { status: ProfessionalStatus.VERIFIED }),
+        service.updateProfessionalStatus('non-existent', {
+          status: ProfessionalStatus.VERIFIED,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('should reject professional', async () => {
-      const rejectedProfessional = createMockProfessional({ status: ProfessionalStatus.REJECTED });
-      mockProfessionalService.updateStatus.mockResolvedValue(rejectedProfessional);
+      const rejectedProfessional = createMockProfessional({
+        status: ProfessionalStatus.REJECTED,
+      });
+      mockProfessionalService.updateStatus.mockResolvedValue(
+        rejectedProfessional,
+      );
 
       const result = await service.updateProfessionalStatus('prof-123', {
         status: ProfessionalStatus.REJECTED,

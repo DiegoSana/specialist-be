@@ -11,7 +11,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
@@ -67,7 +73,10 @@ export class ProfessionalsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create my professional profile' })
   @ApiResponse({ status: 201, description: 'Profile created successfully' })
-  @ApiResponse({ status: 400, description: 'Profile already exists or invalid data' })
+  @ApiResponse({
+    status: 400,
+    description: 'Profile already exists or invalid data',
+  })
   async createMyProfile(
     @CurrentUser() user: UserEntity,
     @Body() createDto: CreateProfessionalDto,
@@ -86,7 +95,11 @@ export class ProfessionalsController {
     @Body() updateDto: UpdateProfessionalDto,
   ) {
     const professional = await this.professionalService.findByUserId(user.id);
-    return this.professionalService.updateProfile(user.id, professional.id, updateDto);
+    return this.professionalService.updateProfile(
+      user.id,
+      professional.id,
+      updateDto,
+    );
   }
 
   @Post('me/gallery')
@@ -107,7 +120,10 @@ export class ProfessionalsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove item from my gallery' })
-  @ApiResponse({ status: 200, description: 'Gallery item removed successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Gallery item removed successfully',
+  })
   async removeGalleryItem(
     @CurrentUser() user: UserEntity,
     @Body() body: { url: string },
@@ -115,4 +131,3 @@ export class ProfessionalsController {
     return this.professionalService.removeGalleryItem(user.id, body.url);
   }
 }
-

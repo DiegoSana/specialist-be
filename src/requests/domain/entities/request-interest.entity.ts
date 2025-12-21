@@ -7,6 +7,3 @@ export class RequestInterestEntity {
     public readonly createdAt: Date,
   ) {}
 }
-
-
-

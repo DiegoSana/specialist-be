@@ -3,6 +3,7 @@ import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.serv
 import { ProfessionalRepository } from '../../domain/repositories/professional.repository';
 import { ProfessionalEntity } from '../../domain/entities/professional.entity';
 import { ProfessionalStatus } from '@prisma/client';
+import { PrismaProfessionalMapper } from '../mappers/professional.prisma-mapper';
 
 @Injectable()
 export class PrismaProfessionalRepository implements ProfessionalRepository {
@@ -31,7 +32,7 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
 
     if (!professional) return null;
 
-    return this.toEntity(professional);
+    return PrismaProfessionalMapper.toDomain(professional);
   }
 
   async findByUserId(userId: string): Promise<ProfessionalEntity | null> {
@@ -48,7 +49,7 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
 
     if (!professional) return null;
 
-    return this.toEntity(professional);
+    return PrismaProfessionalMapper.toDomain(professional);
   }
 
   async findByTradeId(tradeId: string): Promise<ProfessionalEntity[]> {
@@ -78,7 +79,7 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
       },
     });
 
-    return professionals.map((p) => this.toEntity(p));
+    return professionals.map((p) => PrismaProfessionalMapper.toDomain(p));
   }
 
   async search(criteria: {
@@ -161,104 +162,93 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
       orderBy: { averageRating: 'desc' },
     });
 
-    return professionals.map((p) => this.toEntity(p));
+    return professionals.map((p) => PrismaProfessionalMapper.toDomain(p));
   }
 
-  async create(
-    professionalData: {
-      userId: string;
-      tradeIds: string[];
-      description: string | null;
-      experienceYears: number | null;
-      status: ProfessionalStatus;
-      zone: string | null;
-      city: string;
-      address: string | null;
-      whatsapp: string | null;
-      website: string | null;
-      profileImage: string | null;
-      gallery: string[];
-      active: boolean;
-    },
-  ): Promise<ProfessionalEntity> {
-    const professional = await this.prisma.professional.create({
-      data: {
-        userId: professionalData.userId,
-        description: professionalData.description,
-        experienceYears: professionalData.experienceYears,
-        status: professionalData.status,
-        zone: professionalData.zone,
-        city: professionalData.city,
-        address: professionalData.address,
-        whatsapp: professionalData.whatsapp,
-        website: professionalData.website,
-        profileImage: professionalData.profileImage,
-        gallery: professionalData.gallery,
-        active: professionalData.active,
-        trades: {
-          create: professionalData.tradeIds.map((tradeId, index) => ({
-            tradeId,
-            isPrimary: index === 0, // First trade is primary
-          })),
-        },
-      },
-      include: {
-        trades: {
-          include: {
-            trade: true,
-          },
-        },
-      },
-    });
+  async save(professional: ProfessionalEntity): Promise<ProfessionalEntity> {
+    const tradeIds = professional.tradeIds;
 
-    return this.toEntity(professional);
-  }
-
-  async update(id: string, data: Partial<ProfessionalEntity> & { tradeIds?: string[] }): Promise<ProfessionalEntity> {
-    const updateData: any = {
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.experienceYears !== undefined && { experienceYears: data.experienceYears }),
-      ...(data.status && { status: data.status }),
-      ...(data.zone !== undefined && { zone: data.zone }),
-      ...(data.city && { city: data.city }),
-      ...(data.address !== undefined && { address: data.address }),
-      ...(data.whatsapp !== undefined && { whatsapp: data.whatsapp }),
-      ...(data.website !== undefined && { website: data.website }),
-      ...(data.profileImage !== undefined && { profileImage: data.profileImage }),
-      ...(data.gallery !== undefined && { gallery: data.gallery }),
-      ...(data.active !== undefined && { active: data.active }),
-    };
-
-    // Handle trade updates
-    if (data.tradeIds) {
-      // Delete existing trades and create new ones
-      await this.prisma.professionalTrade.deleteMany({
-        where: { professionalId: id },
+    const result = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.professional.findUnique({
+        where: { id: professional.id },
+        select: { id: true },
       });
-      updateData.trades = {
-        create: data.tradeIds.map((tradeId, index) => ({
+
+      if (!existing) {
+        return tx.professional.create({
+          data: {
+            id: professional.id,
+            userId: professional.userId,
+            description: professional.description,
+            experienceYears: professional.experienceYears,
+            status: professional.status,
+            zone: professional.zone,
+            city: professional.city,
+            address: professional.address,
+            whatsapp: professional.whatsapp,
+            website: professional.website,
+            averageRating: professional.averageRating,
+            totalReviews: professional.totalReviews,
+            profileImage: professional.profileImage,
+            gallery: professional.gallery,
+            active: professional.active,
+            trades: PrismaProfessionalMapper.toPersistenceTrades(tradeIds),
+          },
+          include: {
+            trades: { include: { trade: true } },
+          },
+        });
+      }
+
+      // Update scalars
+      await tx.professional.update({
+        where: { id: professional.id },
+        data: {
+          description: professional.description,
+          experienceYears: professional.experienceYears,
+          status: professional.status,
+          zone: professional.zone,
+          city: professional.city,
+          address: professional.address,
+          whatsapp: professional.whatsapp,
+          website: professional.website,
+          averageRating: professional.averageRating,
+          totalReviews: professional.totalReviews,
+          profileImage: professional.profileImage,
+          gallery: professional.gallery,
+          active: professional.active,
+        },
+      });
+
+      // Sync trades (source of truth = aggregate)
+      await tx.professionalTrade.deleteMany({
+        where: { professionalId: professional.id },
+      });
+      await tx.professionalTrade.createMany({
+        data: tradeIds.map((tradeId, index) => ({
+          professionalId: professional.id,
           tradeId,
           isPrimary: index === 0,
         })),
-      };
-    }
+        skipDuplicates: true,
+      });
 
-    const professional = await this.prisma.professional.update({
-      where: { id },
-      data: updateData,
-      include: {
-        trades: {
-          include: {
-            trade: true,
-          },
+      return tx.professional.findUniqueOrThrow({
+        where: { id: professional.id },
+        include: {
+          trades: { include: { trade: true } },
         },
-      },
+      });
     });
 
-    return this.toEntity(professional);
+    return PrismaProfessionalMapper.toDomain(result);
   }
 
-  async updateRating(id: string, averageRating: number, totalReviews: number): Promise<void> {
+  async updateRating(
+    id: string,
+    averageRating: number,
+    totalReviews: number,
+  ): Promise<void> {
     await this.prisma.professional.update({
       where: { id },
       data: {
@@ -267,43 +257,4 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
       },
     });
   }
-
-  private toEntity(professional: any): ProfessionalEntity {
-    const trades = (professional.trades || []).map((pt: any) => ({
-      id: pt.trade.id,
-      name: pt.trade.name,
-      category: pt.trade.category,
-      description: pt.trade.description,
-      isPrimary: pt.isPrimary,
-    }));
-
-    const entity = new ProfessionalEntity(
-      professional.id,
-      professional.userId,
-      trades,
-      professional.description,
-      professional.experienceYears,
-      professional.status as ProfessionalStatus,
-      professional.zone,
-      professional.city,
-      professional.address,
-      professional.whatsapp,
-      professional.website,
-      professional.averageRating,
-      professional.totalReviews,
-      professional.profileImage,
-      professional.gallery,
-      professional.active,
-      professional.createdAt,
-      professional.updatedAt,
-    );
-
-    // Attach user data if available (for API responses)
-    if (professional.user) {
-      (entity as any).user = professional.user;
-    }
-
-    return entity;
-  }
 }
-

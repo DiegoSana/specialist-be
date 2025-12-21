@@ -12,7 +12,10 @@ export class CreateReviewDto {
   @Max(5)
   rating: number;
 
-  @ApiProperty({ example: 'Excellent work! Very professional.', required: false })
+  @ApiProperty({
+    example: 'Excellent work! Very professional.',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   comment?: string;
@@ -22,4 +25,3 @@ export class CreateReviewDto {
   @IsString()
   requestId?: string;
 }
-

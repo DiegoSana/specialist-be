@@ -1,10 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { RequestService } from './request.service';
 import { REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { UserService } from '../../../identity/application/services/user.service';
-import { createMockUser, createMockProfessional, createMockRequest } from '../../../__mocks__/test-utils';
+import {
+  createMockUser,
+  createMockProfessional,
+  createMockRequest,
+} from '../../../__mocks__/test-utils';
 import { RequestStatus, ProfessionalStatus } from '@prisma/client';
 
 describe('RequestService', () => {
@@ -15,17 +23,16 @@ describe('RequestService', () => {
 
   beforeEach(async () => {
     mockRequestRepository = {
-      create: jest.fn(),
+      save: jest.fn(),
       findById: jest.fn(),
       findByClientId: jest.fn(),
       findByProfessionalId: jest.fn(),
       findPublicRequests: jest.fn(),
       findAvailableForProfessional: jest.fn(),
-      update: jest.fn(),
     };
 
     mockProfessionalService = {
-      findById: jest.fn(),
+      getByIdOrFail: jest.fn(),
       findByUserId: jest.fn(),
     };
 
@@ -59,26 +66,33 @@ describe('RequestService', () => {
       };
 
       it('should create a direct request successfully', async () => {
-        const client = createMockUser({ id: 'client-123', hasClientProfile: true });
-        const professional = createMockProfessional({ 
-          id: 'prof-123', 
+        const client = createMockUser({
+          id: 'client-123',
+          hasClientProfile: true,
+        });
+        const professional = createMockProfessional({
+          id: 'prof-123',
           status: ProfessionalStatus.VERIFIED,
           active: true,
         });
-        const newRequest = createMockRequest({ clientId: 'client-123', isPublic: false });
+        const newRequest = createMockRequest({
+          clientId: 'client-123',
+          isPublic: false,
+        });
 
         mockUserService.findById.mockResolvedValue(client);
-        mockProfessionalService.findById.mockResolvedValue(professional);
-        mockRequestRepository.create.mockResolvedValue(newRequest);
+        mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+        mockRequestRepository.save.mockResolvedValue(newRequest);
 
         const result = await service.create('client-123', directRequestDto);
 
         expect(result).toEqual(newRequest);
-        expect(mockRequestRepository.create).toHaveBeenCalledWith(
+        expect(mockRequestRepository.save).toHaveBeenCalledWith(
           expect.objectContaining({
             clientId: 'client-123',
             isPublic: false,
             professionalId: 'prof-123',
+            status: RequestStatus.PENDING,
           }),
         );
       });
@@ -87,7 +101,9 @@ describe('RequestService', () => {
         const nonClient = createMockUser({ hasClientProfile: false });
         mockUserService.findById.mockResolvedValue(nonClient);
 
-        await expect(service.create('user-123', directRequestDto)).rejects.toThrow(BadRequestException);
+        await expect(
+          service.create('user-123', directRequestDto),
+        ).rejects.toThrow(BadRequestException);
       });
 
       it('should throw BadRequestException if professionalId is missing for direct request', async () => {
@@ -95,29 +111,39 @@ describe('RequestService', () => {
         mockUserService.findById.mockResolvedValue(client);
 
         await expect(
-          service.create('client-123', { isPublic: false, description: 'Test' }),
+          service.create('client-123', {
+            isPublic: false,
+            description: 'Test',
+          }),
         ).rejects.toThrow(BadRequestException);
       });
 
       it('should throw NotFoundException if professional not found', async () => {
         const client = createMockUser({ hasClientProfile: true });
         mockUserService.findById.mockResolvedValue(client);
-        mockProfessionalService.findById.mockResolvedValue(null);
+        mockProfessionalService.getByIdOrFail.mockRejectedValue(
+          new NotFoundException('Professional not found'),
+        );
 
-        await expect(service.create('client-123', directRequestDto)).rejects.toThrow(NotFoundException);
+        await expect(
+          service.create('client-123', directRequestDto),
+        ).rejects.toThrow(NotFoundException);
       });
 
       it('should throw BadRequestException if professional is not active', async () => {
         const client = createMockUser({ hasClientProfile: true });
-        const inactiveProfessional = createMockProfessional({ 
+        const inactiveProfessional = createMockProfessional({
           status: ProfessionalStatus.PENDING_VERIFICATION,
           active: false,
         });
-        
         mockUserService.findById.mockResolvedValue(client);
-        mockProfessionalService.findById.mockResolvedValue(inactiveProfessional);
+        mockProfessionalService.getByIdOrFail.mockResolvedValue(
+          inactiveProfessional,
+        );
 
-        await expect(service.create('client-123', directRequestDto)).rejects.toThrow(BadRequestException);
+        await expect(
+          service.create('client-123', directRequestDto),
+        ).rejects.toThrow(BadRequestException);
       });
     });
 
@@ -130,19 +156,23 @@ describe('RequestService', () => {
 
       it('should create a public request successfully', async () => {
         const client = createMockUser({ hasClientProfile: true });
-        const newRequest = createMockRequest({ isPublic: true, professionalId: null });
+        const newRequest = createMockRequest({
+          isPublic: true,
+          professionalId: null,
+        });
 
         mockUserService.findById.mockResolvedValue(client);
-        mockRequestRepository.create.mockResolvedValue(newRequest);
+        mockRequestRepository.save.mockResolvedValue(newRequest);
 
         const result = await service.create('client-123', publicRequestDto);
 
         expect(result).toEqual(newRequest);
-        expect(mockRequestRepository.create).toHaveBeenCalledWith(
+        expect(mockRequestRepository.save).toHaveBeenCalledWith(
           expect.objectContaining({
             isPublic: true,
             professionalId: null,
             tradeId: 'trade-123',
+            status: RequestStatus.PENDING,
           }),
         );
       });
@@ -171,19 +201,26 @@ describe('RequestService', () => {
     it('should throw NotFoundException when request not found', async () => {
       mockRequestRepository.findById.mockResolvedValue(null);
 
-      await expect(service.findById('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('updateStatus (by professional)', () => {
     it('should allow assigned professional to update request status', async () => {
       const request = createMockRequest({ professionalId: 'prof-123' });
-      const professional = createMockProfessional({ id: 'prof-123', userId: 'prof-user' });
-      const updatedRequest = createMockRequest({ status: RequestStatus.IN_PROGRESS });
+      const professional = createMockProfessional({
+        id: 'prof-123',
+        userId: 'prof-user',
+      });
+      const updatedRequest = createMockRequest({
+        status: RequestStatus.IN_PROGRESS,
+      });
 
       mockRequestRepository.findById.mockResolvedValue(request);
       mockProfessionalService.findByUserId.mockResolvedValue(professional);
-      mockRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockRequestRepository.save.mockResolvedValue(updatedRequest);
 
       const result = await service.updateStatus('req-123', 'prof-user', {
         status: RequestStatus.IN_PROGRESS,
@@ -196,7 +233,9 @@ describe('RequestService', () => {
       mockRequestRepository.findById.mockResolvedValue(null);
 
       await expect(
-        service.updateStatus('non-existent', 'prof-user', { status: RequestStatus.IN_PROGRESS }),
+        service.updateStatus('non-existent', 'prof-user', {
+          status: RequestStatus.IN_PROGRESS,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -205,10 +244,14 @@ describe('RequestService', () => {
       const differentProfessional = createMockProfessional({ id: 'prof-999' });
 
       mockRequestRepository.findById.mockResolvedValue(request);
-      mockProfessionalService.findByUserId.mockResolvedValue(differentProfessional);
+      mockProfessionalService.findByUserId.mockResolvedValue(
+        differentProfessional,
+      );
 
       await expect(
-        service.updateStatus('req-123', 'other-user', { status: RequestStatus.IN_PROGRESS }),
+        service.updateStatus('req-123', 'other-user', {
+          status: RequestStatus.IN_PROGRESS,
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -219,7 +262,9 @@ describe('RequestService', () => {
       mockProfessionalService.findByUserId.mockResolvedValue(null);
 
       await expect(
-        service.updateStatus('req-123', 'random-user', { status: RequestStatus.IN_PROGRESS }),
+        service.updateStatus('req-123', 'random-user', {
+          status: RequestStatus.IN_PROGRESS,
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -231,10 +276,12 @@ describe('RequestService', () => {
         status: RequestStatus.PENDING,
         quoteAmount: 5000,
       });
-      const acceptedRequest = createMockRequest({ status: RequestStatus.ACCEPTED });
+      const acceptedRequest = createMockRequest({
+        status: RequestStatus.ACCEPTED,
+      });
 
       mockRequestRepository.findById.mockResolvedValue(request);
-      mockRequestRepository.update.mockResolvedValue(acceptedRequest);
+      mockRequestRepository.save.mockResolvedValue(acceptedRequest);
 
       const result = await service.acceptQuote('req-123', 'client-123');
 
@@ -246,7 +293,9 @@ describe('RequestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      await expect(service.acceptQuote('req-123', 'other-user')).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.acceptQuote('req-123', 'other-user'),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException if request is not pending', async () => {
@@ -258,7 +307,9 @@ describe('RequestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      await expect(service.acceptQuote('req-123', 'client-123')).rejects.toThrow(BadRequestException);
+      await expect(
+        service.acceptQuote('req-123', 'client-123'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if no quote amount exists', async () => {
@@ -270,21 +321,29 @@ describe('RequestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      await expect(service.acceptQuote('req-123', 'client-123')).rejects.toThrow(BadRequestException);
+      await expect(
+        service.acceptQuote('req-123', 'client-123'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('updateStatusByClient', () => {
     it('should allow client to cancel request', async () => {
       const request = createMockRequest({ clientId: 'client-123' });
-      const cancelledRequest = createMockRequest({ status: RequestStatus.CANCELLED });
-
-      mockRequestRepository.findById.mockResolvedValue(request);
-      mockRequestRepository.update.mockResolvedValue(cancelledRequest);
-
-      const result = await service.updateStatusByClient('req-123', 'client-123', {
+      const cancelledRequest = createMockRequest({
         status: RequestStatus.CANCELLED,
       });
+
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockRequestRepository.save.mockResolvedValue(cancelledRequest);
+
+      const result = await service.updateStatusByClient(
+        'req-123',
+        'client-123',
+        {
+          status: RequestStatus.CANCELLED,
+        },
+      );
 
       expect(result.status).toBe(RequestStatus.CANCELLED);
     });
@@ -295,7 +354,9 @@ describe('RequestService', () => {
       mockRequestRepository.findById.mockResolvedValue(request);
 
       await expect(
-        service.updateStatusByClient('req-123', 'other-user', { status: RequestStatus.CANCELLED }),
+        service.updateStatusByClient('req-123', 'other-user', {
+          status: RequestStatus.CANCELLED,
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -305,7 +366,9 @@ describe('RequestService', () => {
       mockRequestRepository.findById.mockResolvedValue(request);
 
       await expect(
-        service.updateStatusByClient('req-123', 'client-123', { status: RequestStatus.IN_PROGRESS }),
+        service.updateStatusByClient('req-123', 'client-123', {
+          status: RequestStatus.IN_PROGRESS,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -315,14 +378,20 @@ describe('RequestService', () => {
         status: RequestStatus.PENDING,
         quoteAmount: 5000,
       });
-      const acceptedRequest = createMockRequest({ status: RequestStatus.ACCEPTED });
-
-      mockRequestRepository.findById.mockResolvedValue(request);
-      mockRequestRepository.update.mockResolvedValue(acceptedRequest);
-
-      const result = await service.updateStatusByClient('req-123', 'client-123', {
+      const acceptedRequest = createMockRequest({
         status: RequestStatus.ACCEPTED,
       });
+
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockRequestRepository.save.mockResolvedValue(acceptedRequest);
+
+      const result = await service.updateStatusByClient(
+        'req-123',
+        'client-123',
+        {
+          status: RequestStatus.ACCEPTED,
+        },
+      );
 
       expect(result.status).toBe(RequestStatus.ACCEPTED);
     });
@@ -341,9 +410,13 @@ describe('RequestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
       mockProfessionalService.findByUserId.mockResolvedValue(null);
-      mockRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockRequestRepository.save.mockResolvedValue(updatedRequest);
 
-      const result = await service.addRequestPhoto('req-123', 'client-123', 'http://example.com/new.jpg');
+      const result = await service.addRequestPhoto(
+        'req-123',
+        'client-123',
+        'http://example.com/new.jpg',
+      );
 
       expect(result.photos).toContain('http://example.com/new.jpg');
     });
@@ -355,15 +428,22 @@ describe('RequestService', () => {
         photos: [],
         status: RequestStatus.IN_PROGRESS,
       });
-      const professional = createMockProfessional({ id: 'prof-123', userId: 'prof-user' });
+      const professional = createMockProfessional({
+        id: 'prof-123',
+        userId: 'prof-user',
+      });
 
       mockRequestRepository.findById.mockResolvedValue(request);
       mockProfessionalService.findByUserId.mockResolvedValue(professional);
-      mockRequestRepository.update.mockResolvedValue(request);
+      mockRequestRepository.save.mockResolvedValue(request);
 
-      await service.addRequestPhoto('req-123', 'prof-user', 'http://example.com/photo.jpg');
+      await service.addRequestPhoto(
+        'req-123',
+        'prof-user',
+        'http://example.com/photo.jpg',
+      );
 
-      expect(mockRequestRepository.update).toHaveBeenCalled();
+      expect(mockRequestRepository.save).toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException for unauthorized user', async () => {
@@ -376,7 +456,11 @@ describe('RequestService', () => {
       mockProfessionalService.findByUserId.mockResolvedValue(null);
 
       await expect(
-        service.addRequestPhoto('req-123', 'random-user', 'http://example.com/photo.jpg'),
+        service.addRequestPhoto(
+          'req-123',
+          'random-user',
+          'http://example.com/photo.jpg',
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -391,7 +475,11 @@ describe('RequestService', () => {
       mockProfessionalService.findByUserId.mockResolvedValue(null);
 
       await expect(
-        service.addRequestPhoto('req-123', 'client-123', 'http://example.com/photo.jpg'),
+        service.addRequestPhoto(
+          'req-123',
+          'client-123',
+          'http://example.com/photo.jpg',
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -407,7 +495,11 @@ describe('RequestService', () => {
       mockProfessionalService.findByUserId.mockResolvedValue(null);
 
       await expect(
-        service.addRequestPhoto('req-123', 'client-123', 'http://example.com/existing.jpg'),
+        service.addRequestPhoto(
+          'req-123',
+          'client-123',
+          'http://example.com/existing.jpg',
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -431,9 +523,13 @@ describe('RequestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
       mockProfessionalService.findByUserId.mockResolvedValue(null);
-      mockRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockRequestRepository.save.mockResolvedValue(updatedRequest);
 
-      const result = await service.removeRequestPhoto('req-123', 'client-123', 'photo2.jpg');
+      const result = await service.removeRequestPhoto(
+        'req-123',
+        'client-123',
+        'photo2.jpg',
+      );
 
       expect(result.photos).not.toContain('photo2.jpg');
     });
@@ -461,7 +557,9 @@ describe('RequestService', () => {
       const result = await service.findByClientId('client-123');
 
       expect(result).toHaveLength(2);
-      expect(mockRequestRepository.findByClientId).toHaveBeenCalledWith('client-123');
+      expect(mockRequestRepository.findByClientId).toHaveBeenCalledWith(
+        'client-123',
+      );
     });
   });
 
@@ -473,7 +571,9 @@ describe('RequestService', () => {
       const result = await service.findByProfessionalId('prof-123');
 
       expect(result).toHaveLength(1);
-      expect(mockRequestRepository.findByProfessionalId).toHaveBeenCalledWith('prof-123');
+      expect(mockRequestRepository.findByProfessionalId).toHaveBeenCalledWith(
+        'prof-123',
+      );
     });
   });
 
@@ -485,8 +585,10 @@ describe('RequestService', () => {
       const result = await service.findPublicRequests(['trade-1', 'trade-2']);
 
       expect(result).toHaveLength(1);
-      expect(mockRequestRepository.findPublicRequests).toHaveBeenCalledWith(['trade-1', 'trade-2']);
+      expect(mockRequestRepository.findPublicRequests).toHaveBeenCalledWith([
+        'trade-1',
+        'trade-2',
+      ]);
     });
   });
 });
-

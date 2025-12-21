@@ -9,9 +9,11 @@ export class UpdateReviewDto {
   @Max(5)
   rating?: number;
 
-  @ApiProperty({ example: 'Excellent work! Very professional.', required: false })
+  @ApiProperty({
+    example: 'Excellent work! Very professional.',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   comment?: string;
 }
-

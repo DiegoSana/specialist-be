@@ -2,30 +2,40 @@
  * Test Utilities and Factories
  * Common helpers for creating test data
  */
-import { UserStatus, AuthProvider, ProfessionalStatus, RequestStatus } from '@prisma/client';
+import {
+  UserStatus,
+  AuthProvider,
+  ProfessionalStatus,
+  RequestStatus,
+} from '@prisma/client';
 import { UserEntity } from '../identity/domain/entities/user.entity';
-import { ProfessionalEntity, TradeInfo } from '../profiles/domain/entities/professional.entity';
+import {
+  ProfessionalEntity,
+  TradeInfo,
+} from '../profiles/domain/entities/professional.entity';
 import { RequestEntity } from '../requests/domain/entities/request.entity';
 
 // Factory for creating test users
-export const createMockUser = (overrides: Partial<{
-  id: string;
-  email: string;
-  password: string | null;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-  profilePictureUrl: string | null;
-  isAdmin: boolean;
-  status: UserStatus;
-  createdAt: Date;
-  updatedAt: Date;
-  hasClientProfile: boolean;
-  hasProfessionalProfile: boolean;
-  googleId: string | null;
-  facebookId: string | null;
-  authProvider: AuthProvider;
-}> = {}): UserEntity => {
+export const createMockUser = (
+  overrides: Partial<{
+    id: string;
+    email: string;
+    password: string | null;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    profilePictureUrl: string | null;
+    isAdmin: boolean;
+    status: UserStatus;
+    createdAt: Date;
+    updatedAt: Date;
+    hasClientProfile: boolean;
+    hasProfessionalProfile: boolean;
+    googleId: string | null;
+    facebookId: string | null;
+    authProvider: AuthProvider;
+  }> = {},
+): UserEntity => {
   const defaults = {
     id: 'user-123',
     email: 'test@example.com',
@@ -67,30 +77,40 @@ export const createMockUser = (overrides: Partial<{
 };
 
 // Factory for creating test professionals
-export const createMockProfessional = (overrides: Partial<{
-  id: string;
-  userId: string;
-  trades: TradeInfo[];
-  description: string | null;
-  experienceYears: number | null;
-  status: ProfessionalStatus;
-  zone: string | null;
-  city: string;
-  address: string | null;
-  whatsapp: string | null;
-  website: string | null;
-  averageRating: number;
-  totalReviews: number;
-  profileImage: string | null;
-  gallery: string[];
-  active: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}> = {}): ProfessionalEntity => {
+export const createMockProfessional = (
+  overrides: Partial<{
+    id: string;
+    userId: string;
+    trades: TradeInfo[];
+    description: string | null;
+    experienceYears: number | null;
+    status: ProfessionalStatus;
+    zone: string | null;
+    city: string;
+    address: string | null;
+    whatsapp: string | null;
+    website: string | null;
+    averageRating: number;
+    totalReviews: number;
+    profileImage: string | null;
+    gallery: string[];
+    active: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = {},
+): ProfessionalEntity => {
   const defaults = {
     id: 'professional-123',
     userId: 'user-123',
-    trades: [{ id: 'trade-1', name: 'Electricista', category: 'Hogar', description: null, isPrimary: true }],
+    trades: [
+      {
+        id: 'trade-1',
+        name: 'Electricista',
+        category: 'Hogar',
+        description: null,
+        isPrimary: true,
+      },
+    ],
     description: 'Experienced professional',
     experienceYears: 5,
     status: ProfessionalStatus.VERIFIED,
@@ -132,24 +152,26 @@ export const createMockProfessional = (overrides: Partial<{
 };
 
 // Factory for creating test requests
-export const createMockRequest = (overrides: Partial<{
-  id: string;
-  clientId: string;
-  professionalId: string | null;
-  tradeId: string | null;
-  isPublic: boolean;
-  description: string;
-  address: string | null;
-  availability: string | null;
-  photos: string[];
-  status: RequestStatus;
-  quoteAmount: number | null;
-  quoteNotes: string | null;
-  clientRating: number | null;
-  clientRatingComment: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}> = {}): RequestEntity => {
+export const createMockRequest = (
+  overrides: Partial<{
+    id: string;
+    clientId: string;
+    professionalId: string | null;
+    tradeId: string | null;
+    isPublic: boolean;
+    description: string;
+    address: string | null;
+    availability: string | null;
+    photos: string[];
+    status: RequestStatus;
+    quoteAmount: number | null;
+    quoteNotes: string | null;
+    clientRating: number | null;
+    clientRatingComment: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = {},
+): RequestEntity => {
   const defaults = {
     id: 'request-123',
     clientId: 'user-123',
@@ -192,7 +214,8 @@ export const createMockRequest = (overrides: Partial<{
 
 // Helper for creating bcrypt hashed password (for test assertions)
 export const TEST_PASSWORD = 'TestPassword123!';
-export const TEST_PASSWORD_HASH = '$2a$10$K4/rGrqVj7QJHrvHSMK7/.yGVFJRxRmvvV.WBZ4Tz0l7I0kzM0pNm';
+export const TEST_PASSWORD_HASH =
+  '$2a$10$K4/rGrqVj7QJHrvHSMK7/.yGVFJRxRmvvV.WBZ4Tz0l7I0kzM0pNm';
 
 // Mock JWT payload
 export const createMockJwtPayload = (userId: string, isAdmin = false) => ({

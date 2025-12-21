@@ -1,6 +1,39 @@
 import { RequestStatus } from '@prisma/client';
 
 export class RequestEntity {
+  static createPending(params: {
+    id: string;
+    clientId: string;
+    professionalId: string | null;
+    tradeId: string | null;
+    isPublic: boolean;
+    description: string;
+    address: string | null;
+    availability: string | null;
+    photos?: string[];
+    now?: Date;
+  }): RequestEntity {
+    const now = params.now ?? new Date();
+    return new RequestEntity(
+      params.id,
+      params.clientId,
+      params.professionalId,
+      params.tradeId,
+      params.isPublic,
+      params.description,
+      params.address,
+      params.availability,
+      params.photos ?? [],
+      RequestStatus.PENDING,
+      null,
+      null,
+      null,
+      null,
+      now,
+      now,
+    );
+  }
+
   constructor(
     public readonly id: string,
     public readonly clientId: string,
@@ -46,5 +79,53 @@ export class RequestEntity {
 
   isPublicRequest(): boolean {
     return this.isPublic;
+  }
+
+  withChanges(changes: {
+    professionalId?: string | null;
+    tradeId?: string | null;
+    isPublic?: boolean;
+    description?: string;
+    address?: string | null;
+    availability?: string | null;
+    photos?: string[];
+    status?: RequestStatus;
+    quoteAmount?: number | null;
+    quoteNotes?: string | null;
+    clientRating?: number | null;
+    clientRatingComment?: string | null;
+    now?: Date;
+  }): RequestEntity {
+    const now = changes.now ?? new Date();
+    return new RequestEntity(
+      this.id,
+      this.clientId,
+      changes.professionalId !== undefined
+        ? changes.professionalId
+        : this.professionalId,
+      changes.tradeId !== undefined ? changes.tradeId : this.tradeId,
+      changes.isPublic !== undefined ? changes.isPublic : this.isPublic,
+      changes.description !== undefined
+        ? changes.description
+        : this.description,
+      changes.address !== undefined ? changes.address : this.address,
+      changes.availability !== undefined
+        ? changes.availability
+        : this.availability,
+      changes.photos !== undefined ? changes.photos : this.photos,
+      changes.status !== undefined ? changes.status : this.status,
+      changes.quoteAmount !== undefined
+        ? changes.quoteAmount
+        : this.quoteAmount,
+      changes.quoteNotes !== undefined ? changes.quoteNotes : this.quoteNotes,
+      changes.clientRating !== undefined
+        ? changes.clientRating
+        : this.clientRating,
+      changes.clientRatingComment !== undefined
+        ? changes.clientRatingComment
+        : this.clientRatingComment,
+      this.createdAt,
+      now,
+    );
   }
 }

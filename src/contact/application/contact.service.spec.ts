@@ -6,7 +6,9 @@ import { UserService } from '../../identity/application/services/user.service';
 import { createMockUser } from '../../__mocks__/test-utils';
 import { ContactEntity } from '../domain/entities/contact.entity';
 
-const createMockContact = (overrides?: Partial<ContactEntity>): ContactEntity => {
+const createMockContact = (
+  overrides?: Partial<ContactEntity>,
+): ContactEntity => {
   return new ContactEntity(
     overrides?.id || 'contact-123',
     overrides?.fromUserId || 'user-123',
@@ -77,9 +79,13 @@ describe('ContactService', () => {
     });
 
     it('should throw NotFoundException if from user not found', async () => {
-      mockUserService.findByIdOrFail.mockRejectedValue(new NotFoundException('User not found'));
+      mockUserService.findByIdOrFail.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
 
-      await expect(service.create('non-existent', createDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create('non-existent', createDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw NotFoundException if to user not found', async () => {
@@ -89,7 +95,9 @@ describe('ContactService', () => {
         .mockResolvedValueOnce(fromUser)
         .mockRejectedValueOnce(new NotFoundException('User not found'));
 
-      await expect(service.create('user-123', createDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create('user-123', createDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when trying to contact yourself', async () => {
@@ -99,7 +107,9 @@ describe('ContactService', () => {
 
       const selfContactDto = { ...createDto, toUserId: 'user-123' };
 
-      await expect(service.create('user-123', selfContactDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-123', selfContactDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should use default contact type if not provided', async () => {
@@ -150,7 +160,11 @@ describe('ContactService', () => {
         .mockResolvedValueOnce(toUser);
       mockContactRepository.create.mockResolvedValue(contact);
 
-      const emailDto = { toUserId: 'user-456', contactType: 'email', message: 'Email me' };
+      const emailDto = {
+        toUserId: 'user-456',
+        contactType: 'email',
+        message: 'Email me',
+      };
 
       await service.create('user-123', emailDto);
 
@@ -164,7 +178,11 @@ describe('ContactService', () => {
     it('should return contacts for user', async () => {
       const contacts = [
         createMockContact({ id: 'contact-1' }),
-        createMockContact({ id: 'contact-2', toUserId: 'user-123', fromUserId: 'user-789' }),
+        createMockContact({
+          id: 'contact-2',
+          toUserId: 'user-123',
+          fromUserId: 'user-789',
+        }),
       ];
 
       mockContactRepository.findByUserId.mockResolvedValue(contacts);
@@ -172,7 +190,9 @@ describe('ContactService', () => {
       const result = await service.findByUserId('user-123');
 
       expect(result).toHaveLength(2);
-      expect(mockContactRepository.findByUserId).toHaveBeenCalledWith('user-123');
+      expect(mockContactRepository.findByUserId).toHaveBeenCalledWith(
+        'user-123',
+      );
     });
 
     it('should return empty array when no contacts', async () => {

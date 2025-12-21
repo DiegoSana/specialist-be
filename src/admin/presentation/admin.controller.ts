@@ -9,7 +9,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { AdminService } from '../application/admin.service';
 import { UpdateUserStatusDto } from '../application/dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from '../application/dto/update-professional-status.dto';
@@ -61,7 +67,10 @@ export class AdminController {
   @ApiOperation({ summary: 'Get all professional profiles (Admin only)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Professional profiles retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Professional profiles retrieved successfully',
+  })
   async getAllProfessionals(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -75,12 +84,14 @@ export class AdminController {
   @Put('professionals/:id/status')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update professional status (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Professional status updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Professional status updated successfully',
+  })
   async updateProfessionalStatus(
     @Param('id') id: string,
     @Body() updateDto: UpdateProfessionalStatusDto,
   ) {
     return this.adminService.updateProfessionalStatus(id, updateDto);
   }
-
 }

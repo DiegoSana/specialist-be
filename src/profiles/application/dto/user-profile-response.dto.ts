@@ -38,4 +38,3 @@ export class UserProfileResponseDto {
   @ApiProperty()
   updatedAt: Date;
 }
-

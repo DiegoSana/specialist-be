@@ -2,9 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { RequestInterestRepository } from '../../domain/repositories/request-interest.repository';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
+import { PrismaRequestInterestMapper } from '../mappers/request-interest.prisma-mapper';
 
 @Injectable()
-export class PrismaRequestInterestRepository implements RequestInterestRepository {
+export class PrismaRequestInterestRepository
+  implements RequestInterestRepository
+{
   constructor(private readonly prisma: PrismaService) {}
 
   async findByRequestId(requestId: string): Promise<RequestInterestEntity[]> {
@@ -34,16 +37,18 @@ export class PrismaRequestInterestRepository implements RequestInterestRepositor
       orderBy: { createdAt: 'desc' },
     });
 
-    return interests.map((i) => this.toEntity(i));
+    return interests.map((i) => PrismaRequestInterestMapper.toDomain(i));
   }
 
-  async findByProfessionalId(professionalId: string): Promise<RequestInterestEntity[]> {
+  async findByProfessionalId(
+    professionalId: string,
+  ): Promise<RequestInterestEntity[]> {
     const interests = await this.prisma.requestInterest.findMany({
       where: { professionalId },
       orderBy: { createdAt: 'desc' },
     });
 
-    return interests.map((i) => this.toEntity(i));
+    return interests.map((i) => PrismaRequestInterestMapper.toDomain(i));
   }
 
   async findByRequestAndProfessional(
@@ -59,19 +64,17 @@ export class PrismaRequestInterestRepository implements RequestInterestRepositor
       },
     });
 
-    return interest ? this.toEntity(interest) : null;
+    return interest ? PrismaRequestInterestMapper.toDomain(interest) : null;
   }
 
-  async create(data: {
+  async add(data: {
     requestId: string;
     professionalId: string;
     message: string | null;
   }): Promise<RequestInterestEntity> {
     const interest = await this.prisma.requestInterest.create({
       data: {
-        requestId: data.requestId,
-        professionalId: data.professionalId,
-        message: data.message,
+        ...PrismaRequestInterestMapper.toPersistenceCreate(data),
       },
       include: {
         professional: {
@@ -96,10 +99,10 @@ export class PrismaRequestInterestRepository implements RequestInterestRepositor
       },
     });
 
-    return this.toEntity(interest);
+    return PrismaRequestInterestMapper.toDomain(interest);
   }
 
-  async delete(requestId: string, professionalId: string): Promise<void> {
+  async remove(requestId: string, professionalId: string): Promise<void> {
     await this.prisma.requestInterest.delete({
       where: {
         requestId_professionalId: {
@@ -110,51 +113,9 @@ export class PrismaRequestInterestRepository implements RequestInterestRepositor
     });
   }
 
-  async deleteAllByRequestId(requestId: string): Promise<void> {
+  async removeAllByRequestId(requestId: string): Promise<void> {
     await this.prisma.requestInterest.deleteMany({
       where: { requestId },
     });
   }
-
-  private toEntity(interest: any): RequestInterestEntity {
-    const entity = new RequestInterestEntity(
-      interest.id,
-      interest.requestId,
-      interest.professionalId,
-      interest.message,
-      interest.createdAt,
-    );
-
-    // Attach professional data if available
-    if (interest.professional) {
-      const professional = interest.professional;
-      const trades = (professional.trades || []).map((pt: any) => ({
-        id: pt.trade.id,
-        name: pt.trade.name,
-        category: pt.trade.category,
-        description: pt.trade.description,
-        isPrimary: pt.isPrimary,
-      }));
-
-      (entity as any).professional = {
-        id: professional.id,
-        userId: professional.userId,
-        trades,
-        description: professional.description,
-        experienceYears: professional.experienceYears,
-        status: professional.status,
-        zone: professional.zone,
-        city: professional.city,
-        whatsapp: professional.whatsapp,
-        averageRating: professional.averageRating,
-        totalReviews: professional.totalReviews,
-        user: professional.user,
-      };
-    }
-
-    return entity;
-  }
 }
-
-
-

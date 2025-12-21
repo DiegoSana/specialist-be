@@ -55,4 +55,3 @@ export class FileCategoryVO {
     return this.getAccessLevel() === FileAccessLevel.PUBLIC;
   }
 }
-

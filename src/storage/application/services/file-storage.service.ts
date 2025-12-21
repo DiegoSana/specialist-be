@@ -1,7 +1,19 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
-import { FileStorageRepository, FILE_STORAGE_REPOSITORY } from '../../domain/repositories/file-storage.repository';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+  Inject,
+} from '@nestjs/common';
+import {
+  FileStorageRepository,
+  FILE_STORAGE_REPOSITORY,
+} from '../../domain/repositories/file-storage.repository';
 import { FileEntity } from '../../domain/entities/file.entity';
-import { FileCategory, FileCategoryVO } from '../../domain/value-objects/file-category.vo';
+import {
+  FileCategory,
+  FileCategoryVO,
+} from '../../domain/value-objects/file-category.vo';
 import { FileTypeVO } from '../../domain/value-objects/file-type.vo';
 import { FileSizeVO } from '../../domain/value-objects/file-size.vo';
 import { UploadFileDto } from '../dto/upload-file.dto';
@@ -29,30 +41,32 @@ export class FileStorageService {
 
     // Validate file type
     const fileType = new FileTypeVO(file.mimetype, uploadDto.category);
-    const fileSize = new FileSizeVO(file.size, fileType.getMaxSize());
+    new FileSizeVO(file.size, fileType.getMaxSize());
 
     // Validate requestId if provided
     if (uploadDto.requestId) {
       const request = await this.requestService.findById(uploadDto.requestId);
-      
       // Check if user is the client who created the request
       const isClient = request.clientId === userId;
-      
+
       // Check if user is the professional assigned to the request
       let isProfessional = false;
       if (request.professionalId) {
         try {
-          const professional = await this.professionalService.findByUserId(userId);
+          const professional =
+            await this.professionalService.findByUserId(userId);
           isProfessional = professional.id === request.professionalId;
         } catch {
           // User doesn't have a professional profile
           isProfessional = false;
         }
       }
-      
+
       // Verify user is either the client or the assigned professional
       if (!isClient && !isProfessional) {
-        throw new ForbiddenException('Only the client or assigned professional can upload photos to this request');
+        throw new ForbiddenException(
+          'Only the client or assigned professional can upload photos to this request',
+        );
       }
     }
 
@@ -76,7 +90,11 @@ export class FileStorageService {
     return file;
   }
 
-  async deleteFile(filePath: string, userId: string, isAdmin: boolean): Promise<void> {
+  async deleteFile(
+    filePath: string,
+    userId: string,
+    isAdmin: boolean,
+  ): Promise<void> {
     const file = await this.fileStorageRepository.findByPath(filePath);
     if (!file) {
       throw new NotFoundException('File not found');
@@ -132,22 +150,23 @@ export class FileStorageService {
     if (file.category === FileCategory.REQUEST_PHOTO && file.requestId) {
       try {
         const request = await this.requestService.findById(file.requestId);
-        
+
         // PUBLIC REQUESTS: All logged-in users can see photos
         if (request.isPublic) {
           return true; // userId is already verified as not null above
         }
-        
+
         // DIRECT REQUESTS: Only client and assigned specialist can see photos
         // Check if user is the client (owner)
         if (request.clientId === userId) {
           return true;
         }
-        
+
         // Check if user is the assigned professional
         if (request.professionalId) {
           try {
-            const professional = await this.professionalService.findByUserId(userId);
+            const professional =
+              await this.professionalService.findByUserId(userId);
             if (professional.id === request.professionalId) {
               return true;
             }
@@ -155,7 +174,7 @@ export class FileStorageService {
             // User doesn't have a professional profile
           }
         }
-        
+
         return false;
       } catch {
         return false;
@@ -165,4 +184,3 @@ export class FileStorageService {
     return false;
   }
 }
-

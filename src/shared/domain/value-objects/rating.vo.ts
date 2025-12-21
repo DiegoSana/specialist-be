@@ -16,4 +16,3 @@ export class Rating {
     return this.value === other.value;
   }
 }
-

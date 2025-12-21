@@ -38,4 +38,3 @@ export class FileMetadataDto {
   @ApiProperty()
   updatedAt: Date;
 }
-

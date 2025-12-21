@@ -3,6 +3,7 @@ import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.serv
 import { TradeRepository } from '../../domain/repositories/trade.repository';
 import { TradeEntity } from '../../domain/entities/trade.entity';
 import { ProfessionalStatus } from '@prisma/client';
+import { PrismaTradeMapper } from '../mappers/trade.prisma-mapper';
 
 @Injectable()
 export class PrismaTradeRepository implements TradeRepository {
@@ -15,7 +16,7 @@ export class PrismaTradeRepository implements TradeRepository {
 
     if (!trade) return null;
 
-    return this.toEntity(trade);
+    return PrismaTradeMapper.toDomain(trade);
   }
 
   async findByName(name: string): Promise<TradeEntity | null> {
@@ -25,7 +26,7 @@ export class PrismaTradeRepository implements TradeRepository {
 
     if (!trade) return null;
 
-    return this.toEntity(trade);
+    return PrismaTradeMapper.toDomain(trade);
   }
 
   async findAll(): Promise<TradeEntity[]> {
@@ -33,7 +34,7 @@ export class PrismaTradeRepository implements TradeRepository {
       orderBy: { name: 'asc' },
     });
 
-    return trades.map((trade) => this.toEntity(trade));
+    return trades.map((trade) => PrismaTradeMapper.toDomain(trade));
   }
 
   async findWithActiveProfessionals(): Promise<TradeEntity[]> {
@@ -52,43 +53,23 @@ export class PrismaTradeRepository implements TradeRepository {
       orderBy: { name: 'asc' },
     });
 
-    return trades.map((trade) => this.toEntity(trade));
+    return trades.map((trade) => PrismaTradeMapper.toDomain(trade));
   }
 
-  async create(tradeData: Omit<TradeEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<TradeEntity> {
-    const trade = await this.prisma.trade.create({
-      data: {
-        name: tradeData.name,
-        category: tradeData.category,
-        description: tradeData.description,
+  async save(trade: TradeEntity): Promise<TradeEntity> {
+    const persistence = PrismaTradeMapper.toPersistenceSave(trade);
+
+    const saved = await this.prisma.trade.upsert({
+      where: { id: trade.id },
+      create: {
+        id: trade.id,
+        ...(persistence as any),
+      },
+      update: {
+        ...(persistence as any),
       },
     });
 
-    return this.toEntity(trade);
-  }
-
-  async update(id: string, data: Partial<TradeEntity>): Promise<TradeEntity> {
-    const trade = await this.prisma.trade.update({
-      where: { id },
-      data: {
-        ...(data.name && { name: data.name }),
-        ...(data.category !== undefined && { category: data.category }),
-        ...(data.description !== undefined && { description: data.description }),
-      },
-    });
-
-    return this.toEntity(trade);
-  }
-
-  private toEntity(trade: any): TradeEntity {
-    return new TradeEntity(
-      trade.id,
-      trade.name,
-      trade.category,
-      trade.description,
-      trade.createdAt,
-      trade.updatedAt,
-    );
+    return PrismaTradeMapper.toDomain(saved);
   }
 }
-

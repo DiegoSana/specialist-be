@@ -1,11 +1,25 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
-import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../domain/repositories/professional.repository';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
+import {
+  ProfessionalRepository,
+  PROFESSIONAL_REPOSITORY,
+} from '../../domain/repositories/professional.repository';
 import { ProfessionalEntity } from '../../domain/entities/professional.entity';
-import { TradeRepository, TRADE_REPOSITORY } from '../../domain/repositories/trade.repository';
+import {
+  TradeRepository,
+  TRADE_REPOSITORY,
+} from '../../domain/repositories/trade.repository';
 import { CreateProfessionalDto } from '../dto/create-professional.dto';
 import { UpdateProfessionalDto } from '../dto/update-professional.dto';
 import { SearchProfessionalsDto } from '../dto/search-professionals.dto';
 import { ProfessionalStatus, RequestStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { UserService } from '../../../identity/application/services/user.service';
 import { RequestService } from '../../../requests/application/services/request.service';
@@ -13,13 +27,19 @@ import { RequestService } from '../../../requests/application/services/request.s
 @Injectable()
 export class ProfessionalService {
   constructor(
-    @Inject(PROFESSIONAL_REPOSITORY) private readonly professionalRepository: ProfessionalRepository,
-    @Inject(forwardRef(() => UserService)) private readonly userService: UserService,
-    @Inject(TRADE_REPOSITORY) private readonly tradeRepository: TradeRepository,
-    @Inject(forwardRef(() => RequestService)) private readonly requestService: RequestService,
+    @Inject(PROFESSIONAL_REPOSITORY)
+    private readonly professionalRepository: ProfessionalRepository,
+    @Inject(forwardRef(() => UserService))
+    private readonly userService: UserService,
+    @Inject(TRADE_REPOSITORY)
+    private readonly tradeRepository: TradeRepository,
+    @Inject(forwardRef(() => RequestService))
+    private readonly requestService: RequestService,
   ) {}
 
-  async search(searchDto: SearchProfessionalsDto): Promise<Partial<ProfessionalEntity>[]> {
+  async search(
+    searchDto: SearchProfessionalsDto,
+  ): Promise<Partial<ProfessionalEntity>[]> {
     const professionals = await this.professionalRepository.search({
       search: searchDto.search,
       tradeId: searchDto.tradeId,
@@ -28,7 +48,9 @@ export class ProfessionalService {
 
     // For public search, sanitize contact info and only return public gallery
     // Contact info (whatsapp, website, address) requires an active request
-    return professionals.map((professional) => this.sanitizeForPublic(professional));
+    return professionals.map((professional) =>
+      this.sanitizeForPublic(professional),
+    );
   }
 
   async findById(id: string): Promise<Partial<ProfessionalEntity>> {
@@ -36,17 +58,64 @@ export class ProfessionalService {
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }
-    
+
     // For public access, sanitize contact info
     return this.sanitizeForPublic(professional);
   }
 
   /**
+   * Internal (cross-context) load method.
+   * Returns the full domain entity (not sanitized).
+   */
+  async getByIdOrFail(id: string): Promise<ProfessionalEntity> {
+    const professional = await this.professionalRepository.findById(id);
+    if (!professional) {
+      throw new NotFoundException('Professional not found');
+    }
+    return professional;
+  }
+
+  /**
+   * Admin use-case: update a professional status.
+   */
+  async updateStatus(
+    professionalId: string,
+    status: ProfessionalStatus,
+  ): Promise<ProfessionalEntity> {
+    const professional = await this.getByIdOrFail(professionalId);
+    const now = new Date();
+    return this.professionalRepository.save(
+      new ProfessionalEntity(
+        professional.id,
+        professional.userId,
+        professional.trades,
+        professional.description,
+        professional.experienceYears,
+        status,
+        professional.zone,
+        professional.city,
+        professional.address,
+        professional.whatsapp,
+        professional.website,
+        professional.averageRating,
+        professional.totalReviews,
+        professional.profileImage,
+        professional.gallery,
+        professional.active,
+        professional.createdAt,
+        now,
+      ),
+    );
+  }
+
+  /**
    * Sanitize professional data for public access
-   * Removes contact info (whatsapp, website, address) 
+   * Removes contact info (whatsapp, website, address)
    * Contact info is only visible after creating a request
    */
-  private sanitizeForPublic(professional: ProfessionalEntity): Partial<ProfessionalEntity> & { combinedGallery: string[]; user?: any } {
+  private sanitizeForPublic(
+    professional: ProfessionalEntity,
+  ): Partial<ProfessionalEntity> & { combinedGallery: string[]; user?: any } {
     const sanitized: any = {
       id: professional.id,
       userId: professional.userId,
@@ -76,15 +145,22 @@ export class ProfessionalService {
   }
 
   // Get professional with full combined gallery (for authenticated users with access)
-  async findByIdWithFullGallery(id: string, requestingUserId?: string): Promise<ProfessionalEntity> {
+  async findByIdWithFullGallery(
+    id: string,
+    requestingUserId?: string,
+  ): Promise<ProfessionalEntity> {
     const professional = await this.professionalRepository.findById(id);
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }
 
     // Get completed requests for this professional
-    const completedRequests = await this.requestService.findByProfessionalId(professional.id);
-    const doneRequests = completedRequests.filter((req) => req.status === RequestStatus.DONE);
+    const completedRequests = await this.requestService.findByProfessionalId(
+      professional.id,
+    );
+    const doneRequests = completedRequests.filter(
+      (req) => req.status === RequestStatus.DONE,
+    );
 
     // Collect photos from completed work
     // Only include photos from requests where the requesting user is a participant
@@ -92,16 +168,21 @@ export class ProfessionalService {
     doneRequests.forEach((request) => {
       // If no requesting user, only include public photos (none from requests)
       // If requesting user is the professional or was the client, include those photos
-      const isParticipant = requestingUserId && 
-        (professional.userId === requestingUserId || request.clientId === requestingUserId);
-      
+      const isParticipant =
+        requestingUserId &&
+        (professional.userId === requestingUserId ||
+          request.clientId === requestingUserId);
+
       if (isParticipant && request.photos && request.photos.length > 0) {
         completedWorkPhotos.push(...request.photos);
       }
     });
 
     // Combine professional gallery with accessible completed work photos
-    const combinedGallery = [...(professional.gallery || []), ...completedWorkPhotos];
+    const combinedGallery = [
+      ...(professional.gallery || []),
+      ...completedWorkPhotos,
+    ];
     (professional as any).combinedGallery = combinedGallery;
 
     return professional;
@@ -114,8 +195,12 @@ export class ProfessionalService {
     }
 
     // For the professional viewing their own profile, include photos from their completed work
-    const completedRequests = await this.requestService.findByProfessionalId(professional.id);
-    const doneRequests = completedRequests.filter((req) => req.status === RequestStatus.DONE);
+    const completedRequests = await this.requestService.findByProfessionalId(
+      professional.id,
+    );
+    const doneRequests = completedRequests.filter(
+      (req) => req.status === RequestStatus.DONE,
+    );
 
     const completedWorkPhotos: string[] = [];
     doneRequests.forEach((request) => {
@@ -124,13 +209,19 @@ export class ProfessionalService {
       }
     });
 
-    const combinedGallery = [...(professional.gallery || []), ...completedWorkPhotos];
+    const combinedGallery = [
+      ...(professional.gallery || []),
+      ...completedWorkPhotos,
+    ];
     (professional as any).combinedGallery = combinedGallery;
 
     return professional;
   }
 
-  async createProfile(userId: string, createDto: CreateProfessionalDto): Promise<{ professional: ProfessionalEntity; user: any }> {
+  async createProfile(
+    userId: string,
+    createDto: CreateProfessionalDto,
+  ): Promise<{ professional: ProfessionalEntity; user: any }> {
     const user = await this.userService.findByIdOrFail(userId, true);
 
     if (!user.isActive()) {
@@ -144,44 +235,68 @@ export class ProfessionalService {
     }
 
     // Verify all trades exist
+    const trades: {
+      id: string;
+      name: string;
+      category: string | null;
+      description: string | null;
+    }[] = [];
     for (const tradeId of createDto.tradeIds) {
       const trade = await this.tradeRepository.findById(tradeId);
       if (!trade) {
         throw new NotFoundException(`Trade with ID ${tradeId} not found`);
       }
+      trades.push({
+        id: trade.id,
+        name: trade.name,
+        category: trade.category,
+        description: trade.description,
+      });
     }
 
-    const professional = await this.professionalRepository.create({
-      userId,
-      tradeIds: createDto.tradeIds,
-      description: createDto.description || null,
-      experienceYears: createDto.experienceYears || null,
-      status: ProfessionalStatus.PENDING_VERIFICATION,
-      zone: createDto.zone || null,
-      city: createDto.city || 'Bariloche',
-      address: createDto.address || null,
-      whatsapp: createDto.whatsapp || null,
-      website: createDto.website || null,
-      profileImage: createDto.profileImage || null,
-      gallery: createDto.gallery || [],
-      active: true,
-    });
+    const now = new Date();
+    const professional = await this.professionalRepository.save(
+      new ProfessionalEntity(
+        randomUUID(),
+        userId,
+        trades.map((t, index) => ({
+          ...t,
+          isPrimary: index === 0,
+        })),
+        createDto.description || null,
+        createDto.experienceYears || null,
+        ProfessionalStatus.PENDING_VERIFICATION,
+        createDto.zone || null,
+        createDto.city || 'Bariloche',
+        createDto.address || null,
+        createDto.whatsapp || null,
+        createDto.website || null,
+        0,
+        0,
+        createDto.profileImage || null,
+        createDto.gallery || [],
+        true,
+        now,
+        now,
+      ),
+    );
 
     // Reload user with updated profiles to return user info
     const updatedUser = await this.userService.findById(userId, true);
-    
     return {
       professional,
-      user: updatedUser ? {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        status: updatedUser.status,
-        hasClientProfile: updatedUser.hasClientProfile,
-        hasProfessionalProfile: updatedUser.hasProfessionalProfile,
-        isAdmin: updatedUser.isAdminUser(),
-      } : null,
+      user: updatedUser
+        ? {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            firstName: updatedUser.firstName,
+            lastName: updatedUser.lastName,
+            status: updatedUser.status,
+            hasClientProfile: updatedUser.hasClientProfile,
+            hasProfessionalProfile: updatedUser.hasProfessionalProfile,
+            isAdmin: updatedUser.isAdminUser(),
+          }
+        : null,
     };
   }
 
@@ -190,7 +305,8 @@ export class ProfessionalService {
     professionalId: string,
     updateDto: UpdateProfessionalDto,
   ): Promise<ProfessionalEntity> {
-    const professional = await this.professionalRepository.findById(professionalId);
+    const professional =
+      await this.professionalRepository.findById(professionalId);
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }
@@ -200,33 +316,75 @@ export class ProfessionalService {
     }
 
     // Verify all trades exist if updating
+    let nextTrades = professional.trades;
     if (updateDto.tradeIds && updateDto.tradeIds.length > 0) {
+      const trades: {
+        id: string;
+        name: string;
+        category: string | null;
+        description: string | null;
+      }[] = [];
       for (const tradeId of updateDto.tradeIds) {
         const trade = await this.tradeRepository.findById(tradeId);
         if (!trade) {
           throw new NotFoundException(`Trade with ID ${tradeId} not found`);
         }
+        trades.push({
+          id: trade.id,
+          name: trade.name,
+          category: trade.category,
+          description: trade.description,
+        });
       }
+      nextTrades = trades.map((t, index) => ({
+        ...t,
+        isPrimary: index === 0,
+      }));
     }
 
-    // Convert UpdateProfessionalDto to update data
-    const updateData: Partial<ProfessionalEntity> & { tradeIds?: string[] } = {
-      ...(updateDto.description !== undefined && { description: updateDto.description }),
-      ...(updateDto.experienceYears !== undefined && { experienceYears: updateDto.experienceYears }),
-      ...(updateDto.zone !== undefined && { zone: updateDto.zone }),
-      ...(updateDto.city && { city: updateDto.city }),
-      ...(updateDto.address !== undefined && { address: updateDto.address }),
-      ...(updateDto.whatsapp !== undefined && { whatsapp: updateDto.whatsapp }),
-      ...(updateDto.website !== undefined && { website: updateDto.website }),
-      ...(updateDto.profileImage !== undefined && { profileImage: updateDto.profileImage }),
-      ...(updateDto.gallery !== undefined && { gallery: updateDto.gallery }),
-      ...(updateDto.tradeIds && { tradeIds: updateDto.tradeIds }),
-    };
-
-    return this.professionalRepository.update(professionalId, updateData);
+    const now = new Date();
+    return this.professionalRepository.save(
+      new ProfessionalEntity(
+        professional.id,
+        professional.userId,
+        nextTrades,
+        updateDto.description !== undefined
+          ? updateDto.description
+          : professional.description,
+        updateDto.experienceYears !== undefined
+          ? updateDto.experienceYears
+          : professional.experienceYears,
+        professional.status,
+        updateDto.zone !== undefined ? updateDto.zone : professional.zone,
+        updateDto.city ? updateDto.city : professional.city,
+        updateDto.address !== undefined
+          ? updateDto.address
+          : professional.address,
+        updateDto.whatsapp !== undefined
+          ? updateDto.whatsapp
+          : professional.whatsapp,
+        updateDto.website !== undefined
+          ? updateDto.website
+          : professional.website,
+        professional.averageRating,
+        professional.totalReviews,
+        updateDto.profileImage !== undefined
+          ? updateDto.profileImage
+          : professional.profileImage,
+        updateDto.gallery !== undefined
+          ? updateDto.gallery
+          : professional.gallery,
+        professional.active,
+        professional.createdAt,
+        now,
+      ),
+    );
   }
 
-  async addGalleryItem(userId: string, url: string): Promise<ProfessionalEntity> {
+  async addGalleryItem(
+    userId: string,
+    url: string,
+  ): Promise<ProfessionalEntity> {
     const professional = await this.professionalRepository.findByUserId(userId);
     if (!professional) {
       throw new NotFoundException('Professional profile not found');
@@ -239,12 +397,34 @@ export class ProfessionalService {
 
     const updatedGallery = [...currentGallery, url];
 
-    return this.professionalRepository.update(professional.id, {
-      gallery: updatedGallery,
-    });
+    return this.professionalRepository.save(
+      new ProfessionalEntity(
+        professional.id,
+        professional.userId,
+        professional.trades,
+        professional.description,
+        professional.experienceYears,
+        professional.status,
+        professional.zone,
+        professional.city,
+        professional.address,
+        professional.whatsapp,
+        professional.website,
+        professional.averageRating,
+        professional.totalReviews,
+        professional.profileImage,
+        updatedGallery,
+        professional.active,
+        professional.createdAt,
+        new Date(),
+      ),
+    );
   }
 
-  async removeGalleryItem(userId: string, url: string): Promise<ProfessionalEntity> {
+  async removeGalleryItem(
+    userId: string,
+    url: string,
+  ): Promise<ProfessionalEntity> {
     const professional = await this.professionalRepository.findByUserId(userId);
     if (!professional) {
       throw new NotFoundException('Professional profile not found');
@@ -253,28 +433,43 @@ export class ProfessionalService {
     const currentGallery = professional.gallery || [];
     const updatedGallery = currentGallery.filter((item) => item !== url);
 
-    return this.professionalRepository.update(professional.id, {
-      gallery: updatedGallery,
-    });
+    return this.professionalRepository.save(
+      new ProfessionalEntity(
+        professional.id,
+        professional.userId,
+        professional.trades,
+        professional.description,
+        professional.experienceYears,
+        professional.status,
+        professional.zone,
+        professional.city,
+        professional.address,
+        professional.whatsapp,
+        professional.website,
+        professional.averageRating,
+        professional.totalReviews,
+        professional.profileImage,
+        updatedGallery,
+        professional.active,
+        professional.createdAt,
+        new Date(),
+      ),
+    );
   }
 
   /**
    * Update professional's rating statistics
    * Called by ReviewService after reviews are created/updated/deleted
    */
-  async updateRating(professionalId: string, averageRating: number, totalReviews: number): Promise<void> {
-    await this.professionalRepository.updateRating(professionalId, averageRating, totalReviews);
-  }
-
-  /**
-   * Update professional status (for admin operations)
-   */
-  async updateStatus(professionalId: string, status: ProfessionalStatus): Promise<ProfessionalEntity> {
-    const professional = await this.professionalRepository.findById(professionalId);
-    if (!professional) {
-      throw new NotFoundException('Professional not found');
-    }
-    return this.professionalRepository.update(professionalId, { status });
+  async updateRating(
+    professionalId: string,
+    averageRating: number,
+    totalReviews: number,
+  ): Promise<void> {
+    await this.professionalRepository.updateRating(
+      professionalId,
+      averageRating,
+      totalReviews,
+    );
   }
 }
-

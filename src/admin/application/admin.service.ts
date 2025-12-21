@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from './dto/update-professional-status.dto';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
@@ -110,6 +110,9 @@ export class AdminService {
     professionalId: string,
     updateDto: UpdateProfessionalStatusDto,
   ) {
-    return this.professionalService.updateStatus(professionalId, updateDto.status);
+    return this.professionalService.updateStatus(
+      professionalId,
+      updateDto.status,
+    );
   }
 }
