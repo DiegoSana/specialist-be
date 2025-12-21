@@ -1,5 +1,7 @@
 # Specialist - Professional Marketplace API
 
+[![Deploy to Fly.io](https://github.com/DiegoSana/specialist-be/actions/workflows/deploy.yml/badge.svg)](https://github.com/DiegoSana/specialist-be/actions/workflows/deploy.yml)
+
 NestJS REST API with DDD (Domain-Driven Design) architecture that connects users with verified professionals in Bariloche.
 
 ## 🏗️ Architecture

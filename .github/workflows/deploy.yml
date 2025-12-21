@@ -6,8 +6,31 @@ on:
       - main
 
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run tests
+        run: npm test
+
   deploy:
     name: Deploy Backend
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,3 +44,30 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+      - name: Health Check
+        run: |
+          echo "Waiting for deployment to stabilize..."
+          sleep 10
+          
+          echo "Checking health endpoint..."
+          for i in {1..5}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://specialist-api.fly.dev/api/health || echo "000")
+            if [ "$response" = "200" ]; then
+              echo "✅ Health check passed! (HTTP $response)"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $response - Retrying in 5s..."
+            sleep 5
+          done
+          
+          echo "❌ Health check failed after 5 attempts"
+          exit 1
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "## 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **App URL:** https://specialist-api.fly.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Docs:** https://specialist-api.fly.dev/api/docs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health:** https://specialist-api.fly.dev/api/health" >> $GITHUB_STEP_SUMMARY
