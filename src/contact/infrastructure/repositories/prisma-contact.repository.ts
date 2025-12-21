@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { ContactRepository } from '../../domain/repositories/contact.repository';
 import { ContactEntity } from '../../domain/entities/contact.entity';
+import { PrismaContactMapper } from '../mappers/contact.prisma-mapper';
 
 @Injectable()
 export class PrismaContactRepository implements ContactRepository {
@@ -12,14 +13,11 @@ export class PrismaContactRepository implements ContactRepository {
   ): Promise<ContactEntity> {
     const contact = await this.prisma.contact.create({
       data: {
-        fromUserId: contactData.fromUserId,
-        toUserId: contactData.toUserId,
-        contactType: contactData.contactType,
-        message: contactData.message,
+        ...PrismaContactMapper.toPersistenceCreate(contactData),
       },
     });
 
-    return this.toEntity(contact);
+    return PrismaContactMapper.toDomain(contact);
   }
 
   async findByUserId(userId: string): Promise<ContactEntity[]> {
@@ -30,18 +28,7 @@ export class PrismaContactRepository implements ContactRepository {
       orderBy: { createdAt: 'desc' },
     });
 
-    return contacts.map((c) => this.toEntity(c));
-  }
-
-  private toEntity(contact: any): ContactEntity {
-    return new ContactEntity(
-      contact.id,
-      contact.fromUserId,
-      contact.toUserId,
-      contact.contactType,
-      contact.message,
-      contact.createdAt,
-    );
+    return contacts.map((c) => PrismaContactMapper.toDomain(c));
   }
 }
 
