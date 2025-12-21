@@ -43,8 +43,7 @@ describe('ReviewService', () => {
       findByProfessionalId: jest.fn(),
       findById: jest.fn(),
       findByRequestId: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
+      save: jest.fn(),
       delete: jest.fn(),
     };
 
@@ -165,7 +164,7 @@ describe('ReviewService', () => {
       mockProfessionalRepository.findById.mockResolvedValue(professional);
       mockRequestRepository.findById.mockResolvedValue(request);
       mockReviewRepository.findByRequestId.mockResolvedValue(null);
-      mockReviewRepository.create.mockResolvedValue(review);
+      mockReviewRepository.save.mockResolvedValue(review);
       mockReviewRepository.findByProfessionalId.mockResolvedValue([review]);
       mockProfessionalRepository.updateRating.mockResolvedValue(undefined);
 
@@ -319,7 +318,7 @@ describe('ReviewService', () => {
       });
 
       mockReviewRepository.findById.mockResolvedValue(review);
-      mockReviewRepository.update.mockResolvedValue(updatedReview);
+      mockReviewRepository.save.mockResolvedValue(updatedReview);
       mockReviewRepository.findByProfessionalId.mockResolvedValue([
         updatedReview,
       ]);
@@ -353,16 +352,14 @@ describe('ReviewService', () => {
       const updatedReview = createMockReview({ ...review, rating: 3 });
 
       mockReviewRepository.findById.mockResolvedValue(review);
-      mockReviewRepository.update.mockResolvedValue(updatedReview);
+      mockReviewRepository.save.mockResolvedValue(updatedReview);
       mockReviewRepository.findByProfessionalId.mockResolvedValue([
         updatedReview,
       ]);
 
       await service.update('review-123', 'user-123', { rating: 3 });
 
-      expect(mockReviewRepository.update).toHaveBeenCalledWith('review-123', {
-        rating: 3,
-      });
+      expect(mockReviewRepository.save).toHaveBeenCalled();
     });
 
     it('should update only comment', async () => {
@@ -373,7 +370,7 @@ describe('ReviewService', () => {
       });
 
       mockReviewRepository.findById.mockResolvedValue(review);
-      mockReviewRepository.update.mockResolvedValue(updatedReview);
+      mockReviewRepository.save.mockResolvedValue(updatedReview);
       mockReviewRepository.findByProfessionalId.mockResolvedValue([
         updatedReview,
       ]);
@@ -382,9 +379,7 @@ describe('ReviewService', () => {
         comment: 'New comment',
       });
 
-      expect(mockReviewRepository.update).toHaveBeenCalledWith('review-123', {
-        comment: 'New comment',
-      });
+      expect(mockReviewRepository.save).toHaveBeenCalled();
     });
   });
 

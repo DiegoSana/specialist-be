@@ -26,6 +26,7 @@ import {
 import { CreateReviewDto } from '../dto/create-review.dto';
 import { UpdateReviewDto } from '../dto/update-review.dto';
 import { Rating } from '../../domain/value-objects/rating.vo';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ReviewService {
@@ -104,13 +105,16 @@ export class ReviewService {
     // Validate rating
     const rating = new Rating(createDto.rating);
 
-    const review = await this.reviewRepository.create({
-      reviewerId,
-      professionalId: createDto.professionalId,
-      requestId: createDto.requestId || null,
-      rating: rating.getValue(),
-      comment: createDto.comment || null,
-    });
+    const review = await this.reviewRepository.save(
+      ReviewEntity.create({
+        id: randomUUID(),
+        reviewerId,
+        professionalId: createDto.professionalId,
+        requestId: createDto.requestId || null,
+        rating: rating.getValue(),
+        comment: createDto.comment || null,
+      }),
+    );
 
     // Update professional rating
     await this.updateProfessionalRating(createDto.professionalId);
@@ -132,10 +136,7 @@ export class ReviewService {
       throw new ForbiddenException('You can only update your own reviews');
     }
 
-    const updateData: {
-      rating?: number;
-      comment?: string | null;
-    } = {};
+    const updateData: { rating?: number; comment?: string | null } = {};
 
     if (updateDto.rating !== undefined) {
       const rating = new Rating(updateDto.rating);
@@ -146,7 +147,9 @@ export class ReviewService {
       updateData.comment = updateDto.comment;
     }
 
-    const updatedReview = await this.reviewRepository.update(id, updateData);
+    const updatedReview = await this.reviewRepository.save(
+      review.withChanges(updateData),
+    );
 
     // Update professional rating
     await this.updateProfessionalRating(review.professionalId);

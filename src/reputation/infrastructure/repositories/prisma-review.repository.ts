@@ -8,6 +8,17 @@ import { PrismaReviewMapper } from '../mappers/review.prisma-mapper';
 export class PrismaReviewRepository implements ReviewRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly includeReviewer = {
+    reviewer: {
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
+    },
+  } as const;
+
   async findById(id: string): Promise<ReviewEntity | null> {
     const review = await this.prisma.review.findUnique({
       where: { id },
@@ -21,16 +32,7 @@ export class PrismaReviewRepository implements ReviewRepository {
   async findByProfessionalId(professionalId: string): Promise<ReviewEntity[]> {
     const reviews = await this.prisma.review.findMany({
       where: { professionalId },
-      include: {
-        reviewer: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
+      include: this.includeReviewer,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -47,37 +49,31 @@ export class PrismaReviewRepository implements ReviewRepository {
     return PrismaReviewMapper.toDomain(review);
   }
 
-  async create(reviewData: {
-    reviewerId: string;
-    professionalId: string;
-    rating: number;
-    comment: string | null;
-    requestId: string | null;
-  }): Promise<ReviewEntity> {
-    const review = await this.prisma.review.create({
-      data: {
-        ...PrismaReviewMapper.toPersistenceCreate(reviewData),
-      },
+  async save(review: ReviewEntity): Promise<ReviewEntity> {
+    const createData: any = {
+      id: review.id,
+      reviewerId: review.reviewerId,
+      professionalId: review.professionalId,
+      requestId: review.requestId,
+      rating: review.rating,
+      comment: review.comment,
+    };
+
+    const updateData = { ...createData };
+    delete updateData.id;
+    // No permitir cambiar reviewer/professional/request via save.
+    delete updateData.reviewerId;
+    delete updateData.professionalId;
+    delete updateData.requestId;
+
+    const saved = await this.prisma.review.upsert({
+      where: { id: review.id },
+      create: createData,
+      update: updateData,
+      include: this.includeReviewer,
     });
 
-    return PrismaReviewMapper.toDomain(review);
-  }
-
-  async update(
-    id: string,
-    data: {
-      rating?: number;
-      comment?: string | null;
-    },
-  ): Promise<ReviewEntity> {
-    const review = await this.prisma.review.update({
-      where: { id },
-      data: {
-        ...PrismaReviewMapper.toPersistenceUpdate(data),
-      },
-    });
-
-    return PrismaReviewMapper.toDomain(review);
+    return PrismaReviewMapper.toDomain(saved);
   }
 
   async delete(id: string): Promise<void> {
