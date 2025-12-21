@@ -11,6 +11,13 @@
 
 ---
 
+## Overview (English)
+
+This repository follows a Clean Architecture + DDD-inspired structure. For the persistence layer, see:
+- `docs/architecture/PERSISTENCE_BOUNDARIES.md`
+
+> Note: parts of this document are still in Spanish and will be progressively migrated to English.
+
 ## Visión General
 
 **Specialist** es un marketplace que conecta clientes con profesionales/especialistas verificados. El core del negocio es facilitar la conexión entre quienes necesitan un servicio y quienes lo ofrecen.

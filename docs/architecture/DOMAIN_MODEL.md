@@ -39,9 +39,11 @@
 ### 3. Requests Context
 **Purpose**: Manages service requests lifecycle.
 
-**Aggregate Roots**:
+**Aggregate Root**:
 - `Request` - Service request (public or direct)
-- `RequestInterest` - Professional interest in public request
+
+**Association (append/remove)**:
+- `RequestInterest` - Professional interest in a public request (modeled as an association store rather than a mutable aggregate)
 
 **Request Types**:
 - **Direct** (isPublic: false) - Client → specific Professional
@@ -167,6 +169,7 @@
 - Public Request: tradeId required, professionalId null initially
 - Only client can accept quote
 - Only assigned professional can update status
+ - `RequestInterest` is added/removed (not updated): one interest per (requestId, professionalId)
 
 ### Reputation
 - Review only after Request status = DONE

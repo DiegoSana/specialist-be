@@ -1,4 +1,5 @@
 import { ContactEntity } from '../../domain/entities/contact.entity';
+import { Prisma } from '@prisma/client';
 
 export class PrismaContactMapper {
   static toDomain(contact: any): ContactEntity {
@@ -14,7 +15,7 @@ export class PrismaContactMapper {
 
   static toPersistenceCreate(
     input: Omit<ContactEntity, 'id' | 'createdAt'>,
-  ): Record<string, unknown> {
+  ): Prisma.ContactUncheckedCreateInput {
     return {
       fromUserId: input.fromUserId,
       toUserId: input.toUserId,

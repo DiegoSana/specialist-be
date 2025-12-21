@@ -86,11 +86,11 @@ class FileEntity {
 }
 ```
 
-#### `FileStorageRepository` (Interface)
-Contract defining storage operations:
+#### `FileStoragePort` (Interface)
+Contract defining storage operations (infrastructure **port**, not an aggregate repository):
 
 ```typescript
-interface FileStorageRepository {
+interface FileStoragePort {
   upload(file: Buffer, metadata: {...}): Promise<FileEntity>;
   delete(filePath: string): Promise<void>;
   getUrl(filePath: string): Promise<string>;

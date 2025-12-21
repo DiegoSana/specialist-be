@@ -1,4 +1,5 @@
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
+import { Prisma } from '@prisma/client';
 
 export class PrismaRequestInterestMapper {
   static toDomain(interest: any): RequestInterestEntity {
@@ -43,7 +44,7 @@ export class PrismaRequestInterestMapper {
     requestId: string;
     professionalId: string;
     message: string | null;
-  }): Record<string, unknown> {
+  }): Prisma.RequestInterestUncheckedCreateInput {
     return {
       requestId: input.requestId,
       professionalId: input.professionalId,
