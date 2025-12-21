@@ -67,7 +67,7 @@ export class PrismaRequestInterestRepository
     return interest ? PrismaRequestInterestMapper.toDomain(interest) : null;
   }
 
-  async create(data: {
+  async add(data: {
     requestId: string;
     professionalId: string;
     message: string | null;
@@ -102,7 +102,7 @@ export class PrismaRequestInterestRepository
     return PrismaRequestInterestMapper.toDomain(interest);
   }
 
-  async delete(requestId: string, professionalId: string): Promise<void> {
+  async remove(requestId: string, professionalId: string): Promise<void> {
     await this.prisma.requestInterest.delete({
       where: {
         requestId_professionalId: {
@@ -113,7 +113,7 @@ export class PrismaRequestInterestRepository
     });
   }
 
-  async deleteAllByRequestId(requestId: string): Promise<void> {
+  async removeAllByRequestId(requestId: string): Promise<void> {
     await this.prisma.requestInterest.deleteMany({
       where: { requestId },
     });

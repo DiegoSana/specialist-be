@@ -35,11 +35,11 @@ describe('RequestInterestService', () => {
 
   beforeEach(async () => {
     mockRequestInterestRepository = {
-      create: jest.fn(),
+      add: jest.fn(),
       findByRequestAndProfessional: jest.fn(),
       findByRequestId: jest.fn(),
-      delete: jest.fn(),
-      deleteAllByRequestId: jest.fn(),
+      remove: jest.fn(),
+      removeAllByRequestId: jest.fn(),
     };
 
     mockRequestRepository = {
@@ -100,7 +100,7 @@ describe('RequestInterestService', () => {
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         null,
       );
-      mockRequestInterestRepository.create.mockResolvedValue(interest);
+      mockRequestInterestRepository.add.mockResolvedValue(interest);
 
       const result = await service.expressInterest(
         'request-123',
@@ -109,7 +109,7 @@ describe('RequestInterestService', () => {
       );
 
       expect(result).toEqual(interest);
-      expect(mockRequestInterestRepository.create).toHaveBeenCalledWith({
+      expect(mockRequestInterestRepository.add).toHaveBeenCalledWith({
         requestId: 'request-123',
         professionalId: professional.id,
         message: 'I am interested',
@@ -223,7 +223,7 @@ describe('RequestInterestService', () => {
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         null,
       );
-      mockRequestInterestRepository.create.mockResolvedValue(interest);
+      mockRequestInterestRepository.add.mockResolvedValue(interest);
 
       const result = await service.expressInterest(
         'request-123',
@@ -243,11 +243,11 @@ describe('RequestInterestService', () => {
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         interest,
       );
-      mockRequestInterestRepository.delete.mockResolvedValue(undefined);
+      mockRequestInterestRepository.remove.mockResolvedValue(undefined);
 
       await service.removeInterest('request-123', 'user-123');
 
-      expect(mockRequestInterestRepository.delete).toHaveBeenCalledWith(
+      expect(mockRequestInterestRepository.remove).toHaveBeenCalledWith(
         'request-123',
         professional.id,
       );
@@ -381,7 +381,7 @@ describe('RequestInterestService', () => {
         interest,
       );
       mockRequestRepository.save.mockResolvedValue(updatedRequest);
-      mockRequestInterestRepository.deleteAllByRequestId.mockResolvedValue(
+      mockRequestInterestRepository.removeAllByRequestId.mockResolvedValue(
         undefined,
       );
 
@@ -394,7 +394,7 @@ describe('RequestInterestService', () => {
       expect(result.professionalId).toBe('prof-123');
       expect(result.status).toBe(RequestStatus.ACCEPTED);
       expect(
-        mockRequestInterestRepository.deleteAllByRequestId,
+        mockRequestInterestRepository.removeAllByRequestId,
       ).toHaveBeenCalledWith('request-123');
     });
 

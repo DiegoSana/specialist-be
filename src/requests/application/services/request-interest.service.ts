@@ -87,7 +87,7 @@ export class RequestInterestService {
       }
     }
 
-    return this.requestInterestRepository.create({
+    return this.requestInterestRepository.add({
       requestId,
       professionalId: professional.id,
       message: dto.message || null,
@@ -112,7 +112,7 @@ export class RequestInterestService {
       throw new NotFoundException('Interest not found');
     }
 
-    await this.requestInterestRepository.delete(requestId, professional.id);
+    await this.requestInterestRepository.remove(requestId, professional.id);
   }
 
   /**
@@ -212,7 +212,7 @@ export class RequestInterestService {
     );
 
     // Clean up all interests for this request
-    await this.requestInterestRepository.deleteAllByRequestId(requestId);
+    await this.requestInterestRepository.removeAllByRequestId(requestId);
 
     return updatedRequest;
   }
