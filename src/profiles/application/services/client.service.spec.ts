@@ -6,13 +6,13 @@ import {
 } from '@nestjs/common';
 import { ClientService } from './client.service';
 import { USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
-import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
+import { CLIENT_REPOSITORY } from '../../domain/repositories/client.repository';
 import { createMockUser } from '../../../__mocks__/test-utils';
 
 describe('ClientService', () => {
   let service: ClientService;
   let mockUserRepository: any;
-  let mockPrismaService: any;
+  let mockClientRepository: any;
 
   beforeEach(async () => {
     mockUserRepository = {
@@ -20,17 +20,15 @@ describe('ClientService', () => {
       save: jest.fn(),
     };
 
-    mockPrismaService = {
-      client: {
-        create: jest.fn(),
-      },
+    mockClientRepository = {
+      save: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClientService,
         { provide: USER_REPOSITORY, useValue: mockUserRepository },
-        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: CLIENT_REPOSITORY, useValue: mockClientRepository },
       ],
     }).compile();
 
@@ -151,7 +149,7 @@ describe('ClientService', () => {
       mockUserRepository.findById
         .mockResolvedValueOnce(user)
         .mockResolvedValueOnce(userWithClient);
-      mockPrismaService.client.create.mockResolvedValue({
+      mockClientRepository.save.mockResolvedValue({
         id: 'client-123',
         userId: 'user-123',
       });
@@ -159,9 +157,7 @@ describe('ClientService', () => {
       const result = await service.activateClientProfile('user-123');
 
       expect(result.hasClientProfile).toBe(true);
-      expect(mockPrismaService.client.create).toHaveBeenCalledWith({
-        data: { userId: 'user-123' },
-      });
+      expect(mockClientRepository.save).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when user not found', async () => {

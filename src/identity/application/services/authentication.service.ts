@@ -21,6 +21,7 @@ import {
   ClientRepository,
   CLIENT_REPOSITORY,
 } from '../../../profiles/domain/repositories/client.repository';
+import { ClientEntity } from '../../../profiles/domain/entities/client.entity';
 
 @Injectable()
 export class AuthenticationService {
@@ -58,9 +59,9 @@ export class AuthenticationService {
     // If registering as professional, client profile will not be created
     // (user can create it later if needed)
     if (!registerDto.isProfessional) {
-      await this.clientRepository.create({
-        userId: user.id,
-      });
+      await this.clientRepository.save(
+        ClientEntity.createForUser({ id: randomUUID(), userId: user.id }),
+      );
     }
 
     // Reload user with profiles
@@ -192,9 +193,9 @@ export class AuthenticationService {
         );
 
         // Create client profile for new user
-        await this.clientRepository.create({
-          userId: user.id,
-        });
+        await this.clientRepository.save(
+          ClientEntity.createForUser({ id: randomUUID(), userId: user.id }),
+        );
 
         // Reload user with profiles
         user = await this.userRepository.findById(user.id, true);
@@ -287,9 +288,9 @@ export class AuthenticationService {
         );
 
         // Create client profile for new user
-        await this.clientRepository.create({
-          userId: user.id,
-        });
+        await this.clientRepository.save(
+          ClientEntity.createForUser({ id: randomUUID(), userId: user.id }),
+        );
 
         // Reload user with profiles
         user = await this.userRepository.findById(user.id, true);

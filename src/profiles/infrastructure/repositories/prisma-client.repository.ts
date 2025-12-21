@@ -28,31 +28,21 @@ export class PrismaClientRepository implements ClientRepository {
     return PrismaClientMapper.toDomain(client);
   }
 
-  async create(clientData: {
-    userId: string;
-    preferences?: Record<string, any> | null;
-    savedProfessionals?: string[];
-    searchHistory?: Record<string, any> | null;
-    notificationSettings?: Record<string, any> | null;
-  }): Promise<ClientEntity> {
-    const client = await this.prisma.client.create({
-      data: {
-        ...PrismaClientMapper.toPersistenceCreate(clientData),
+  async save(client: ClientEntity): Promise<ClientEntity> {
+    const persistence = PrismaClientMapper.toPersistenceSave(client);
+
+    const saved = await this.prisma.client.upsert({
+      where: { id: client.id },
+      create: {
+        id: client.id,
+        ...(persistence as any),
+      },
+      update: {
+        ...(persistence as any),
       },
     });
 
-    return PrismaClientMapper.toDomain(client);
-  }
-
-  async update(id: string, data: Partial<ClientEntity>): Promise<ClientEntity> {
-    const client = await this.prisma.client.update({
-      where: { id },
-      data: {
-        ...PrismaClientMapper.toPersistenceUpdate(data),
-      },
-    });
-
-    return PrismaClientMapper.toDomain(client);
+    return PrismaClientMapper.toDomain(saved);
   }
 
   async delete(id: string): Promise<void> {

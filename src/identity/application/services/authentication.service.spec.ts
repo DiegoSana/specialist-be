@@ -32,7 +32,7 @@ describe('AuthenticationService', () => {
     };
 
     mockClientRepository = {
-      create: jest.fn(),
+      save: jest.fn(),
     };
 
     mockJwtService = {
@@ -80,7 +80,7 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(null);
       mockUserRepository.save.mockResolvedValue(createdUser);
       mockUserRepository.findById.mockResolvedValue(createdUser);
-      mockClientRepository.create.mockResolvedValue({
+      mockClientRepository.save.mockResolvedValue({
         id: 'client-id',
         userId: createdUser.id,
       });
@@ -94,7 +94,7 @@ describe('AuthenticationService', () => {
         registerDto.email,
       );
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 10);
-      expect(mockClientRepository.create).toHaveBeenCalled();
+      expect(mockClientRepository.save).toHaveBeenCalled();
     });
 
     it('should throw ConflictException if email already exists', async () => {
@@ -118,7 +118,7 @@ describe('AuthenticationService', () => {
 
       await service.register(professionalRegisterDto);
 
-      expect(mockClientRepository.create).not.toHaveBeenCalled();
+      expect(mockClientRepository.save).not.toHaveBeenCalled();
     });
   });
 
@@ -312,12 +312,12 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(null);
       mockUserRepository.save.mockResolvedValue(newUser);
       mockUserRepository.findById.mockResolvedValue(newUser);
-      mockClientRepository.create.mockResolvedValue({ id: 'client-id' });
+      mockClientRepository.save.mockResolvedValue({ id: 'client-id' });
 
       const result = await service.googleLogin(googleUser);
 
       expect(mockUserRepository.save).toHaveBeenCalled();
-      expect(mockClientRepository.create).toHaveBeenCalled();
+      expect(mockClientRepository.save).toHaveBeenCalled();
       expect(result).toHaveProperty('accessToken');
     });
 
@@ -369,7 +369,7 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByFacebookId.mockResolvedValue(null);
       mockUserRepository.save.mockResolvedValue(newUser);
       mockUserRepository.findById.mockResolvedValue(newUser);
-      mockClientRepository.create.mockResolvedValue({ id: 'client-id' });
+      mockClientRepository.save.mockResolvedValue({ id: 'client-id' });
 
       const result = await service.facebookLogin(facebookUserNoEmail);
 

@@ -30,6 +30,16 @@ export class PrismaClientMapper {
     };
   }
 
+  static toPersistenceSave(client: ClientEntity): Record<string, unknown> {
+    return {
+      userId: client.userId,
+      preferences: client.preferences,
+      savedProfessionals: client.savedProfessionals,
+      searchHistory: client.searchHistory,
+      notificationSettings: client.notificationSettings,
+    };
+  }
+
   static toPersistenceUpdate(
     partial: Partial<ClientEntity>,
   ): Record<string, unknown> {
