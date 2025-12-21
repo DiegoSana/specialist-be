@@ -88,6 +88,37 @@ export class PrismaUserMapper {
   }
 
   /**
+   * Datos de persistencia para un "save" completo (sin campos derivados del dominio).
+   */
+  static toPersistenceSave(user: UserEntity): {
+    email: string;
+    password: string | null;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    profilePictureUrl: string | null;
+    isAdmin: boolean;
+    status: UserStatus;
+    googleId: string | null;
+    facebookId: string | null;
+    authProvider: AuthProvider;
+  } {
+    return {
+      email: user.email,
+      password: user.password,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      profilePictureUrl: user.profilePictureUrl,
+      isAdmin: user.isAdmin,
+      status: user.status,
+      googleId: user.googleId,
+      facebookId: user.facebookId,
+      authProvider: user.authProvider,
+    };
+  }
+
+  /**
    * Prisma update data para User.
    * Sólo incluye campos presentes (undefined = no tocar).
    */

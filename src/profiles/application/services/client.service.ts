@@ -13,6 +13,7 @@ import {
   USER_REPOSITORY,
 } from '../../../identity/domain/repositories/user.repository';
 import { UserEntity } from '../../../identity/domain/entities/user.entity';
+import { UserStatus } from '@prisma/client';
 
 @Injectable()
 export class ClientService {
@@ -35,7 +36,7 @@ export class ClientService {
     userId: string,
     updateDto: UpdateUserDto,
   ): Promise<UserEntity> {
-    const user = await this.userRepository.findById(userId);
+    const user = await this.userRepository.findById(userId, true);
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -53,7 +54,29 @@ export class ClientService {
       }
     }
 
-    return this.userRepository.update(userId, updateDto);
+    const now = new Date();
+    const updated = new UserEntity(
+      user.id,
+      user.email,
+      user.password,
+      updateDto.firstName !== undefined ? updateDto.firstName : user.firstName,
+      updateDto.lastName !== undefined ? updateDto.lastName : user.lastName,
+      updateDto.phone !== undefined ? updateDto.phone : user.phone,
+      updateDto.profilePictureUrl !== undefined
+        ? updateDto.profilePictureUrl
+        : user.profilePictureUrl,
+      user.isAdmin,
+      user.status as UserStatus,
+      user.createdAt,
+      now,
+      user.hasClientProfile,
+      user.hasProfessionalProfile,
+      user.googleId,
+      user.facebookId,
+      user.authProvider,
+    );
+
+    return this.userRepository.save(updated);
   }
 
   async activateClientProfile(userId: string): Promise<UserEntity> {

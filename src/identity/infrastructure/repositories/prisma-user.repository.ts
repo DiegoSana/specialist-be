@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { UserRepository } from '../../domain/repositories/user.repository';
 import { UserEntity } from '../../domain/entities/user.entity';
-import { UserStatus, AuthProvider } from '@prisma/client';
 import { PrismaUserMapper } from '../mappers/user.prisma-mapper';
 
 @Injectable()
@@ -75,48 +74,24 @@ export class PrismaUserRepository implements UserRepository {
     return PrismaUserMapper.toDomain(user);
   }
 
-  async create(userData: {
-    email: string;
-    password: string | null;
-    firstName: string;
-    lastName: string;
-    phone?: string | null;
-    profilePictureUrl?: string | null;
-    isAdmin?: boolean;
-    status: UserStatus;
-    googleId?: string;
-    facebookId?: string;
-    authProvider?: AuthProvider;
-  }): Promise<UserEntity> {
-    const user = await this.prisma.user.create({
-      data: {
-        ...PrismaUserMapper.toPersistenceCreate(userData),
+  async save(user: UserEntity): Promise<UserEntity> {
+    const persistence = PrismaUserMapper.toPersistenceSave(user);
+
+    const saved = await this.prisma.user.upsert({
+      where: { id: user.id },
+      create: {
+        id: user.id,
+        ...persistence,
       },
-    });
-
-    return PrismaUserMapper.toDomain(user);
-  }
-
-  async update(
-    id: string,
-    data: Partial<UserEntity> & { googleId?: string; facebookId?: string },
-  ): Promise<UserEntity> {
-    const updateData = PrismaUserMapper.toPersistenceUpdate({
-      ...data,
-      googleId: data.googleId ?? undefined,
-      facebookId: data.facebookId ?? undefined,
-    });
-
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: updateData,
-      // Incluir relaciones para que los flags derivados queden correctos.
+      update: {
+        ...persistence,
+      },
       include: {
         client: { select: { id: true } },
         professional: { select: { id: true } },
       },
     });
 
-    return PrismaUserMapper.toDomain(user);
+    return PrismaUserMapper.toDomain(saved);
   }
 }

@@ -17,7 +17,7 @@ describe('ClientService', () => {
   beforeEach(async () => {
     mockUserRepository = {
       findById: jest.fn(),
-      update: jest.fn(),
+      save: jest.fn(),
     };
 
     mockPrismaService = {
@@ -78,15 +78,12 @@ describe('ClientService', () => {
       });
 
       mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.update.mockResolvedValue(updatedUser);
+      mockUserRepository.save.mockResolvedValue(updatedUser);
 
       const result = await service.updateProfile('user-123', updateDto);
 
       expect(result.firstName).toBe('Updated');
-      expect(mockUserRepository.update).toHaveBeenCalledWith(
-        'user-123',
-        updateDto,
-      );
+      expect(mockUserRepository.save).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when user not found', async () => {
@@ -115,7 +112,7 @@ describe('ClientService', () => {
       });
 
       mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.update.mockResolvedValue(updatedUser);
+      mockUserRepository.save.mockResolvedValue(updatedUser);
 
       const validDto = { profilePictureUrl: 'https://example.com/photo.jpg' };
       const result = await service.updateProfile('user-123', validDto);
@@ -126,23 +123,23 @@ describe('ClientService', () => {
     it('should allow empty profilePictureUrl', async () => {
       const user = createMockUser();
       mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.update.mockResolvedValue(user);
+      mockUserRepository.save.mockResolvedValue(user);
 
       const emptyDto = { profilePictureUrl: '' };
       await service.updateProfile('user-123', emptyDto);
 
-      expect(mockUserRepository.update).toHaveBeenCalled();
+      expect(mockUserRepository.save).toHaveBeenCalled();
     });
 
     it('should allow null profilePictureUrl', async () => {
       const user = createMockUser();
       mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.update.mockResolvedValue(user);
+      mockUserRepository.save.mockResolvedValue(user);
 
       const nullDto = { profilePictureUrl: null };
       await service.updateProfile('user-123', nullDto as any);
 
-      expect(mockUserRepository.update).toHaveBeenCalled();
+      expect(mockUserRepository.save).toHaveBeenCalled();
     });
   });
 

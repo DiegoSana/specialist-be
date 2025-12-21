@@ -15,6 +15,7 @@ import { UserEntity } from '../../domain/entities/user.entity';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { UserStatus, AuthProvider } from '@prisma/client';
+import { randomUUID } from 'crypto';
 // Cross-context dependency - Client belongs to Profiles context
 import {
   ClientRepository,
@@ -41,14 +42,27 @@ export class AuthenticationService {
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    const user = await this.userRepository.create({
-      email: registerDto.email,
-      password: hashedPassword,
-      firstName: registerDto.firstName,
-      lastName: registerDto.lastName,
-      phone: registerDto.phone || null,
-      status: UserStatus.PENDING,
-    });
+    const now = new Date();
+    const user = await this.userRepository.save(
+      new UserEntity(
+        randomUUID(),
+        registerDto.email,
+        hashedPassword,
+        registerDto.firstName,
+        registerDto.lastName,
+        registerDto.phone || null,
+        null,
+        false,
+        UserStatus.PENDING,
+        now,
+        now,
+        false,
+        false,
+        null,
+        null,
+        AuthProvider.LOCAL,
+      ),
+    );
 
     // Only create client profile if not registering as professional
     // If registering as professional, client profile will not be created
@@ -164,26 +178,52 @@ export class AuthenticationService {
       );
 
       if (existingUser) {
-        // Link Google account to existing user
-        user = await this.userRepository.update(existingUser.id, {
-          googleId: googleUser.googleId,
-          profilePictureUrl:
+        const now = new Date();
+        // Link Google account to existing user (aggregate completo)
+        await this.userRepository.save(
+          new UserEntity(
+            existingUser.id,
+            existingUser.email,
+            existingUser.password,
+            existingUser.firstName,
+            existingUser.lastName,
+            existingUser.phone,
             existingUser.profilePictureUrl || googleUser.profilePictureUrl,
-        });
-        // Reload to get updated data
+            existingUser.isAdmin,
+            existingUser.status,
+            existingUser.createdAt,
+            now,
+            existingUser.hasClientProfile,
+            existingUser.hasProfessionalProfile,
+            googleUser.googleId,
+            existingUser.facebookId,
+            existingUser.authProvider,
+          ),
+        );
         user = await this.userRepository.findById(existingUser.id, true);
       } else {
-        // Create new user with Google account
-        user = await this.userRepository.create({
-          email: googleUser.email,
-          password: null, // No password for social login
-          firstName: googleUser.firstName,
-          lastName: googleUser.lastName,
-          profilePictureUrl: googleUser.profilePictureUrl,
-          googleId: googleUser.googleId,
-          authProvider: AuthProvider.GOOGLE,
-          status: UserStatus.ACTIVE, // Auto-activate Google users
-        });
+        // Create new user with Google account (aggregate completo)
+        const now = new Date();
+        user = await this.userRepository.save(
+          new UserEntity(
+            randomUUID(),
+            googleUser.email,
+            null,
+            googleUser.firstName,
+            googleUser.lastName,
+            null,
+            googleUser.profilePictureUrl,
+            false,
+            UserStatus.ACTIVE,
+            now,
+            now,
+            false,
+            false,
+            googleUser.googleId,
+            null,
+            AuthProvider.GOOGLE,
+          ),
+        );
 
         // Create client profile for new user
         await this.clientRepository.create({
@@ -249,13 +289,28 @@ export class AuthenticationService {
         );
 
         if (existingUser) {
-          // Link Facebook account to existing user
-          user = await this.userRepository.update(existingUser.id, {
-            facebookId: facebookUser.facebookId,
-            profilePictureUrl:
+          const now = new Date();
+          // Link Facebook account to existing user (aggregate completo)
+          await this.userRepository.save(
+            new UserEntity(
+              existingUser.id,
+              existingUser.email,
+              existingUser.password,
+              existingUser.firstName,
+              existingUser.lastName,
+              existingUser.phone,
               existingUser.profilePictureUrl || facebookUser.profilePictureUrl,
-          });
-          // Reload to get updated data
+              existingUser.isAdmin,
+              existingUser.status,
+              existingUser.createdAt,
+              now,
+              existingUser.hasClientProfile,
+              existingUser.hasProfessionalProfile,
+              existingUser.googleId,
+              facebookUser.facebookId,
+              existingUser.authProvider,
+            ),
+          );
           user = await this.userRepository.findById(existingUser.id, true);
         }
       }
@@ -267,16 +322,27 @@ export class AuthenticationService {
           facebookUser.email ||
           `fb_${facebookUser.facebookId}@placeholder.local`;
 
-        user = await this.userRepository.create({
-          email,
-          password: null, // No password for social login
-          firstName: facebookUser.firstName || 'Usuario',
-          lastName: facebookUser.lastName || 'Facebook',
-          profilePictureUrl: facebookUser.profilePictureUrl,
-          facebookId: facebookUser.facebookId,
-          authProvider: AuthProvider.FACEBOOK,
-          status: UserStatus.ACTIVE, // Auto-activate Facebook users
-        });
+        const now = new Date();
+        user = await this.userRepository.save(
+          new UserEntity(
+            randomUUID(),
+            email,
+            null,
+            facebookUser.firstName || 'Usuario',
+            facebookUser.lastName || 'Facebook',
+            null,
+            facebookUser.profilePictureUrl,
+            false,
+            UserStatus.ACTIVE,
+            now,
+            now,
+            false,
+            false,
+            null,
+            facebookUser.facebookId,
+            AuthProvider.FACEBOOK,
+          ),
+        );
 
         // Create client profile for new user
         await this.clientRepository.create({

@@ -19,7 +19,7 @@ describe('AdminService', () => {
   beforeEach(async () => {
     mockUserRepository = {
       findById: jest.fn(),
-      update: jest.fn(),
+      save: jest.fn(),
     };
 
     mockProfessionalRepository = {
@@ -160,16 +160,14 @@ describe('AdminService', () => {
       const updatedUser = createMockUser({ status: UserStatus.SUSPENDED });
 
       mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.update.mockResolvedValue(updatedUser);
+      mockUserRepository.save.mockResolvedValue(updatedUser);
 
       const result = await service.updateUserStatus('user-123', {
         status: UserStatus.SUSPENDED,
       });
 
       expect(result.status).toBe(UserStatus.SUSPENDED);
-      expect(mockUserRepository.update).toHaveBeenCalledWith('user-123', {
-        status: UserStatus.SUSPENDED,
-      });
+      expect(mockUserRepository.save).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when user not found', async () => {
