@@ -13,7 +13,9 @@ export class ClientService {
   ) {}
 
   async getProfile(userId: string): Promise<UserEntity> {
-    const user = await this.userRepository.findById(userId);
+    // Importante: los flags hasClientProfile/hasProfessionalProfile se derivan
+    // de relaciones (client/professional). Hay que incluirlas.
+    const user = await this.userRepository.findById(userId, true);
     if (!user) {
       throw new NotFoundException('User not found');
     }

@@ -103,6 +103,11 @@ export class PrismaUserRepository implements UserRepository {
     const user = await this.prisma.user.update({
       where: { id },
       data: updateData,
+      // Incluir relaciones para que los flags derivados queden correctos.
+      include: {
+        client: { select: { id: true } },
+        professional: { select: { id: true } },
+      },
     });
 
     return PrismaUserMapper.toDomain(user);
