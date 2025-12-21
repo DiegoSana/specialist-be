@@ -42,26 +42,16 @@ export class AuthenticationService {
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    const now = new Date();
     const user = await this.userRepository.save(
-      new UserEntity(
-        randomUUID(),
-        registerDto.email,
-        hashedPassword,
-        registerDto.firstName,
-        registerDto.lastName,
-        registerDto.phone || null,
-        null,
-        false,
-        UserStatus.PENDING,
-        now,
-        now,
-        false,
-        false,
-        null,
-        null,
-        AuthProvider.LOCAL,
-      ),
+      UserEntity.createLocal({
+        id: randomUUID(),
+        email: registerDto.email,
+        password: hashedPassword,
+        firstName: registerDto.firstName,
+        lastName: registerDto.lastName,
+        phone: registerDto.phone || null,
+        status: UserStatus.PENDING,
+      }),
     );
 
     // Only create client profile if not registering as professional
@@ -178,51 +168,27 @@ export class AuthenticationService {
       );
 
       if (existingUser) {
-        const now = new Date();
         // Link Google account to existing user (aggregate completo)
         await this.userRepository.save(
-          new UserEntity(
-            existingUser.id,
-            existingUser.email,
-            existingUser.password,
-            existingUser.firstName,
-            existingUser.lastName,
-            existingUser.phone,
-            existingUser.profilePictureUrl || googleUser.profilePictureUrl,
-            existingUser.isAdmin,
-            existingUser.status,
-            existingUser.createdAt,
-            now,
-            existingUser.hasClientProfile,
-            existingUser.hasProfessionalProfile,
+          existingUser.linkGoogle(
             googleUser.googleId,
-            existingUser.facebookId,
-            existingUser.authProvider,
+            googleUser.profilePictureUrl,
           ),
         );
         user = await this.userRepository.findById(existingUser.id, true);
       } else {
         // Create new user with Google account (aggregate completo)
-        const now = new Date();
         user = await this.userRepository.save(
-          new UserEntity(
-            randomUUID(),
-            googleUser.email,
-            null,
-            googleUser.firstName,
-            googleUser.lastName,
-            null,
-            googleUser.profilePictureUrl,
-            false,
-            UserStatus.ACTIVE,
-            now,
-            now,
-            false,
-            false,
-            googleUser.googleId,
-            null,
-            AuthProvider.GOOGLE,
-          ),
+          UserEntity.createOAuth({
+            id: randomUUID(),
+            email: googleUser.email,
+            firstName: googleUser.firstName,
+            lastName: googleUser.lastName,
+            profilePictureUrl: googleUser.profilePictureUrl,
+            provider: AuthProvider.GOOGLE,
+            externalId: googleUser.googleId,
+            status: UserStatus.ACTIVE,
+          }),
         );
 
         // Create client profile for new user
@@ -289,26 +255,11 @@ export class AuthenticationService {
         );
 
         if (existingUser) {
-          const now = new Date();
           // Link Facebook account to existing user (aggregate completo)
           await this.userRepository.save(
-            new UserEntity(
-              existingUser.id,
-              existingUser.email,
-              existingUser.password,
-              existingUser.firstName,
-              existingUser.lastName,
-              existingUser.phone,
-              existingUser.profilePictureUrl || facebookUser.profilePictureUrl,
-              existingUser.isAdmin,
-              existingUser.status,
-              existingUser.createdAt,
-              now,
-              existingUser.hasClientProfile,
-              existingUser.hasProfessionalProfile,
-              existingUser.googleId,
+            existingUser.linkFacebook(
               facebookUser.facebookId,
-              existingUser.authProvider,
+              facebookUser.profilePictureUrl,
             ),
           );
           user = await this.userRepository.findById(existingUser.id, true);
@@ -322,26 +273,17 @@ export class AuthenticationService {
           facebookUser.email ||
           `fb_${facebookUser.facebookId}@placeholder.local`;
 
-        const now = new Date();
         user = await this.userRepository.save(
-          new UserEntity(
-            randomUUID(),
+          UserEntity.createOAuth({
+            id: randomUUID(),
             email,
-            null,
-            facebookUser.firstName || 'Usuario',
-            facebookUser.lastName || 'Facebook',
-            null,
-            facebookUser.profilePictureUrl,
-            false,
-            UserStatus.ACTIVE,
-            now,
-            now,
-            false,
-            false,
-            null,
-            facebookUser.facebookId,
-            AuthProvider.FACEBOOK,
-          ),
+            firstName: facebookUser.firstName || 'Usuario',
+            lastName: facebookUser.lastName || 'Facebook',
+            profilePictureUrl: facebookUser.profilePictureUrl,
+            provider: AuthProvider.FACEBOOK,
+            externalId: facebookUser.facebookId,
+            status: UserStatus.ACTIVE,
+          }),
         );
 
         // Create client profile for new user

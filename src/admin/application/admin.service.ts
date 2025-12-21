@@ -11,7 +11,6 @@ import { ProfessionalEntity } from '../../profiles/domain/entities/professional.
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from './dto/update-professional-status.dto';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
-import { UserEntity } from '../../identity/domain/entities/user.entity';
 
 @Injectable()
 export class AdminService {
@@ -77,27 +76,7 @@ export class AdminService {
       throw new NotFoundException('User not found');
     }
 
-    const now = new Date();
-    return this.userRepository.save(
-      new UserEntity(
-        user.id,
-        user.email,
-        user.password,
-        user.firstName,
-        user.lastName,
-        user.phone,
-        user.profilePictureUrl,
-        user.isAdmin,
-        updateDto.status,
-        user.createdAt,
-        now,
-        user.hasClientProfile,
-        user.hasProfessionalProfile,
-        user.googleId,
-        user.facebookId,
-        user.authProvider,
-      ),
-    );
+    return this.userRepository.save(user.withStatus(updateDto.status));
   }
 
   async getAllProfessionals(page: number = 1, limit: number = 10) {
