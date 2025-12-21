@@ -1,18 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { ClientService } from './client.service';
-import { USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
+import { UserService } from '../../../identity/application/services/user.service';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { createMockUser } from '../../../__mocks__/test-utils';
 
 describe('ClientService', () => {
   let service: ClientService;
-  let mockUserRepository: any;
+  let mockUserService: any;
   let mockPrismaService: any;
 
   beforeEach(async () => {
-    mockUserRepository = {
+    mockUserService = {
       findById: jest.fn(),
+      findByIdOrFail: jest.fn(),
       update: jest.fn(),
     };
 
@@ -25,7 +26,7 @@ describe('ClientService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClientService,
-        { provide: USER_REPOSITORY, useValue: mockUserRepository },
+        { provide: UserService, useValue: mockUserService },
         { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
@@ -40,16 +41,16 @@ describe('ClientService', () => {
   describe('getProfile', () => {
     it('should return user profile when found', async () => {
       const user = createMockUser();
-      mockUserRepository.findById.mockResolvedValue(user);
+      mockUserService.findByIdOrFail.mockResolvedValue(user);
 
       const result = await service.getProfile('user-123');
 
       expect(result).toEqual(user);
-      expect(mockUserRepository.findById).toHaveBeenCalledWith('user-123');
+      expect(mockUserService.findByIdOrFail).toHaveBeenCalledWith('user-123');
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockUserRepository.findById.mockResolvedValue(null);
+      mockUserService.findByIdOrFail.mockRejectedValue(new NotFoundException('User not found'));
 
       await expect(service.getProfile('non-existent')).rejects.toThrow(NotFoundException);
     });
@@ -62,39 +63,30 @@ describe('ClientService', () => {
     };
 
     it('should update user profile successfully', async () => {
-      const user = createMockUser();
       const updatedUser = createMockUser({ firstName: 'Updated', lastName: 'Name' });
-
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.update.mockResolvedValue(updatedUser);
+      mockUserService.update.mockResolvedValue(updatedUser);
 
       const result = await service.updateProfile('user-123', updateDto);
 
       expect(result.firstName).toBe('Updated');
-      expect(mockUserRepository.update).toHaveBeenCalledWith('user-123', updateDto);
+      expect(mockUserService.update).toHaveBeenCalledWith('user-123', updateDto);
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockUserRepository.findById.mockResolvedValue(null);
+      mockUserService.update.mockRejectedValue(new NotFoundException('User not found'));
 
       await expect(service.updateProfile('non-existent', updateDto)).rejects.toThrow(NotFoundException);
     });
 
     it('should validate profilePictureUrl if provided', async () => {
-      const user = createMockUser();
-      mockUserRepository.findById.mockResolvedValue(user);
-
       const invalidDto = { profilePictureUrl: 'not-a-valid-url' };
 
       await expect(service.updateProfile('user-123', invalidDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should accept valid profilePictureUrl', async () => {
-      const user = createMockUser();
       const updatedUser = createMockUser({ profilePictureUrl: 'https://example.com/photo.jpg' });
-
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.update.mockResolvedValue(updatedUser);
+      mockUserService.update.mockResolvedValue(updatedUser);
 
       const validDto = { profilePictureUrl: 'https://example.com/photo.jpg' };
       const result = await service.updateProfile('user-123', validDto);
@@ -104,24 +96,22 @@ describe('ClientService', () => {
 
     it('should allow empty profilePictureUrl', async () => {
       const user = createMockUser();
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.update.mockResolvedValue(user);
+      mockUserService.update.mockResolvedValue(user);
 
       const emptyDto = { profilePictureUrl: '' };
       await service.updateProfile('user-123', emptyDto);
 
-      expect(mockUserRepository.update).toHaveBeenCalled();
+      expect(mockUserService.update).toHaveBeenCalled();
     });
 
     it('should allow null profilePictureUrl', async () => {
       const user = createMockUser();
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.update.mockResolvedValue(user);
+      mockUserService.update.mockResolvedValue(user);
 
       const nullDto = { profilePictureUrl: null };
       await service.updateProfile('user-123', nullDto as any);
 
-      expect(mockUserRepository.update).toHaveBeenCalled();
+      expect(mockUserService.update).toHaveBeenCalled();
     });
   });
 
@@ -130,7 +120,7 @@ describe('ClientService', () => {
       const user = createMockUser({ hasClientProfile: false });
       const userWithClient = createMockUser({ hasClientProfile: true });
 
-      mockUserRepository.findById
+      mockUserService.findByIdOrFail
         .mockResolvedValueOnce(user)
         .mockResolvedValueOnce(userWithClient);
       mockPrismaService.client.create.mockResolvedValue({ id: 'client-123', userId: 'user-123' });
@@ -144,17 +134,16 @@ describe('ClientService', () => {
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockUserRepository.findById.mockResolvedValue(null);
+      mockUserService.findByIdOrFail.mockRejectedValue(new NotFoundException('User not found'));
 
       await expect(service.activateClientProfile('non-existent')).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException if client profile already exists', async () => {
       const userWithClient = createMockUser({ hasClientProfile: true });
-      mockUserRepository.findById.mockResolvedValue(userWithClient);
+      mockUserService.findByIdOrFail.mockResolvedValue(userWithClient);
 
       await expect(service.activateClientProfile('user-123')).rejects.toThrow(ConflictException);
     });
   });
 });
-

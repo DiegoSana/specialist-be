@@ -1,31 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, Inject, forwardRef } from '@nestjs/common';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
-// Cross-context dependencies
-import { UserRepository, USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
+// Cross-context dependency - using Service instead of Repository (DDD)
+import { UserService } from '../../../identity/application/services/user.service';
 import { UserEntity } from '../../../identity/domain/entities/user.entity';
 
 @Injectable()
 export class ClientService {
   constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    @Inject(forwardRef(() => UserService)) private readonly userService: UserService,
     private readonly prisma: PrismaService,
   ) {}
 
   async getProfile(userId: string): Promise<UserEntity> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
+    return this.userService.findByIdOrFail(userId);
   }
 
   async updateProfile(userId: string, updateDto: UpdateUserDto): Promise<UserEntity> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
     // Validate profilePictureUrl if provided
     if (updateDto.profilePictureUrl !== undefined && updateDto.profilePictureUrl !== null && updateDto.profilePictureUrl !== '') {
       try {
@@ -35,15 +26,12 @@ export class ClientService {
       }
     }
 
-    return this.userRepository.update(userId, updateDto);
+    return this.userService.update(userId, updateDto);
   }
 
   async activateClientProfile(userId: string): Promise<UserEntity> {
     // Check if user exists
-    const user = await this.userRepository.findById(userId, true);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    const user = await this.userService.findByIdOrFail(userId, true);
 
     // Check if client profile already exists
     if (user.hasClientProfile) {
@@ -58,6 +46,6 @@ export class ClientService {
     });
 
     // Return updated user with client profile
-    return this.userRepository.findById(userId, true) as Promise<UserEntity>;
+    return this.userService.findByIdOrFail(userId, true);
   }
 }

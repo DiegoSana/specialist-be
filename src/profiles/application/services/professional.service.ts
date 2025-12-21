@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../domain/repositories/professional.repository';
 import { ProfessionalEntity } from '../../domain/entities/professional.entity';
 import { TradeRepository, TRADE_REPOSITORY } from '../../domain/repositories/trade.repository';
@@ -6,17 +6,17 @@ import { CreateProfessionalDto } from '../dto/create-professional.dto';
 import { UpdateProfessionalDto } from '../dto/update-professional.dto';
 import { SearchProfessionalsDto } from '../dto/search-professionals.dto';
 import { ProfessionalStatus, RequestStatus } from '@prisma/client';
-// Cross-context dependencies
-import { UserRepository, USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
-import { RequestRepository, REQUEST_REPOSITORY } from '../../../requests/domain/repositories/request.repository';
+// Cross-context dependencies - using Services instead of Repositories (DDD)
+import { UserService } from '../../../identity/application/services/user.service';
+import { RequestService } from '../../../requests/application/services/request.service';
 
 @Injectable()
 export class ProfessionalService {
   constructor(
     @Inject(PROFESSIONAL_REPOSITORY) private readonly professionalRepository: ProfessionalRepository,
-    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    @Inject(forwardRef(() => UserService)) private readonly userService: UserService,
     @Inject(TRADE_REPOSITORY) private readonly tradeRepository: TradeRepository,
-    @Inject(REQUEST_REPOSITORY) private readonly requestRepository: RequestRepository,
+    @Inject(forwardRef(() => RequestService)) private readonly requestService: RequestService,
   ) {}
 
   async search(searchDto: SearchProfessionalsDto): Promise<Partial<ProfessionalEntity>[]> {
@@ -83,7 +83,7 @@ export class ProfessionalService {
     }
 
     // Get completed requests for this professional
-    const completedRequests = await this.requestRepository.findByProfessionalId(professional.id);
+    const completedRequests = await this.requestService.findByProfessionalId(professional.id);
     const doneRequests = completedRequests.filter((req) => req.status === RequestStatus.DONE);
 
     // Collect photos from completed work
@@ -114,7 +114,7 @@ export class ProfessionalService {
     }
 
     // For the professional viewing their own profile, include photos from their completed work
-    const completedRequests = await this.requestRepository.findByProfessionalId(professional.id);
+    const completedRequests = await this.requestService.findByProfessionalId(professional.id);
     const doneRequests = completedRequests.filter((req) => req.status === RequestStatus.DONE);
 
     const completedWorkPhotos: string[] = [];
@@ -131,10 +131,7 @@ export class ProfessionalService {
   }
 
   async createProfile(userId: string, createDto: CreateProfessionalDto): Promise<{ professional: ProfessionalEntity; user: any }> {
-    const user = await this.userRepository.findById(userId, true);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    const user = await this.userService.findByIdOrFail(userId, true);
 
     if (!user.isActive()) {
       throw new BadRequestException('User account is not active');
@@ -171,7 +168,7 @@ export class ProfessionalService {
     });
 
     // Reload user with updated profiles to return user info
-    const updatedUser = await this.userRepository.findById(userId, true);
+    const updatedUser = await this.userService.findById(userId, true);
     
     return {
       professional,
@@ -259,6 +256,25 @@ export class ProfessionalService {
     return this.professionalRepository.update(professional.id, {
       gallery: updatedGallery,
     });
+  }
+
+  /**
+   * Update professional's rating statistics
+   * Called by ReviewService after reviews are created/updated/deleted
+   */
+  async updateRating(professionalId: string, averageRating: number, totalReviews: number): Promise<void> {
+    await this.professionalRepository.updateRating(professionalId, averageRating, totalReviews);
+  }
+
+  /**
+   * Update professional status (for admin operations)
+   */
+  async updateStatus(professionalId: string, status: ProfessionalStatus): Promise<ProfessionalEntity> {
+    const professional = await this.professionalRepository.findById(professionalId);
+    if (!professional) {
+      throw new NotFoundException('Professional not found');
+    }
+    return this.professionalRepository.update(professionalId, { status });
   }
 }
 

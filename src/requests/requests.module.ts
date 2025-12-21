@@ -44,8 +44,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
   exports: [
     RequestService,
     RequestInterestService,
-    REQUEST_REPOSITORY,
-    REQUEST_INTEREST_REPOSITORY,
+    // Note: Repositories are NOT exported - use Services instead (DDD best practice)
   ],
 })
 export class RequestsModule {}

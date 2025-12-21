@@ -8,20 +8,21 @@ import {
 } from '@nestjs/common';
 import { ReviewRepository, REVIEW_REPOSITORY } from '../../domain/repositories/review.repository';
 import { ReviewEntity } from '../../domain/entities/review.entity';
-import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../../profiles/domain/repositories/professional.repository';
-import { RequestRepository, REQUEST_REPOSITORY } from '../../../requests/domain/repositories/request.repository';
-import { UserRepository, USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
 import { CreateReviewDto } from '../dto/create-review.dto';
 import { UpdateReviewDto } from '../dto/update-review.dto';
 import { Rating } from '../../domain/value-objects/rating.vo';
+// Cross-context dependencies - using Services instead of Repositories (DDD)
+import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { RequestService } from '../../../requests/application/services/request.service';
+import { UserService } from '../../../identity/application/services/user.service';
 
 @Injectable()
 export class ReviewService {
   constructor(
     @Inject(REVIEW_REPOSITORY) private readonly reviewRepository: ReviewRepository,
-    @Inject(PROFESSIONAL_REPOSITORY) private readonly professionalRepository: ProfessionalRepository,
-    @Inject(REQUEST_REPOSITORY) private readonly requestRepository: RequestRepository,
-    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    private readonly professionalService: ProfessionalService,
+    private readonly requestService: RequestService,
+    private readonly userService: UserService,
   ) {}
 
   async findByProfessionalId(professionalId: string): Promise<ReviewEntity[]> {
@@ -41,25 +42,20 @@ export class ReviewService {
   }
 
   async create(reviewerId: string, createDto: CreateReviewDto): Promise<ReviewEntity> {
-    const reviewer = await this.userRepository.findById(reviewerId, true);
+    const reviewer = await this.userService.findById(reviewerId, true);
     if (!reviewer || !reviewer.hasClientProfile) {
       throw new BadRequestException('Only clients can create reviews');
     }
 
-    const professional = await this.professionalRepository.findById(createDto.professionalId);
-    if (!professional) {
-      throw new NotFoundException('Professional not found');
-    }
+    // Validate professional exists
+    await this.professionalService.findById(createDto.professionalId);
 
     // Validate request if provided (required for reviews)
     if (!createDto.requestId) {
       throw new BadRequestException('Request ID is required to create a review');
     }
 
-    const request = await this.requestRepository.findById(createDto.requestId);
-    if (!request) {
-      throw new NotFoundException('Request not found');
-    }
+    const request = await this.requestService.findById(createDto.requestId);
 
     if (request.clientId !== reviewerId) {
       throw new ForbiddenException('You can only review requests you created');
@@ -146,7 +142,7 @@ export class ReviewService {
     const reviews = await this.reviewRepository.findByProfessionalId(professionalId);
 
     if (reviews.length === 0) {
-      await this.professionalRepository.updateRating(professionalId, 0, 0);
+      await this.professionalService.updateRating(professionalId, 0, 0);
       return;
     }
 
@@ -154,7 +150,7 @@ export class ReviewService {
     const averageRating = totalRating / reviews.length;
     const totalReviews = reviews.length;
 
-    await this.professionalRepository.updateRating(professionalId, averageRating, totalReviews);
+    await this.professionalService.updateRating(professionalId, averageRating, totalReviews);
   }
 }
 

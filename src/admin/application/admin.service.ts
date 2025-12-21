@@ -1,15 +1,16 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { UserRepository, USER_REPOSITORY } from '../../identity/domain/repositories/user.repository';
-import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../profiles/domain/repositories/professional.repository';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from './dto/update-professional-status.dto';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
+// Cross-context dependencies - using Services instead of Repositories (DDD)
+import { UserService } from '../../identity/application/services/user.service';
+import { ProfessionalService } from '../../profiles/application/services/professional.service';
 
 @Injectable()
 export class AdminService {
   constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
-    @Inject(PROFESSIONAL_REPOSITORY) private readonly professionalRepository: ProfessionalRepository,
+    private readonly userService: UserService,
+    private readonly professionalService: ProfessionalService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -55,20 +56,11 @@ export class AdminService {
   }
 
   async getUserById(userId: string) {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
+    return this.userService.findByIdOrFail(userId);
   }
 
   async updateUserStatus(userId: string, updateDto: UpdateUserStatusDto) {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return this.userRepository.update(userId, { status: updateDto.status });
+    return this.userService.update(userId, { status: updateDto.status });
   }
 
   async getAllProfessionals(page: number = 1, limit: number = 10) {
@@ -118,13 +110,6 @@ export class AdminService {
     professionalId: string,
     updateDto: UpdateProfessionalStatusDto,
   ) {
-    const professional = await this.professionalRepository.findById(professionalId);
-    if (!professional) {
-      throw new NotFoundException('Professional not found');
-    }
-
-    return this.professionalRepository.update(professionalId, {
-      status: updateDto.status,
-    });
+    return this.professionalService.updateStatus(professionalId, updateDto.status);
   }
 }

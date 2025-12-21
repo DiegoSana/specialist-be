@@ -7,14 +7,14 @@ import { UserEntity } from '../../domain/entities/user.entity';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { UserStatus, AuthProvider } from '@prisma/client';
-// Cross-context dependency - Client belongs to Profiles context
-import { ClientRepository, CLIENT_REPOSITORY } from '../../../profiles/domain/repositories/client.repository';
+// Cross-context dependency - using Service instead of Repository (DDD best practice)
+import { ClientService } from '../../../profiles/application/services/client.service';
 
 @Injectable()
 export class AuthenticationService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
-    @Inject(CLIENT_REPOSITORY) private readonly clientRepository: ClientRepository,
+    private readonly clientService: ClientService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -40,9 +40,7 @@ export class AuthenticationService {
     // If registering as professional, client profile will not be created
     // (user can create it later if needed)
     if (!registerDto.isProfessional) {
-      await this.clientRepository.create({
-        userId: user.id,
-      });
+      await this.clientService.activateClientProfile(user.id);
     }
 
     // Reload user with profiles
@@ -149,7 +147,7 @@ export class AuthenticationService {
         // Reload to get updated data
         user = await this.userRepository.findById(existingUser.id, true);
       } else {
-        // Create new user with Google account
+        // Create new user with Google account (without profile - user must choose)
         user = await this.userRepository.create({
           email: googleUser.email,
           password: null, // No password for social login
@@ -161,12 +159,8 @@ export class AuthenticationService {
           status: UserStatus.ACTIVE, // Auto-activate Google users
         });
 
-        // Create client profile for new user
-        await this.clientRepository.create({
-          userId: user.id,
-        });
-
-        // Reload user with profiles
+        // Note: No profile is created here - user must complete profile setup
+        // Reload user (will have no profiles)
         user = await this.userRepository.findById(user.id, true);
       }
     }
@@ -228,7 +222,7 @@ export class AuthenticationService {
       }
       
       if (!user) {
-        // Create new user with Facebook account
+        // Create new user with Facebook account (without profile - user must choose)
         // Generate a placeholder email if Facebook didn't provide one
         const email = facebookUser.email || `fb_${facebookUser.facebookId}@placeholder.local`;
         
@@ -243,12 +237,8 @@ export class AuthenticationService {
           status: UserStatus.ACTIVE, // Auto-activate Facebook users
         });
 
-        // Create client profile for new user
-        await this.clientRepository.create({
-          userId: user.id,
-        });
-
-        // Reload user with profiles
+        // Note: No profile is created here - user must complete profile setup
+        // Reload user (will have no profiles)
         user = await this.userRepository.findById(user.id, true);
       }
     }

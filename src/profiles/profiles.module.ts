@@ -16,6 +16,7 @@ import { PrismaProfessionalRepository } from './infrastructure/repositories/pris
 import { PrismaTradeRepository } from './infrastructure/repositories/prisma-trade.repository';
 
 // Presentation
+import { ClientsController } from './presentation/clients.controller';
 import { ProfessionalsController } from './presentation/professionals.controller';
 import { TradesController } from './presentation/trades.controller';
 
@@ -32,7 +33,7 @@ import { RequestsModule } from '../requests/requests.module';
     forwardRef(() => IdentityModule),
     forwardRef(() => RequestsModule),
   ],
-  controllers: [ProfessionalsController, TradesController],
+  controllers: [ClientsController, ProfessionalsController, TradesController],
   providers: [
     ClientService,
     ProfessionalService,
@@ -54,9 +55,7 @@ import { RequestsModule } from '../requests/requests.module';
     ClientService,
     ProfessionalService,
     TradeService,
-    CLIENT_REPOSITORY,
-    PROFESSIONAL_REPOSITORY,
-    TRADE_REPOSITORY,
+    // Note: Repositories are NOT exported - use Services instead (DDD best practice)
   ],
 })
 export class ProfilesModule {}

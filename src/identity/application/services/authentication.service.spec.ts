@@ -5,7 +5,7 @@ import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { AuthenticationService } from './authentication.service';
 import { USER_REPOSITORY } from '../../domain/repositories/user.repository';
-import { CLIENT_REPOSITORY } from '../../../profiles/domain/repositories/client.repository';
+import { ClientService } from '../../../profiles/application/services/client.service';
 import { createMockUser } from '../../../__mocks__/test-utils';
 import { UserStatus, AuthProvider } from '@prisma/client';
 
@@ -18,7 +18,7 @@ jest.mock('bcryptjs', () => ({
 describe('AuthenticationService', () => {
   let service: AuthenticationService;
   let mockUserRepository: any;
-  let mockClientRepository: any;
+  let mockClientService: any;
   let mockJwtService: any;
   let mockConfigService: any;
 
@@ -32,8 +32,8 @@ describe('AuthenticationService', () => {
       update: jest.fn(),
     };
 
-    mockClientRepository = {
-      create: jest.fn(),
+    mockClientService = {
+      activateClientProfile: jest.fn(),
     };
 
     mockJwtService = {
@@ -48,7 +48,7 @@ describe('AuthenticationService', () => {
       providers: [
         AuthenticationService,
         { provide: USER_REPOSITORY, useValue: mockUserRepository },
-        { provide: CLIENT_REPOSITORY, useValue: mockClientRepository },
+        { provide: ClientService, useValue: mockClientService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
       ],
@@ -81,7 +81,7 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(null);
       mockUserRepository.create.mockResolvedValue(createdUser);
       mockUserRepository.findById.mockResolvedValue(createdUser);
-      mockClientRepository.create.mockResolvedValue({ id: 'client-id', userId: createdUser.id });
+      mockClientService.activateClientProfile.mockResolvedValue({ id: 'client-id', userId: createdUser.id });
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
 
       const result = await service.register(registerDto);
@@ -90,7 +90,7 @@ describe('AuthenticationService', () => {
       expect(result.user).toHaveProperty('email', registerDto.email);
       expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(registerDto.email);
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 10);
-      expect(mockClientRepository.create).toHaveBeenCalled();
+      expect(mockClientService.activateClientProfile).toHaveBeenCalled();
     });
 
     it('should throw ConflictException if email already exists', async () => {
@@ -112,7 +112,7 @@ describe('AuthenticationService', () => {
 
       await service.register(professionalRegisterDto);
 
-      expect(mockClientRepository.create).not.toHaveBeenCalled();
+      expect(mockClientService.activateClientProfile).not.toHaveBeenCalled();
     });
   });
 
@@ -293,7 +293,6 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(null);
       mockUserRepository.create.mockResolvedValue(newUser);
       mockUserRepository.findById.mockResolvedValue(newUser);
-      mockClientRepository.create.mockResolvedValue({ id: 'client-id' });
 
       const result = await service.googleLogin(googleUser);
 
@@ -305,7 +304,9 @@ describe('AuthenticationService', () => {
           status: UserStatus.ACTIVE,
         }),
       );
-      expect(mockClientRepository.create).toHaveBeenCalled();
+      // Note: Client profile is NOT automatically created for social logins
+      // User must complete profile setup after login
+      expect(mockClientService.activateClientProfile).not.toHaveBeenCalled();
       expect(result).toHaveProperty('accessToken');
     });
 
@@ -355,7 +356,7 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByFacebookId.mockResolvedValue(null);
       mockUserRepository.create.mockResolvedValue(newUser);
       mockUserRepository.findById.mockResolvedValue(newUser);
-      mockClientRepository.create.mockResolvedValue({ id: 'client-id' });
+      mockClientService.activateClientProfile.mockResolvedValue({ id: 'client-id' });
 
       const result = await service.facebookLogin(facebookUserNoEmail);
 

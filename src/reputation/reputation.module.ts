@@ -19,6 +19,6 @@ import { IdentityModule } from '../identity/identity.module';
       useClass: PrismaReviewRepository,
     },
   ],
-  exports: [ReviewService, REVIEW_REPOSITORY],
+  exports: [ReviewService],
 })
 export class ReputationModule {}

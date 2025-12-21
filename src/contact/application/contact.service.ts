@@ -1,26 +1,21 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { ContactRepository, CONTACT_REPOSITORY } from '../domain/repositories/contact.repository';
 import { ContactEntity } from '../domain/entities/contact.entity';
-import { UserRepository, USER_REPOSITORY } from '../../identity/domain/repositories/user.repository';
 import { CreateContactDto } from './dto/create-contact.dto';
+// Cross-context dependency - using Service instead of Repository (DDD)
+import { UserService } from '../../identity/application/services/user.service';
 
 @Injectable()
 export class ContactService {
   constructor(
     @Inject(CONTACT_REPOSITORY) private readonly contactRepository: ContactRepository,
-    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    private readonly userService: UserService,
   ) {}
 
   async create(fromUserId: string, createDto: CreateContactDto): Promise<ContactEntity> {
-    const fromUser = await this.userRepository.findById(fromUserId);
-    if (!fromUser) {
-      throw new NotFoundException('User not found');
-    }
-
-    const toUser = await this.userRepository.findById(createDto.toUserId);
-    if (!toUser) {
-      throw new NotFoundException('Target user not found');
-    }
+    // Validate both users exist
+    await this.userService.findByIdOrFail(fromUserId);
+    await this.userService.findByIdOrFail(createDto.toUserId);
 
     if (fromUserId === createDto.toUserId) {
       throw new BadRequestException('Cannot contact yourself');

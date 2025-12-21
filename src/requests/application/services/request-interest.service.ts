@@ -1,12 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { RequestInterestRepository, REQUEST_INTEREST_REPOSITORY } from '../../domain/repositories/request-interest.repository';
 import { RequestRepository, REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
 import { RequestEntity } from '../../domain/entities/request.entity';
 import { ExpressInterestDto } from '../dto/express-interest.dto';
 import { RequestStatus } from '@prisma/client';
-// Cross-context dependency
-import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../../profiles/domain/repositories/professional.repository';
+// Cross-context dependency - using Service instead of Repository (DDD)
+import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 
 @Injectable()
 export class RequestInterestService {
@@ -15,8 +15,7 @@ export class RequestInterestService {
     private readonly requestInterestRepository: RequestInterestRepository,
     @Inject(REQUEST_REPOSITORY)
     private readonly requestRepository: RequestRepository,
-    @Inject(PROFESSIONAL_REPOSITORY)
-    private readonly professionalRepository: ProfessionalRepository,
+    @Inject(forwardRef(() => ProfessionalService)) private readonly professionalService: ProfessionalService,
   ) {}
 
   /**
@@ -28,7 +27,7 @@ export class RequestInterestService {
     dto: ExpressInterestDto,
   ): Promise<RequestInterestEntity> {
     // Get professional profile
-    const professional = await this.professionalRepository.findByUserId(userId);
+    const professional = await this.professionalService.findByUserId(userId);
     if (!professional) {
       throw new ForbiddenException('Only specialists can express interest');
     }
@@ -76,7 +75,7 @@ export class RequestInterestService {
    * Specialist removes their interest
    */
   async removeInterest(requestId: string, userId: string): Promise<void> {
-    const professional = await this.professionalRepository.findByUserId(userId);
+    const professional = await this.professionalService.findByUserId(userId);
     if (!professional) {
       throw new ForbiddenException('Only specialists can remove interest');
     }
@@ -113,7 +112,7 @@ export class RequestInterestService {
    * Check if current user has expressed interest
    */
   async hasExpressedInterest(requestId: string, userId: string): Promise<boolean> {
-    const professional = await this.professionalRepository.findByUserId(userId);
+    const professional = await this.professionalService.findByUserId(userId);
     if (!professional) {
       return false;
     }

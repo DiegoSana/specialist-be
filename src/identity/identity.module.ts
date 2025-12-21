@@ -8,6 +8,7 @@ import { USER_REPOSITORY } from './domain/repositories/user.repository';
 
 // Application
 import { AuthenticationService } from './application/services/authentication.service';
+import { UserService } from './application/services/user.service';
 
 // Infrastructure
 import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
@@ -46,6 +47,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
   controllers: [AuthController, UsersController],
   providers: [
     AuthenticationService,
+    UserService,
     JwtStrategy,
     LocalStrategy,
     GoogleStrategy,
@@ -58,9 +60,10 @@ import { ProfilesModule } from '../profiles/profiles.module';
   ],
   exports: [
     AuthenticationService,
+    UserService,
     JwtStrategy,
     JwtAuthGuard,
-    USER_REPOSITORY,
+    // Note: Repositories are NOT exported - use Services instead (DDD)
   ],
 })
 export class IdentityModule {}

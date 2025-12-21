@@ -2,18 +2,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ProfessionalService } from './professional.service';
 import { PROFESSIONAL_REPOSITORY } from '../../domain/repositories/professional.repository';
-import { USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
 import { TRADE_REPOSITORY } from '../../domain/repositories/trade.repository';
-import { REQUEST_REPOSITORY } from '../../../requests/domain/repositories/request.repository';
+import { UserService } from '../../../identity/application/services/user.service';
+import { RequestService } from '../../../requests/application/services/request.service';
 import { createMockUser, createMockProfessional, createMockRequest } from '../../../__mocks__/test-utils';
 import { ProfessionalStatus, RequestStatus, UserStatus } from '@prisma/client';
 
 describe('ProfessionalService', () => {
   let service: ProfessionalService;
   let mockProfessionalRepository: any;
-  let mockUserRepository: any;
+  let mockUserService: any;
   let mockTradeRepository: any;
-  let mockRequestRepository: any;
+  let mockRequestService: any;
 
   beforeEach(async () => {
     mockProfessionalRepository = {
@@ -22,17 +22,19 @@ describe('ProfessionalService', () => {
       findByUserId: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateRating: jest.fn(),
     };
 
-    mockUserRepository = {
+    mockUserService = {
       findById: jest.fn(),
+      findByIdOrFail: jest.fn(),
     };
 
     mockTradeRepository = {
       findById: jest.fn(),
     };
 
-    mockRequestRepository = {
+    mockRequestService = {
       findByProfessionalId: jest.fn(),
     };
 
@@ -40,9 +42,9 @@ describe('ProfessionalService', () => {
       providers: [
         ProfessionalService,
         { provide: PROFESSIONAL_REPOSITORY, useValue: mockProfessionalRepository },
-        { provide: USER_REPOSITORY, useValue: mockUserRepository },
+        { provide: UserService, useValue: mockUserService },
         { provide: TRADE_REPOSITORY, useValue: mockTradeRepository },
-        { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
+        { provide: RequestService, useValue: mockRequestService },
       ],
     }).compile();
 
@@ -166,7 +168,7 @@ describe('ProfessionalService', () => {
       ];
 
       mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
-      mockRequestRepository.findByProfessionalId.mockResolvedValue(completedRequests);
+      mockRequestService.findByProfessionalId.mockResolvedValue(completedRequests);
 
       const result = await service.findByUserId('user-123');
 
@@ -205,7 +207,7 @@ describe('ProfessionalService', () => {
       });
       const newProfessional = createMockProfessional({ userId: 'user-123' });
 
-      mockUserRepository.findById
+      mockUserService.findByIdOrFail
         .mockResolvedValueOnce(user) // First call to check user exists
         .mockResolvedValueOnce(updatedUser); // After creation
       mockProfessionalRepository.findByUserId.mockResolvedValue(null);
@@ -225,7 +227,7 @@ describe('ProfessionalService', () => {
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockUserRepository.findById.mockResolvedValue(null);
+      mockUserService.findByIdOrFail.mockRejectedValue(new NotFoundException('User not found'));
 
       await expect(service.createProfile('non-existent', createDto)).rejects.toThrow(NotFoundException);
     });
@@ -235,7 +237,7 @@ describe('ProfessionalService', () => {
       // Override isActive to return false for PENDING status
       jest.spyOn(inactiveUser, 'isActive').mockReturnValue(false);
 
-      mockUserRepository.findById.mockResolvedValue(inactiveUser);
+      mockUserService.findByIdOrFail.mockResolvedValue(inactiveUser);
 
       await expect(service.createProfile('user-123', createDto)).rejects.toThrow(BadRequestException);
     });
@@ -244,7 +246,7 @@ describe('ProfessionalService', () => {
       const user = createMockUser({ status: UserStatus.ACTIVE });
       const existingProfessional = createMockProfessional();
 
-      mockUserRepository.findById.mockResolvedValue(user);
+      mockUserService.findByIdOrFail.mockResolvedValue(user);
       mockProfessionalRepository.findByUserId.mockResolvedValue(existingProfessional);
 
       await expect(service.createProfile('user-123', createDto)).rejects.toThrow(BadRequestException);
@@ -253,7 +255,7 @@ describe('ProfessionalService', () => {
     it('should throw NotFoundException if trade not found', async () => {
       const user = createMockUser({ status: UserStatus.ACTIVE });
 
-      mockUserRepository.findById.mockResolvedValue(user);
+      mockUserService.findByIdOrFail.mockResolvedValue(user);
       mockProfessionalRepository.findByUserId.mockResolvedValue(null);
       mockTradeRepository.findById.mockResolvedValue(null);
 
