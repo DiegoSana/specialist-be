@@ -47,15 +47,13 @@ export class PrismaReviewRepository implements ReviewRepository {
     return PrismaReviewMapper.toDomain(review);
   }
 
-  async create(
-    reviewData: {
-      reviewerId: string;
-      professionalId: string;
-      rating: number;
-      comment: string | null;
-      requestId: string | null;
-    },
-  ): Promise<ReviewEntity> {
+  async create(reviewData: {
+    reviewerId: string;
+    professionalId: string;
+    rating: number;
+    comment: string | null;
+    requestId: string | null;
+  }): Promise<ReviewEntity> {
     const review = await this.prisma.review.create({
       data: {
         ...PrismaReviewMapper.toPersistenceCreate(reviewData),
@@ -88,4 +86,3 @@ export class PrismaReviewRepository implements ReviewRepository {
     });
   }
 }
-

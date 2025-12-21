@@ -1,20 +1,38 @@
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsBoolean, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  IsBoolean,
+  ValidateIf,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateRequestDto {
-  @ApiProperty({ example: 'uuid-of-professional', required: false, description: 'Required for direct requests' })
+  @ApiProperty({
+    example: 'uuid-of-professional',
+    required: false,
+    description: 'Required for direct requests',
+  })
   @ValidateIf((o) => !o.isPublic)
   @IsString()
   @IsNotEmpty({ message: 'professionalId is required for direct requests' })
   professionalId?: string;
 
-  @ApiProperty({ example: 'uuid-of-trade', required: false, description: 'Required for public requests' })
+  @ApiProperty({
+    example: 'uuid-of-trade',
+    required: false,
+    description: 'Required for public requests',
+  })
   @ValidateIf((o) => o.isPublic)
   @IsString()
   @IsNotEmpty({ message: 'tradeId is required for public requests' })
   tradeId?: string;
 
-  @ApiProperty({ example: false, description: 'If true, request is public and visible to all specialists' })
+  @ApiProperty({
+    example: false,
+    description: 'If true, request is public and visible to all specialists',
+  })
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
@@ -40,4 +58,3 @@ export class CreateRequestDto {
   @IsString({ each: true })
   photos?: string[];
 }
-

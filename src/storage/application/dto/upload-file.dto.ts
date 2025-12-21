@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { FileCategory } from '../../domain/value-objects/file-category.vo';
 
@@ -19,4 +19,3 @@ export class UploadFileDto {
   @IsUUID()
   requestId?: string;
 }
-

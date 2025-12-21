@@ -1,5 +1,8 @@
 import { ProfessionalStatus } from '@prisma/client';
-import { ProfessionalEntity, TradeInfo } from '../../domain/entities/professional.entity';
+import {
+  ProfessionalEntity,
+  TradeInfo,
+} from '../../domain/entities/professional.entity';
 
 export class PrismaProfessionalMapper {
   static toDomain(professional: {
@@ -7,7 +10,12 @@ export class PrismaProfessionalMapper {
     userId: string;
     trades?: Array<{
       isPrimary: boolean;
-      trade: { id: string; name: string; category: string | null; description: string | null };
+      trade: {
+        id: string;
+        name: string;
+        category: string | null;
+        description: string | null;
+      };
     }>;
     description: string | null;
     experienceYears: number | null;
@@ -100,23 +108,33 @@ export class PrismaProfessionalMapper {
     };
   }
 
-  static toPersistenceUpdate(partial: Partial<ProfessionalEntity>): Record<string, unknown> {
+  static toPersistenceUpdate(
+    partial: Partial<ProfessionalEntity>,
+  ): Record<string, unknown> {
     return {
-      ...(partial.description !== undefined && { description: partial.description }),
-      ...(partial.experienceYears !== undefined && { experienceYears: partial.experienceYears }),
+      ...(partial.description !== undefined && {
+        description: partial.description,
+      }),
+      ...(partial.experienceYears !== undefined && {
+        experienceYears: partial.experienceYears,
+      }),
       ...(partial.status !== undefined && { status: partial.status }),
       ...(partial.zone !== undefined && { zone: partial.zone }),
       ...(partial.city !== undefined && { city: partial.city }),
       ...(partial.address !== undefined && { address: partial.address }),
       ...(partial.whatsapp !== undefined && { whatsapp: partial.whatsapp }),
       ...(partial.website !== undefined && { website: partial.website }),
-      ...(partial.profileImage !== undefined && { profileImage: partial.profileImage }),
+      ...(partial.profileImage !== undefined && {
+        profileImage: partial.profileImage,
+      }),
       ...(partial.gallery !== undefined && { gallery: partial.gallery }),
       ...(partial.active !== undefined && { active: partial.active }),
     };
   }
 
-  static toPersistenceTrades(tradeIds: string[]): { create: Array<{ tradeId: string; isPrimary: boolean }> } {
+  static toPersistenceTrades(tradeIds: string[]): {
+    create: Array<{ tradeId: string; isPrimary: boolean }>;
+  } {
     return {
       create: tradeIds.map((tradeId, index) => ({
         tradeId,
@@ -125,4 +143,3 @@ export class PrismaProfessionalMapper {
     };
   }
 }
-

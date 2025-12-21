@@ -12,9 +12,11 @@ export class UpdateTradeDto {
   @IsString()
   category?: string;
 
-  @ApiProperty({ example: 'Electrical installation and repair services', required: false })
+  @ApiProperty({
+    example: 'Electrical installation and repair services',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   description?: string;
 }
-

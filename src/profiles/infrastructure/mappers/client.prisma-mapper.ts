@@ -30,13 +30,22 @@ export class PrismaClientMapper {
     };
   }
 
-  static toPersistenceUpdate(partial: Partial<ClientEntity>): Record<string, unknown> {
+  static toPersistenceUpdate(
+    partial: Partial<ClientEntity>,
+  ): Record<string, unknown> {
     return {
-      ...(partial.preferences !== undefined && { preferences: partial.preferences }),
-      ...(partial.savedProfessionals !== undefined && { savedProfessionals: partial.savedProfessionals }),
-      ...(partial.searchHistory !== undefined && { searchHistory: partial.searchHistory }),
-      ...(partial.notificationSettings !== undefined && { notificationSettings: partial.notificationSettings }),
+      ...(partial.preferences !== undefined && {
+        preferences: partial.preferences,
+      }),
+      ...(partial.savedProfessionals !== undefined && {
+        savedProfessionals: partial.savedProfessionals,
+      }),
+      ...(partial.searchHistory !== undefined && {
+        searchHistory: partial.searchHistory,
+      }),
+      ...(partial.notificationSettings !== undefined && {
+        notificationSettings: partial.notificationSettings,
+      }),
     };
   }
 }
-

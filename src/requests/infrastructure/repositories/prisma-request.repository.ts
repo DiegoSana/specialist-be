@@ -156,7 +156,14 @@ export class PrismaRequestRepository implements RequestRepository {
     return requests.map((r) => PrismaRequestMapper.toDomain(r));
   }
 
-  async findAvailableForProfessional(tradeIds: string[], city?: string, zone?: string): Promise<RequestEntity[]> {
+  async findAvailableForProfessional(
+    tradeIds: string[],
+    _city?: string,
+    _zone?: string,
+  ): Promise<RequestEntity[]> {
+    // Params reservados para futuros filtros (mantener contrato)
+    void _city;
+    void _zone;
     // Find public requests that match the professional's trades
     const requests = await this.prisma.request.findMany({
       where: {
@@ -185,21 +192,19 @@ export class PrismaRequestRepository implements RequestRepository {
     return requests.map((r) => PrismaRequestMapper.toDomain(r));
   }
 
-  async create(
-    requestData: {
-      clientId: string;
-      professionalId: string | null;
-      tradeId: string | null;
-      isPublic: boolean;
-      description: string;
-      address: string | null;
-      availability: string | null;
-      photos: string[];
-      status: RequestStatus;
-      quoteAmount: number | null;
-      quoteNotes: string | null;
-    },
-  ): Promise<RequestEntity> {
+  async create(requestData: {
+    clientId: string;
+    professionalId: string | null;
+    tradeId: string | null;
+    isPublic: boolean;
+    description: string;
+    address: string | null;
+    availability: string | null;
+    photos: string[];
+    status: RequestStatus;
+    quoteAmount: number | null;
+    quoteNotes: string | null;
+  }): Promise<RequestEntity> {
     const request = await this.prisma.request.create({
       data: {
         ...PrismaRequestMapper.toPersistenceCreate(requestData),
@@ -212,7 +217,10 @@ export class PrismaRequestRepository implements RequestRepository {
     return PrismaRequestMapper.toDomain(request);
   }
 
-  async update(id: string, data: Partial<RequestEntity>): Promise<RequestEntity> {
+  async update(
+    id: string,
+    data: Partial<RequestEntity>,
+  ): Promise<RequestEntity> {
     const updateData = PrismaRequestMapper.toPersistenceUpdate(data);
 
     const request = await this.prisma.request.update({

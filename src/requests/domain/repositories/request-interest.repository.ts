@@ -2,8 +2,13 @@ import { RequestInterestEntity } from '../entities/request-interest.entity';
 
 export interface RequestInterestRepository {
   findByRequestId(requestId: string): Promise<RequestInterestEntity[]>;
-  findByProfessionalId(professionalId: string): Promise<RequestInterestEntity[]>;
-  findByRequestAndProfessional(requestId: string, professionalId: string): Promise<RequestInterestEntity | null>;
+  findByProfessionalId(
+    professionalId: string,
+  ): Promise<RequestInterestEntity[]>;
+  findByRequestAndProfessional(
+    requestId: string,
+    professionalId: string,
+  ): Promise<RequestInterestEntity | null>;
   create(data: {
     requestId: string;
     professionalId: string;
@@ -14,6 +19,3 @@ export interface RequestInterestRepository {
 }
 
 export const REQUEST_INTEREST_REPOSITORY = Symbol('RequestInterestRepository');
-
-
-

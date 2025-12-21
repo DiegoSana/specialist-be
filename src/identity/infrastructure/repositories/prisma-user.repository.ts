@@ -9,7 +9,10 @@ import { PrismaUserMapper } from '../mappers/user.prisma-mapper';
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByEmail(email: string, includeProfiles: boolean = false): Promise<UserEntity | null> {
+  async findByEmail(
+    email: string,
+    includeProfiles: boolean = false,
+  ): Promise<UserEntity | null> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       include: includeProfiles
@@ -25,7 +28,10 @@ export class PrismaUserRepository implements UserRepository {
     return PrismaUserMapper.toDomain(user);
   }
 
-  async findById(id: string, includeProfiles: boolean = false): Promise<UserEntity | null> {
+  async findById(
+    id: string,
+    includeProfiles: boolean = false,
+  ): Promise<UserEntity | null> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: includeProfiles
@@ -69,21 +75,19 @@ export class PrismaUserRepository implements UserRepository {
     return PrismaUserMapper.toDomain(user);
   }
 
-  async create(
-    userData: {
-      email: string;
-      password: string | null;
-      firstName: string;
-      lastName: string;
-      phone?: string | null;
-      profilePictureUrl?: string | null;
-      isAdmin?: boolean;
-      status: UserStatus;
-      googleId?: string;
-      facebookId?: string;
-      authProvider?: AuthProvider;
-    },
-  ): Promise<UserEntity> {
+  async create(userData: {
+    email: string;
+    password: string | null;
+    firstName: string;
+    lastName: string;
+    phone?: string | null;
+    profilePictureUrl?: string | null;
+    isAdmin?: boolean;
+    status: UserStatus;
+    googleId?: string;
+    facebookId?: string;
+    authProvider?: AuthProvider;
+  }): Promise<UserEntity> {
     const user = await this.prisma.user.create({
       data: {
         ...PrismaUserMapper.toPersistenceCreate(userData),
@@ -93,7 +97,10 @@ export class PrismaUserRepository implements UserRepository {
     return PrismaUserMapper.toDomain(user);
   }
 
-  async update(id: string, data: Partial<UserEntity> & { googleId?: string; facebookId?: string }): Promise<UserEntity> {
+  async update(
+    id: string,
+    data: Partial<UserEntity> & { googleId?: string; facebookId?: string },
+  ): Promise<UserEntity> {
     const updateData = PrismaUserMapper.toPersistenceUpdate({
       ...data,
       googleId: data.googleId ?? undefined,
@@ -113,4 +120,3 @@ export class PrismaUserRepository implements UserRepository {
     return PrismaUserMapper.toDomain(user);
   }
 }
-

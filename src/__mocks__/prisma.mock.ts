@@ -12,4 +12,3 @@ export const createMockPrismaClient = (): MockPrismaClient => {
 };
 
 export const prismaMock = createMockPrismaClient();
-

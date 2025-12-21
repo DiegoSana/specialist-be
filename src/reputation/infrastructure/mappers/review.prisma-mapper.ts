@@ -41,11 +41,13 @@ export class PrismaReviewMapper {
     };
   }
 
-  static toPersistenceUpdate(input: { rating?: number; comment?: string | null }): Record<string, unknown> {
+  static toPersistenceUpdate(input: {
+    rating?: number;
+    comment?: string | null;
+  }): Record<string, unknown> {
     return {
       ...(input.rating !== undefined && { rating: input.rating }),
       ...(input.comment !== undefined && { comment: input.comment }),
     };
   }
 }
-

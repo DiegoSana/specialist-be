@@ -11,10 +11,13 @@ export interface ReviewRepository {
     comment: string | null;
     requestId: string | null;
   }): Promise<ReviewEntity>;
-  update(id: string, data: {
-    rating?: number;
-    comment?: string | null;
-  }): Promise<ReviewEntity>;
+  update(
+    id: string,
+    data: {
+      rating?: number;
+      comment?: string | null;
+    },
+  ): Promise<ReviewEntity>;
   delete(id: string): Promise<void>;
 }
 

@@ -1,26 +1,40 @@
-import { Injectable, UnauthorizedException, ConflictException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  Inject,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
-import { UserRepository, USER_REPOSITORY } from '../../domain/repositories/user.repository';
+import {
+  UserRepository,
+  USER_REPOSITORY,
+} from '../../domain/repositories/user.repository';
 import { UserEntity } from '../../domain/entities/user.entity';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { UserStatus, AuthProvider } from '@prisma/client';
 // Cross-context dependency - Client belongs to Profiles context
-import { ClientRepository, CLIENT_REPOSITORY } from '../../../profiles/domain/repositories/client.repository';
+import {
+  ClientRepository,
+  CLIENT_REPOSITORY,
+} from '../../../profiles/domain/repositories/client.repository';
 
 @Injectable()
 export class AuthenticationService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
-    @Inject(CLIENT_REPOSITORY) private readonly clientRepository: ClientRepository,
+    @Inject(CLIENT_REPOSITORY)
+    private readonly clientRepository: ClientRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const existingUser = await this.userRepository.findByEmail(registerDto.email);
+    const existingUser = await this.userRepository.findByEmail(
+      registerDto.email,
+    );
     if (existingUser) {
       throw new ConflictException('Email already registered');
     }
@@ -73,7 +87,10 @@ export class AuthenticationService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -103,7 +120,10 @@ export class AuthenticationService {
     };
   }
 
-  async validateUser(email: string, password: string): Promise<UserEntity | null> {
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<UserEntity | null> {
     const user = await this.userRepository.findByEmail(email, true);
     if (!user) {
       return null;
@@ -138,13 +158,17 @@ export class AuthenticationService {
 
     if (!user) {
       // Check if user exists with this email
-      const existingUser = await this.userRepository.findByEmail(googleUser.email, true);
-      
+      const existingUser = await this.userRepository.findByEmail(
+        googleUser.email,
+        true,
+      );
+
       if (existingUser) {
         // Link Google account to existing user
         user = await this.userRepository.update(existingUser.id, {
           googleId: googleUser.googleId,
-          profilePictureUrl: existingUser.profilePictureUrl || googleUser.profilePictureUrl,
+          profilePictureUrl:
+            existingUser.profilePictureUrl || googleUser.profilePictureUrl,
         });
         // Reload to get updated data
         user = await this.userRepository.findById(existingUser.id, true);
@@ -181,7 +205,10 @@ export class AuthenticationService {
     }
 
     const token = this.generateToken(user);
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
 
     return {
       accessToken: token,
@@ -209,29 +236,37 @@ export class AuthenticationService {
     profilePictureUrl: string | null;
   }) {
     // Check if user already exists with this Facebook ID
-    let user = await this.userRepository.findByFacebookId(facebookUser.facebookId);
+    let user = await this.userRepository.findByFacebookId(
+      facebookUser.facebookId,
+    );
 
     if (!user) {
       // If we have an email, check if user exists with this email
       if (facebookUser.email) {
-        const existingUser = await this.userRepository.findByEmail(facebookUser.email, true);
-        
+        const existingUser = await this.userRepository.findByEmail(
+          facebookUser.email,
+          true,
+        );
+
         if (existingUser) {
           // Link Facebook account to existing user
           user = await this.userRepository.update(existingUser.id, {
             facebookId: facebookUser.facebookId,
-            profilePictureUrl: existingUser.profilePictureUrl || facebookUser.profilePictureUrl,
+            profilePictureUrl:
+              existingUser.profilePictureUrl || facebookUser.profilePictureUrl,
           });
           // Reload to get updated data
           user = await this.userRepository.findById(existingUser.id, true);
         }
       }
-      
+
       if (!user) {
         // Create new user with Facebook account
         // Generate a placeholder email if Facebook didn't provide one
-        const email = facebookUser.email || `fb_${facebookUser.facebookId}@placeholder.local`;
-        
+        const email =
+          facebookUser.email ||
+          `fb_${facebookUser.facebookId}@placeholder.local`;
+
         user = await this.userRepository.create({
           email,
           password: null, // No password for social login
@@ -263,7 +298,10 @@ export class AuthenticationService {
     }
 
     const token = this.generateToken(user);
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
 
     return {
       accessToken: token,

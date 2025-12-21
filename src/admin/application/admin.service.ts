@@ -1,6 +1,13 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { UserRepository, USER_REPOSITORY } from '../../identity/domain/repositories/user.repository';
-import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../profiles/domain/repositories/professional.repository';
+import {
+  UserRepository,
+  USER_REPOSITORY,
+} from '../../identity/domain/repositories/user.repository';
+import {
+  ProfessionalRepository,
+  PROFESSIONAL_REPOSITORY,
+} from '../../profiles/domain/repositories/professional.repository';
+import { ProfessionalEntity } from '../../profiles/domain/entities/professional.entity';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from './dto/update-professional-status.dto';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
@@ -9,7 +16,8 @@ import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service
 export class AdminService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
-    @Inject(PROFESSIONAL_REPOSITORY) private readonly professionalRepository: ProfessionalRepository,
+    @Inject(PROFESSIONAL_REPOSITORY)
+    private readonly professionalRepository: ProfessionalRepository,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -118,13 +126,34 @@ export class AdminService {
     professionalId: string,
     updateDto: UpdateProfessionalStatusDto,
   ) {
-    const professional = await this.professionalRepository.findById(professionalId);
+    const professional =
+      await this.professionalRepository.findById(professionalId);
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }
 
-    return this.professionalRepository.update(professionalId, {
-      status: updateDto.status,
-    });
+    return this.professionalRepository.save(
+      // Aggregate completo (Opción A)
+      new ProfessionalEntity(
+        professional.id,
+        professional.userId,
+        professional.trades,
+        professional.description,
+        professional.experienceYears,
+        updateDto.status,
+        professional.zone,
+        professional.city,
+        professional.address,
+        professional.whatsapp,
+        professional.website,
+        professional.averageRating,
+        professional.totalReviews,
+        professional.profileImage,
+        professional.gallery,
+        professional.active,
+        professional.createdAt,
+        new Date(),
+      ),
+    );
   }
 }

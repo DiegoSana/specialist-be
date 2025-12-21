@@ -5,7 +5,9 @@ export interface TradeRepository {
   findByName(name: string): Promise<TradeEntity | null>;
   findAll(): Promise<TradeEntity[]>;
   findWithActiveProfessionals(): Promise<TradeEntity[]>;
-  create(trade: Omit<TradeEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<TradeEntity>;
+  create(
+    trade: Omit<TradeEntity, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<TradeEntity>;
   update(id: string, data: Partial<TradeEntity>): Promise<TradeEntity>;
 }
 

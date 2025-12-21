@@ -39,7 +39,11 @@ export class PrismaRequestInterestMapper {
     return entity;
   }
 
-  static toPersistenceCreate(input: { requestId: string; professionalId: string; message: string | null }): Record<string, unknown> {
+  static toPersistenceCreate(input: {
+    requestId: string;
+    professionalId: string;
+    message: string | null;
+  }): Record<string, unknown> {
     return {
       requestId: input.requestId,
       professionalId: input.professionalId,
@@ -47,4 +51,3 @@ export class PrismaRequestInterestMapper {
     };
   }
 }
-

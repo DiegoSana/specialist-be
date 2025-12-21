@@ -2,7 +2,10 @@ import { UserEntity } from '../entities/user.entity';
 import { UserStatus, AuthProvider } from '@prisma/client';
 
 export interface UserRepository {
-  findByEmail(email: string, includeProfiles?: boolean): Promise<UserEntity | null>;
+  findByEmail(
+    email: string,
+    includeProfiles?: boolean,
+  ): Promise<UserEntity | null>;
   findById(id: string, includeProfiles?: boolean): Promise<UserEntity | null>;
   findByGoogleId(googleId: string): Promise<UserEntity | null>;
   findByFacebookId(facebookId: string): Promise<UserEntity | null>;

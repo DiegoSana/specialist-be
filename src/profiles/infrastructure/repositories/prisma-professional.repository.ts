@@ -165,67 +165,90 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
     return professionals.map((p) => PrismaProfessionalMapper.toDomain(p));
   }
 
-  async create(
-    professionalData: {
-      userId: string;
-      tradeIds: string[];
-      description: string | null;
-      experienceYears: number | null;
-      status: ProfessionalStatus;
-      zone: string | null;
-      city: string;
-      address: string | null;
-      whatsapp: string | null;
-      website: string | null;
-      profileImage: string | null;
-      gallery: string[];
-      active: boolean;
-    },
-  ): Promise<ProfessionalEntity> {
-    const professional = await this.prisma.professional.create({
-      data: {
-        ...PrismaProfessionalMapper.toPersistenceCreate(professionalData),
-      },
-      include: {
-        trades: {
-          include: {
-            trade: true,
-          },
-        },
-      },
-    });
+  async save(professional: ProfessionalEntity): Promise<ProfessionalEntity> {
+    const tradeIds = professional.tradeIds;
 
-    return PrismaProfessionalMapper.toDomain(professional);
-  }
-
-  async update(id: string, data: Partial<ProfessionalEntity> & { tradeIds?: string[] }): Promise<ProfessionalEntity> {
-    const updateData: any = PrismaProfessionalMapper.toPersistenceUpdate(data);
-
-    // Handle trade updates
-    if (data.tradeIds) {
-      // Delete existing trades and create new ones
-      await this.prisma.professionalTrade.deleteMany({
-        where: { professionalId: id },
+    const result = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.professional.findUnique({
+        where: { id: professional.id },
+        select: { id: true },
       });
-      updateData.trades = PrismaProfessionalMapper.toPersistenceTrades(data.tradeIds);
-    }
 
-    const professional = await this.prisma.professional.update({
-      where: { id },
-      data: updateData,
-      include: {
-        trades: {
-          include: {
-            trade: true,
+      if (!existing) {
+        return tx.professional.create({
+          data: {
+            id: professional.id,
+            userId: professional.userId,
+            description: professional.description,
+            experienceYears: professional.experienceYears,
+            status: professional.status,
+            zone: professional.zone,
+            city: professional.city,
+            address: professional.address,
+            whatsapp: professional.whatsapp,
+            website: professional.website,
+            averageRating: professional.averageRating,
+            totalReviews: professional.totalReviews,
+            profileImage: professional.profileImage,
+            gallery: professional.gallery,
+            active: professional.active,
+            trades: PrismaProfessionalMapper.toPersistenceTrades(tradeIds),
           },
+          include: {
+            trades: { include: { trade: true } },
+          },
+        });
+      }
+
+      // Update scalars
+      await tx.professional.update({
+        where: { id: professional.id },
+        data: {
+          description: professional.description,
+          experienceYears: professional.experienceYears,
+          status: professional.status,
+          zone: professional.zone,
+          city: professional.city,
+          address: professional.address,
+          whatsapp: professional.whatsapp,
+          website: professional.website,
+          averageRating: professional.averageRating,
+          totalReviews: professional.totalReviews,
+          profileImage: professional.profileImage,
+          gallery: professional.gallery,
+          active: professional.active,
         },
-      },
+      });
+
+      // Sync trades (source of truth = aggregate)
+      await tx.professionalTrade.deleteMany({
+        where: { professionalId: professional.id },
+      });
+      await tx.professionalTrade.createMany({
+        data: tradeIds.map((tradeId, index) => ({
+          professionalId: professional.id,
+          tradeId,
+          isPrimary: index === 0,
+        })),
+        skipDuplicates: true,
+      });
+
+      return tx.professional.findUniqueOrThrow({
+        where: { id: professional.id },
+        include: {
+          trades: { include: { trade: true } },
+        },
+      });
     });
 
-    return PrismaProfessionalMapper.toDomain(professional);
+    return PrismaProfessionalMapper.toDomain(result);
   }
 
-  async updateRating(id: string, averageRating: number, totalReviews: number): Promise<void> {
+  async updateRating(
+    id: string,
+    averageRating: number,
+    totalReviews: number,
+  ): Promise<void> {
     await this.prisma.professional.update({
       where: { id },
       data: {
@@ -235,4 +258,3 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
     });
   }
 }
-

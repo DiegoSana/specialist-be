@@ -104,19 +104,26 @@ export class PrismaRequestMapper {
     };
   }
 
-  static toPersistenceUpdate(partial: Partial<RequestEntity>): Record<string, unknown> {
+  static toPersistenceUpdate(
+    partial: Partial<RequestEntity>,
+  ): Record<string, unknown> {
     const updateData: Record<string, unknown> = {};
 
-    if (partial.description !== undefined) updateData.description = partial.description;
+    if (partial.description !== undefined)
+      updateData.description = partial.description;
     if (partial.status !== undefined) updateData.status = partial.status;
-    if (partial.quoteAmount !== undefined) updateData.quoteAmount = partial.quoteAmount;
-    if (partial.quoteNotes !== undefined) updateData.quoteNotes = partial.quoteNotes;
+    if (partial.quoteAmount !== undefined)
+      updateData.quoteAmount = partial.quoteAmount;
+    if (partial.quoteNotes !== undefined)
+      updateData.quoteNotes = partial.quoteNotes;
     if (partial.photos !== undefined) updateData.photos = partial.photos;
-    if (partial.professionalId !== undefined) updateData.professionalId = partial.professionalId;
-    if (partial.clientRating !== undefined) updateData.clientRating = partial.clientRating;
-    if (partial.clientRatingComment !== undefined) updateData.clientRatingComment = partial.clientRatingComment;
+    if (partial.professionalId !== undefined)
+      updateData.professionalId = partial.professionalId;
+    if (partial.clientRating !== undefined)
+      updateData.clientRating = partial.clientRating;
+    if (partial.clientRatingComment !== undefined)
+      updateData.clientRatingComment = partial.clientRatingComment;
 
     return updateData;
   }
 }
-

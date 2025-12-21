@@ -11,9 +11,11 @@ export class CreateContactDto {
   @IsString()
   contactType?: string;
 
-  @ApiProperty({ example: 'Hello, I would like to contact you...', required: false })
+  @ApiProperty({
+    example: 'Hello, I would like to contact you...',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   message?: string;
 }
-

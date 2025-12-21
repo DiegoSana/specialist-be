@@ -52,4 +52,3 @@ export class UserEntity {
     return this.hasClientProfile && this.hasProfessionalProfile;
   }
 }
-

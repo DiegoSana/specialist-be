@@ -1,14 +1,29 @@
-import { IsString, IsOptional, IsNumber, IsArray, Min, Max, IsUrl } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsArray,
+  Min,
+  Max,
+  IsUrl,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateProfessionalDto {
-  @ApiProperty({ example: ['uuid-of-trade-1', 'uuid-of-trade-2'], required: false, description: 'Array of trade IDs. First one will be primary.' })
+  @ApiProperty({
+    example: ['uuid-of-trade-1', 'uuid-of-trade-2'],
+    required: false,
+    description: 'Array of trade IDs. First one will be primary.',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tradeIds?: string[];
 
-  @ApiProperty({ example: 'Experienced electrician with 10+ years...', required: false })
+  @ApiProperty({
+    example: 'Experienced electrician with 10+ years...',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   description?: string;
@@ -56,4 +71,3 @@ export class UpdateProfessionalDto {
   @IsUrl({}, { each: true })
   gallery?: string[];
 }
-

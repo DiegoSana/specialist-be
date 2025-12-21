@@ -1,12 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { FileStorageService } from './file-storage.service';
 import { FILE_STORAGE_REPOSITORY } from '../../domain/repositories/file-storage.repository';
 import { REQUEST_REPOSITORY } from '../../../requests/domain/repositories/request.repository';
 import { PROFESSIONAL_REPOSITORY } from '../../../profiles/domain/repositories/professional.repository';
-import { createMockRequest, createMockProfessional } from '../../../__mocks__/test-utils';
+import {
+  createMockRequest,
+  createMockProfessional,
+} from '../../../__mocks__/test-utils';
 import { FileCategory } from '../../domain/value-objects/file-category.vo';
-import { RequestStatus } from '@prisma/client';
 
 describe('FileStorageService', () => {
   let service: FileStorageService;
@@ -32,9 +38,15 @@ describe('FileStorageService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FileStorageService,
-        { provide: FILE_STORAGE_REPOSITORY, useValue: mockFileStorageRepository },
+        {
+          provide: FILE_STORAGE_REPOSITORY,
+          useValue: mockFileStorageRepository,
+        },
         { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
-        { provide: PROFESSIONAL_REPOSITORY, useValue: mockProfessionalRepository },
+        {
+          provide: PROFESSIONAL_REPOSITORY,
+          useValue: mockProfessionalRepository,
+        },
       ],
     }).compile();
 
@@ -61,7 +73,11 @@ describe('FileStorageService', () => {
 
     it('should throw BadRequestException when no file provided', async () => {
       await expect(
-        service.uploadFile(undefined, { category: FileCategory.PROFILE_PICTURE }, 'user-123'),
+        service.uploadFile(
+          undefined,
+          { category: FileCategory.PROFILE_PICTURE },
+          'user-123',
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -169,7 +185,11 @@ describe('FileStorageService', () => {
           ownerId: 'other-user',
         });
 
-        const result = await service.canAccessFile('uploads/file.jpg', 'admin-user', true);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'admin-user',
+          true,
+        );
 
         expect(result).toBe(true);
       });
@@ -182,7 +202,11 @@ describe('FileStorageService', () => {
           ownerId: 'owner',
         });
 
-        const result = await service.canAccessFile('uploads/file.jpg', null, false);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          null,
+          false,
+        );
 
         expect(result).toBe(true);
       });
@@ -193,7 +217,11 @@ describe('FileStorageService', () => {
           ownerId: 'owner',
         });
 
-        const result = await service.canAccessFile('uploads/file.jpg', null, false);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          null,
+          false,
+        );
 
         expect(result).toBe(true);
       });
@@ -208,7 +236,11 @@ describe('FileStorageService', () => {
           belongsTo: (userId: string) => userId === 'user-123',
         });
 
-        const result = await service.canAccessFile('uploads/file.jpg', 'user-123', false);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'user-123',
+          false,
+        );
 
         expect(result).toBe(true);
       });
@@ -221,7 +253,11 @@ describe('FileStorageService', () => {
           belongsTo: (userId: string) => userId === 'other-user',
         });
 
-        const result = await service.canAccessFile('uploads/file.jpg', 'user-123', false);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'user-123',
+          false,
+        );
 
         expect(result).toBe(false);
       });
@@ -244,7 +280,11 @@ describe('FileStorageService', () => {
         mockRequestRepository.findById.mockResolvedValue(publicRequest);
 
         // Random logged-in user should have access
-        const result = await service.canAccessFile('uploads/file.jpg', 'random-user', false);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'random-user',
+          false,
+        );
 
         expect(result).toBe(true);
       });
@@ -264,7 +304,11 @@ describe('FileStorageService', () => {
         mockRequestRepository.findById.mockResolvedValue(publicRequest);
 
         // No user (not logged in)
-        const result = await service.canAccessFile('uploads/file.jpg', null, false);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          null,
+          false,
+        );
 
         expect(result).toBe(false);
       });
@@ -287,7 +331,11 @@ describe('FileStorageService', () => {
         });
         mockRequestRepository.findById.mockResolvedValue(directRequest);
 
-        const result = await service.canAccessFile('uploads/file.jpg', 'client-user', false);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'client-user',
+          false,
+        );
 
         expect(result).toBe(true);
       });
@@ -313,7 +361,11 @@ describe('FileStorageService', () => {
         mockRequestRepository.findById.mockResolvedValue(directRequest);
         mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
 
-        const result = await service.canAccessFile('uploads/file.jpg', 'professional-user', false);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'professional-user',
+          false,
+        );
 
         expect(result).toBe(true);
       });
@@ -335,7 +387,11 @@ describe('FileStorageService', () => {
         mockRequestRepository.findById.mockResolvedValue(directRequest);
         mockProfessionalRepository.findByUserId.mockResolvedValue(null);
 
-        const result = await service.canAccessFile('uploads/file.jpg', 'random-user', false);
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'random-user',
+          false,
+        );
 
         expect(result).toBe(false);
       });
@@ -359,7 +415,9 @@ describe('FileStorageService', () => {
           belongsTo: () => false,
         });
         mockRequestRepository.findById.mockResolvedValue(directRequest);
-        mockProfessionalRepository.findByUserId.mockResolvedValue(differentProfessional);
+        mockProfessionalRepository.findByUserId.mockResolvedValue(
+          differentProfessional,
+        );
 
         const result = await service.canAccessFile(
           'uploads/file.jpg',
@@ -375,7 +433,11 @@ describe('FileStorageService', () => {
       it('should return false when file not found', async () => {
         mockFileStorageRepository.findByPath.mockResolvedValue(null);
 
-        const result = await service.canAccessFile('non-existent.jpg', 'user-123', false);
+        const result = await service.canAccessFile(
+          'non-existent.jpg',
+          'user-123',
+          false,
+        );
 
         expect(result).toBe(false);
       });
@@ -392,7 +454,9 @@ describe('FileStorageService', () => {
 
       await service.deleteFile('uploads/file.jpg', 'admin-user', true);
 
-      expect(mockFileStorageRepository.delete).toHaveBeenCalledWith('uploads/file.jpg');
+      expect(mockFileStorageRepository.delete).toHaveBeenCalledWith(
+        'uploads/file.jpg',
+      );
     });
 
     it('should allow owner to delete their own file', async () => {
@@ -404,7 +468,9 @@ describe('FileStorageService', () => {
 
       await service.deleteFile('uploads/file.jpg', 'user-123', false);
 
-      expect(mockFileStorageRepository.delete).toHaveBeenCalledWith('uploads/file.jpg');
+      expect(mockFileStorageRepository.delete).toHaveBeenCalledWith(
+        'uploads/file.jpg',
+      );
     });
 
     it('should throw NotFoundException when file not found', async () => {
@@ -445,8 +511,9 @@ describe('FileStorageService', () => {
     it('should throw NotFoundException when file not found', async () => {
       mockFileStorageRepository.findByPath.mockResolvedValue(null);
 
-      await expect(service.getFile('non-existent.jpg')).rejects.toThrow(NotFoundException);
+      await expect(service.getFile('non-existent.jpg')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
-

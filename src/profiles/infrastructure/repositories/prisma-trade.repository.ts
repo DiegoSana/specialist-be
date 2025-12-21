@@ -56,7 +56,9 @@ export class PrismaTradeRepository implements TradeRepository {
     return trades.map((trade) => PrismaTradeMapper.toDomain(trade));
   }
 
-  async create(tradeData: Omit<TradeEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<TradeEntity> {
+  async create(
+    tradeData: Omit<TradeEntity, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<TradeEntity> {
     const trade = await this.prisma.trade.create({
       data: {
         ...PrismaTradeMapper.toPersistenceCreate(tradeData),
@@ -77,4 +79,3 @@ export class PrismaTradeRepository implements TradeRepository {
     return PrismaTradeMapper.toDomain(trade);
   }
 }
-

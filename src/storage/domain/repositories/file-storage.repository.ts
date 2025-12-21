@@ -26,4 +26,3 @@ export interface FileStorageRepository {
 
 // Token for dependency injection
 export const FILE_STORAGE_REPOSITORY = Symbol('FileStorageRepository');
-

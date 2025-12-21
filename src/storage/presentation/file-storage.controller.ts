@@ -14,7 +14,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
@@ -36,7 +43,10 @@ export class FileStorageController {
     private readonly fileStorageService: FileStorageService,
     private readonly configService: ConfigService,
   ) {
-    this.storagePath = this.configService.get<string>('STORAGE_LOCAL_PATH', './uploads');
+    this.storagePath = this.configService.get<string>(
+      'STORAGE_LOCAL_PATH',
+      './uploads',
+    );
   }
 
   @Post('upload')
@@ -54,7 +64,12 @@ export class FileStorageController {
         },
         category: {
           type: 'string',
-          enum: ['profile-picture', 'project-image', 'project-video', 'request-photo'],
+          enum: [
+            'profile-picture',
+            'project-image',
+            'project-video',
+            'request-photo',
+          ],
         },
         requestId: {
           type: 'string',
@@ -80,7 +95,7 @@ export class FileStorageController {
   @ApiResponse({ status: 200, description: 'File retrieved successfully' })
   async getPublicFile(@Param('path') filePath: string, @Res() res: Response) {
     const fullPath = path.join(this.storagePath, 'public', filePath);
-    
+
     try {
       await fs.access(fullPath);
       return res.sendFile(path.resolve(fullPath));
@@ -96,7 +111,7 @@ export class FileStorageController {
   @ApiResponse({ status: 200, description: 'File retrieved successfully' })
   async getPrivateFile(@Param('path') filePath: string, @Res() res: Response) {
     const fullPath = path.join(this.storagePath, 'private', filePath);
-    
+
     try {
       await fs.access(fullPath);
       return res.sendFile(path.resolve(fullPath));
@@ -115,7 +130,10 @@ export class FileStorageController {
     @Param('path') filePath: string,
     @CurrentUser() user: UserEntity,
   ) {
-    await this.fileStorageService.deleteFile(filePath, user.id, user.isAdminUser());
+    await this.fileStorageService.deleteFile(
+      filePath,
+      user.id,
+      user.isAdminUser(),
+    );
   }
 }
-

@@ -8,7 +8,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { ClientService } from '../../profiles/application/services/client.service';
 import { UpdateUserDto } from '../../profiles/application/dto/update-user.dto';
 import { UserProfileResponseDto } from '../../profiles/application/dto/user-profile-response.dto';
@@ -25,8 +30,14 @@ export class UsersController {
 
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'Profile retrieved successfully', type: UserProfileResponseDto })
-  async getMyProfile(@CurrentUser() user: UserEntity): Promise<UserProfileResponseDto> {
+  @ApiResponse({
+    status: 200,
+    description: 'Profile retrieved successfully',
+    type: UserProfileResponseDto,
+  })
+  async getMyProfile(
+    @CurrentUser() user: UserEntity,
+  ): Promise<UserProfileResponseDto> {
     const profile = await this.clientService.getProfile(user.id);
     return this.toResponseDto(profile);
   }
@@ -34,22 +45,37 @@ export class UsersController {
   @Patch('me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update current user profile' })
-  @ApiResponse({ status: 200, description: 'Profile updated successfully', type: UserProfileResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+    type: UserProfileResponseDto,
+  })
   async updateMyProfile(
     @CurrentUser() user: UserEntity,
     @Body() updateDto: UpdateUserDto,
   ): Promise<UserProfileResponseDto> {
-    const updatedProfile = await this.clientService.updateProfile(user.id, updateDto);
+    const updatedProfile = await this.clientService.updateProfile(
+      user.id,
+      updateDto,
+    );
     return this.toResponseDto(updatedProfile);
   }
 
   @Post('me/client-profile')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Activate client profile for current user' })
-  @ApiResponse({ status: 201, description: 'Client profile activated successfully', type: UserProfileResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Client profile activated successfully',
+    type: UserProfileResponseDto,
+  })
   @ApiResponse({ status: 409, description: 'Client profile already exists' })
-  async activateClientProfile(@CurrentUser() user: UserEntity): Promise<UserProfileResponseDto> {
-    const updatedProfile = await this.clientService.activateClientProfile(user.id);
+  async activateClientProfile(
+    @CurrentUser() user: UserEntity,
+  ): Promise<UserProfileResponseDto> {
+    const updatedProfile = await this.clientService.activateClientProfile(
+      user.id,
+    );
     return this.toResponseDto(updatedProfile);
   }
 
@@ -70,4 +96,3 @@ export class UsersController {
     };
   }
 }
-

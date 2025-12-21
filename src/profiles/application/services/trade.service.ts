@@ -1,12 +1,22 @@
-import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
-import { TradeRepository, TRADE_REPOSITORY } from '../../domain/repositories/trade.repository';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  Inject,
+} from '@nestjs/common';
+import {
+  TradeRepository,
+  TRADE_REPOSITORY,
+} from '../../domain/repositories/trade.repository';
 import { TradeEntity } from '../../domain/entities/trade.entity';
 import { CreateTradeDto } from '../dto/create-trade.dto';
 import { UpdateTradeDto } from '../dto/update-trade.dto';
 
 @Injectable()
 export class TradeService {
-  constructor(@Inject(TRADE_REPOSITORY) private readonly tradeRepository: TradeRepository) {}
+  constructor(
+    @Inject(TRADE_REPOSITORY) private readonly tradeRepository: TradeRepository,
+  ) {}
 
   async findAll(): Promise<TradeEntity[]> {
     return this.tradeRepository.findAll();
@@ -53,4 +63,3 @@ export class TradeService {
     return this.tradeRepository.update(id, updateDto);
   }
 }
-

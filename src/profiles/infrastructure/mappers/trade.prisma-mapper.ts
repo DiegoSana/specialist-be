@@ -12,7 +12,9 @@ export class PrismaTradeMapper {
     );
   }
 
-  static toPersistenceCreate(input: Omit<TradeEntity, 'id' | 'createdAt' | 'updatedAt'>): Record<string, unknown> {
+  static toPersistenceCreate(
+    input: Omit<TradeEntity, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Record<string, unknown> {
     return {
       name: input.name,
       category: input.category,
@@ -20,12 +22,15 @@ export class PrismaTradeMapper {
     };
   }
 
-  static toPersistenceUpdate(partial: Partial<TradeEntity>): Record<string, unknown> {
+  static toPersistenceUpdate(
+    partial: Partial<TradeEntity>,
+  ): Record<string, unknown> {
     return {
       ...(partial.name !== undefined && { name: partial.name }),
       ...(partial.category !== undefined && { category: partial.category }),
-      ...(partial.description !== undefined && { description: partial.description }),
+      ...(partial.description !== undefined && {
+        description: partial.description,
+      }),
     };
   }
 }
-

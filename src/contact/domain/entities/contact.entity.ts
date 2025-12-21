@@ -8,4 +8,3 @@ export class ContactEntity {
     public readonly createdAt: Date,
   ) {}
 }
-

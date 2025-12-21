@@ -81,14 +81,19 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(null);
       mockUserRepository.create.mockResolvedValue(createdUser);
       mockUserRepository.findById.mockResolvedValue(createdUser);
-      mockClientRepository.create.mockResolvedValue({ id: 'client-id', userId: createdUser.id });
+      mockClientRepository.create.mockResolvedValue({
+        id: 'client-id',
+        userId: createdUser.id,
+      });
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
 
       const result = await service.register(registerDto);
 
       expect(result).toHaveProperty('accessToken', 'mock-jwt-token');
       expect(result.user).toHaveProperty('email', registerDto.email);
-      expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(registerDto.email);
+      expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(
+        registerDto.email,
+      );
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 10);
       expect(mockClientRepository.create).toHaveBeenCalled();
     });
@@ -97,7 +102,9 @@ describe('AuthenticationService', () => {
       const existingUser = createMockUser({ email: registerDto.email });
       mockUserRepository.findByEmail.mockResolvedValue(existingUser);
 
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(service.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(mockUserRepository.create).not.toHaveBeenCalled();
     });
 
@@ -142,7 +149,9 @@ describe('AuthenticationService', () => {
     it('should throw UnauthorizedException for non-existent user', async () => {
       mockUserRepository.findByEmail.mockResolvedValue(null);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should throw UnauthorizedException for invalid password', async () => {
@@ -150,7 +159,9 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should throw UnauthorizedException for suspended user', async () => {
@@ -162,7 +173,9 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(suspendedUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should throw UnauthorizedException for banned user', async () => {
@@ -174,7 +187,9 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(bannedUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should allow PENDING users to login', async () => {
@@ -207,7 +222,10 @@ describe('AuthenticationService', () => {
     it('should return null for non-existent user', async () => {
       mockUserRepository.findByEmail.mockResolvedValue(null);
 
-      const result = await service.validateUser('nonexistent@example.com', 'password');
+      const result = await service.validateUser(
+        'nonexistent@example.com',
+        'password',
+      );
 
       expect(result).toBeNull();
     });
@@ -216,7 +234,10 @@ describe('AuthenticationService', () => {
       const socialUser = createMockUser({ password: null as any });
       mockUserRepository.findByEmail.mockResolvedValue(socialUser);
 
-      const result = await service.validateUser('social@example.com', 'password');
+      const result = await service.validateUser(
+        'social@example.com',
+        'password',
+      );
 
       expect(result).toBeNull();
     });
@@ -226,7 +247,10 @@ describe('AuthenticationService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      const result = await service.validateUser('test@example.com', 'wrongpassword');
+      const result = await service.validateUser(
+        'test@example.com',
+        'wrongpassword',
+      );
 
       expect(result).toBeNull();
     });
@@ -317,7 +341,9 @@ describe('AuthenticationService', () => {
 
       mockUserRepository.findByGoogleId.mockResolvedValue(suspendedUser);
 
-      await expect(service.googleLogin(googleUser)).rejects.toThrow(UnauthorizedException);
+      await expect(service.googleLogin(googleUser)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -388,4 +414,3 @@ describe('AuthenticationService', () => {
     });
   });
 });
-

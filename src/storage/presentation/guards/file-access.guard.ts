@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { FileStorageService } from '../../application/services/file-storage.service';
 import { UserEntity } from '../../../identity/domain/entities/user.entity';
 
@@ -30,13 +35,18 @@ export class FileAccessGuard implements CanActivate {
     const userId = user?.id || null;
     const isAdmin = user?.isAdminUser() || false;
 
-    const canAccess = await this.fileStorageService.canAccessFile(filePath, userId, isAdmin);
+    const canAccess = await this.fileStorageService.canAccessFile(
+      filePath,
+      userId,
+      isAdmin,
+    );
 
     if (!canAccess) {
-      throw new ForbiddenException('You do not have permission to access this file');
+      throw new ForbiddenException(
+        'You do not have permission to access this file',
+      );
     }
 
     return true;
   }
 }
-

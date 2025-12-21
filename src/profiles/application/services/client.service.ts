@@ -1,8 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Inject,
+} from '@nestjs/common';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 // Cross-context dependencies
-import { UserRepository, USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
+import {
+  UserRepository,
+  USER_REPOSITORY,
+} from '../../../identity/domain/repositories/user.repository';
 import { UserEntity } from '../../../identity/domain/entities/user.entity';
 
 @Injectable()
@@ -22,14 +31,21 @@ export class ClientService {
     return user;
   }
 
-  async updateProfile(userId: string, updateDto: UpdateUserDto): Promise<UserEntity> {
+  async updateProfile(
+    userId: string,
+    updateDto: UpdateUserDto,
+  ): Promise<UserEntity> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     // Validate profilePictureUrl if provided
-    if (updateDto.profilePictureUrl !== undefined && updateDto.profilePictureUrl !== null && updateDto.profilePictureUrl !== '') {
+    if (
+      updateDto.profilePictureUrl !== undefined &&
+      updateDto.profilePictureUrl !== null &&
+      updateDto.profilePictureUrl !== ''
+    ) {
       try {
         new URL(updateDto.profilePictureUrl);
       } catch {

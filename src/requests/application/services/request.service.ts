@@ -1,22 +1,42 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
-import { RequestRepository, REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+} from '@nestjs/common';
+import {
+  RequestRepository,
+  REQUEST_REPOSITORY,
+} from '../../domain/repositories/request.repository';
 import { RequestEntity } from '../../domain/entities/request.entity';
 import { CreateRequestDto } from '../dto/create-request.dto';
 import { UpdateRequestDto } from '../dto/update-request.dto';
 import { RequestStatus } from '@prisma/client';
 // Cross-context dependencies
-import { ProfessionalRepository, PROFESSIONAL_REPOSITORY } from '../../../profiles/domain/repositories/professional.repository';
-import { UserRepository, USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
+import {
+  ProfessionalRepository,
+  PROFESSIONAL_REPOSITORY,
+} from '../../../profiles/domain/repositories/professional.repository';
+import {
+  UserRepository,
+  USER_REPOSITORY,
+} from '../../../identity/domain/repositories/user.repository';
 
 @Injectable()
 export class RequestService {
   constructor(
-    @Inject(REQUEST_REPOSITORY) private readonly requestRepository: RequestRepository,
-    @Inject(PROFESSIONAL_REPOSITORY) private readonly professionalRepository: ProfessionalRepository,
+    @Inject(REQUEST_REPOSITORY)
+    private readonly requestRepository: RequestRepository,
+    @Inject(PROFESSIONAL_REPOSITORY)
+    private readonly professionalRepository: ProfessionalRepository,
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
   ) {}
 
-  async create(clientId: string, createDto: CreateRequestDto): Promise<RequestEntity> {
+  async create(
+    clientId: string,
+    createDto: CreateRequestDto,
+  ): Promise<RequestEntity> {
     const user = await this.userRepository.findById(clientId, true);
     if (!user || !user.isClient()) {
       throw new BadRequestException('Only clients can create requests');
@@ -27,10 +47,14 @@ export class RequestService {
     // For direct requests, validate professional
     if (!isPublic) {
       if (!createDto.professionalId) {
-        throw new BadRequestException('professionalId is required for direct requests');
+        throw new BadRequestException(
+          'professionalId is required for direct requests',
+        );
       }
-      
-      const professional = await this.professionalRepository.findById(createDto.professionalId);
+
+      const professional = await this.professionalRepository.findById(
+        createDto.professionalId,
+      );
       if (!professional) {
         throw new NotFoundException('Professional not found');
       }
@@ -80,8 +104,16 @@ export class RequestService {
     return this.requestRepository.findPublicRequests(tradeIds);
   }
 
-  async findAvailableForProfessional(tradeIds: string[], city?: string, zone?: string): Promise<RequestEntity[]> {
-    return this.requestRepository.findAvailableForProfessional(tradeIds, city, zone);
+  async findAvailableForProfessional(
+    tradeIds: string[],
+    city?: string,
+    zone?: string,
+  ): Promise<RequestEntity[]> {
+    return this.requestRepository.findAvailableForProfessional(
+      tradeIds,
+      city,
+      zone,
+    );
   }
 
   async updateStatus(
@@ -96,7 +128,9 @@ export class RequestService {
 
     const professional = await this.professionalRepository.findByUserId(userId);
     if (!professional || professional.id !== request.professionalId) {
-      throw new ForbiddenException('Only the assigned professional can update this request');
+      throw new ForbiddenException(
+        'Only the assigned professional can update this request',
+      );
     }
 
     return this.requestRepository.update(requestId, {
@@ -121,7 +155,9 @@ export class RequestService {
     }
 
     if (!request.quoteAmount) {
-      throw new BadRequestException('Request must have a quote before it can be accepted');
+      throw new BadRequestException(
+        'Request must have a quote before it can be accepted',
+      );
     }
 
     return this.requestRepository.update(requestId, {
@@ -144,14 +180,22 @@ export class RequestService {
     }
 
     // Client can only cancel or accept
-    if (updateDto.status && updateDto.status !== RequestStatus.CANCELLED && updateDto.status !== RequestStatus.ACCEPTED) {
-      throw new BadRequestException('Clients can only cancel or accept requests');
+    if (
+      updateDto.status &&
+      updateDto.status !== RequestStatus.CANCELLED &&
+      updateDto.status !== RequestStatus.ACCEPTED
+    ) {
+      throw new BadRequestException(
+        'Clients can only cancel or accept requests',
+      );
     }
 
     // If accepting, validate quote exists
     if (updateDto.status === RequestStatus.ACCEPTED) {
       if (!request.quoteAmount) {
-        throw new BadRequestException('Request must have a quote before it can be accepted');
+        throw new BadRequestException(
+          'Request must have a quote before it can be accepted',
+        );
       }
       if (request.status !== RequestStatus.PENDING) {
         throw new BadRequestException('Only pending requests can be accepted');
@@ -163,7 +207,11 @@ export class RequestService {
     });
   }
 
-  async addRequestPhoto(requestId: string, userId: string, url: string): Promise<RequestEntity> {
+  async addRequestPhoto(
+    requestId: string,
+    userId: string,
+    url: string,
+  ): Promise<RequestEntity> {
     // Validate URL format before proceeding
     try {
       new URL(url);
@@ -179,19 +227,25 @@ export class RequestService {
     // Check if user is either the client or the assigned professional
     const isClient = request.clientId === userId;
     let isProfessional = false;
-    
+
     if (request.professionalId) {
-      const professional = await this.professionalRepository.findByUserId(userId);
-      isProfessional = professional !== null && professional.id === request.professionalId;
+      const professional =
+        await this.professionalRepository.findByUserId(userId);
+      isProfessional =
+        professional !== null && professional.id === request.professionalId;
     }
 
     if (!isClient && !isProfessional) {
-      throw new ForbiddenException('Only the client or assigned professional can add photos to this request');
+      throw new ForbiddenException(
+        'Only the client or assigned professional can add photos to this request',
+      );
     }
 
     // Don't allow adding photos to cancelled requests
     if (request.status === RequestStatus.CANCELLED) {
-      throw new BadRequestException('Photos cannot be added to cancelled requests');
+      throw new BadRequestException(
+        'Photos cannot be added to cancelled requests',
+      );
     }
 
     const currentPhotos = request.photos || [];
@@ -206,7 +260,11 @@ export class RequestService {
     });
   }
 
-  async removeRequestPhoto(requestId: string, userId: string, url: string): Promise<RequestEntity> {
+  async removeRequestPhoto(
+    requestId: string,
+    userId: string,
+    url: string,
+  ): Promise<RequestEntity> {
     const request = await this.requestRepository.findById(requestId);
     if (!request) {
       throw new NotFoundException('Request not found');
@@ -215,14 +273,18 @@ export class RequestService {
     // Check if user is either the client or the assigned professional
     const isClient = request.clientId === userId;
     let isProfessional = false;
-    
+
     if (request.professionalId) {
-      const professional = await this.professionalRepository.findByUserId(userId);
-      isProfessional = professional !== null && professional.id === request.professionalId;
+      const professional =
+        await this.professionalRepository.findByUserId(userId);
+      isProfessional =
+        professional !== null && professional.id === request.professionalId;
     }
 
     if (!isClient && !isProfessional) {
-      throw new ForbiddenException('Only the client or assigned professional can remove photos from this request');
+      throw new ForbiddenException(
+        'Only the client or assigned professional can remove photos from this request',
+      );
     }
 
     const currentPhotos = request.photos || [];
@@ -247,17 +309,23 @@ export class RequestService {
     // Only the assigned professional can rate the client
     const professional = await this.professionalRepository.findByUserId(userId);
     if (!professional || professional.id !== request.professionalId) {
-      throw new ForbiddenException('Only the assigned professional can rate the client');
+      throw new ForbiddenException(
+        'Only the assigned professional can rate the client',
+      );
     }
 
     // Can only rate after work is done
     if (request.status !== RequestStatus.DONE) {
-      throw new BadRequestException('Can only rate client after work is completed');
+      throw new BadRequestException(
+        'Can only rate client after work is completed',
+      );
     }
 
     // Check if already rated
     if (request.clientRating !== null) {
-      throw new BadRequestException('Client has already been rated for this request');
+      throw new BadRequestException(
+        'Client has already been rated for this request',
+      );
     }
 
     // Validate rating

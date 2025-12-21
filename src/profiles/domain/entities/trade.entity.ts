@@ -8,4 +8,3 @@ export class TradeEntity {
     public readonly updatedAt: Date,
   ) {}
 }
-

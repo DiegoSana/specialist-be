@@ -92,23 +92,30 @@ export class PrismaUserMapper {
    * Sólo incluye campos presentes (undefined = no tocar).
    */
   static toPersistenceUpdate(
-    partial: Partial<UserEntity> & { googleId?: string | null; facebookId?: string | null; authProvider?: AuthProvider | null },
+    partial: Partial<UserEntity> & {
+      googleId?: string | null;
+      facebookId?: string | null;
+      authProvider?: AuthProvider | null;
+    },
   ): Record<string, unknown> {
     const updateData: Record<string, unknown> = {};
 
     if (partial.email !== undefined) updateData.email = partial.email;
     if (partial.password !== undefined) updateData.password = partial.password;
-    if (partial.firstName !== undefined) updateData.firstName = partial.firstName;
+    if (partial.firstName !== undefined)
+      updateData.firstName = partial.firstName;
     if (partial.lastName !== undefined) updateData.lastName = partial.lastName;
     if (partial.phone !== undefined) updateData.phone = partial.phone;
-    if (partial.profilePictureUrl !== undefined) updateData.profilePictureUrl = partial.profilePictureUrl;
+    if (partial.profilePictureUrl !== undefined)
+      updateData.profilePictureUrl = partial.profilePictureUrl;
     if (partial.isAdmin !== undefined) updateData.isAdmin = partial.isAdmin;
     if (partial.status !== undefined) updateData.status = partial.status;
     if (partial.googleId !== undefined) updateData.googleId = partial.googleId;
-    if (partial.facebookId !== undefined) updateData.facebookId = partial.facebookId;
-    if (partial.authProvider !== undefined) updateData.authProvider = partial.authProvider;
+    if (partial.facebookId !== undefined)
+      updateData.facebookId = partial.facebookId;
+    if (partial.authProvider !== undefined)
+      updateData.authProvider = partial.authProvider;
 
     return updateData;
   }
 }
-

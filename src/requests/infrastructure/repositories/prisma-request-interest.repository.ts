@@ -5,7 +5,9 @@ import { RequestInterestEntity } from '../../domain/entities/request-interest.en
 import { PrismaRequestInterestMapper } from '../mappers/request-interest.prisma-mapper';
 
 @Injectable()
-export class PrismaRequestInterestRepository implements RequestInterestRepository {
+export class PrismaRequestInterestRepository
+  implements RequestInterestRepository
+{
   constructor(private readonly prisma: PrismaService) {}
 
   async findByRequestId(requestId: string): Promise<RequestInterestEntity[]> {
@@ -38,7 +40,9 @@ export class PrismaRequestInterestRepository implements RequestInterestRepositor
     return interests.map((i) => PrismaRequestInterestMapper.toDomain(i));
   }
 
-  async findByProfessionalId(professionalId: string): Promise<RequestInterestEntity[]> {
+  async findByProfessionalId(
+    professionalId: string,
+  ): Promise<RequestInterestEntity[]> {
     const interests = await this.prisma.requestInterest.findMany({
       where: { professionalId },
       orderBy: { createdAt: 'desc' },
@@ -115,4 +119,3 @@ export class PrismaRequestInterestRepository implements RequestInterestRepositor
     });
   }
 }
-

@@ -5,7 +5,10 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { FileStorageRepository } from '../../domain/repositories/file-storage.repository';
 import { FileEntity } from '../../domain/entities/file.entity';
-import { FileCategory, FileCategoryVO } from '../../domain/value-objects/file-category.vo';
+import {
+  FileCategory,
+  FileCategoryVO,
+} from '../../domain/value-objects/file-category.vo';
 import { FileTypeVO } from '../../domain/value-objects/file-type.vo';
 import { FileSizeVO } from '../../domain/value-objects/file-size.vo';
 
@@ -15,8 +18,14 @@ export class LocalFileStorageRepository implements FileStorageRepository {
   private readonly baseUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.storagePath = this.configService.get<string>('STORAGE_LOCAL_PATH', './uploads');
-    this.baseUrl = this.configService.get<string>('STORAGE_BASE_URL', 'http://localhost:5000/api/storage');
+    this.storagePath = this.configService.get<string>(
+      'STORAGE_LOCAL_PATH',
+      './uploads',
+    );
+    this.baseUrl = this.configService.get<string>(
+      'STORAGE_BASE_URL',
+      'http://localhost:5000/api/storage',
+    );
   }
 
   async upload(
@@ -31,7 +40,7 @@ export class LocalFileStorageRepository implements FileStorageRepository {
   ): Promise<FileEntity> {
     // Validate file type
     const fileType = new FileTypeVO(metadata.mimeType, metadata.category);
-    const fileSize = new FileSizeVO(file.length, fileType.getMaxSize());
+    new FileSizeVO(file.length, fileType.getMaxSize());
     const categoryVO = new FileCategoryVO(metadata.category);
 
     // Generate unique filename
@@ -42,7 +51,10 @@ export class LocalFileStorageRepository implements FileStorageRepository {
     const categoryPath = categoryVO.getStoragePath();
     let relativePath: string;
 
-    if (metadata.category === FileCategory.PROFILE_PICTURE && metadata.ownerId) {
+    if (
+      metadata.category === FileCategory.PROFILE_PICTURE &&
+      metadata.ownerId
+    ) {
       relativePath = path.join(categoryPath, metadata.ownerId, storedFilename);
     } else if (
       (metadata.category === FileCategory.PROJECT_IMAGE ||
@@ -50,8 +62,15 @@ export class LocalFileStorageRepository implements FileStorageRepository {
       metadata.ownerId
     ) {
       relativePath = path.join(categoryPath, metadata.ownerId, storedFilename);
-    } else if (metadata.category === FileCategory.REQUEST_PHOTO && metadata.requestId) {
-      relativePath = path.join(categoryPath, metadata.requestId, storedFilename);
+    } else if (
+      metadata.category === FileCategory.REQUEST_PHOTO &&
+      metadata.requestId
+    ) {
+      relativePath = path.join(
+        categoryPath,
+        metadata.requestId,
+        storedFilename,
+      );
     } else {
       relativePath = path.join(categoryPath, storedFilename);
     }
@@ -177,9 +196,10 @@ export class LocalFileStorageRepository implements FileStorageRepository {
     );
   }
 
-  async findById(id: string): Promise<FileEntity | null> {
+  async findById(_id: string): Promise<FileEntity | null> {
     // In a real implementation, this would query a database
     // For now, we'll return null as we don't have a DB for file metadata
+    void _id;
     return null;
   }
 
@@ -189,16 +209,18 @@ export class LocalFileStorageRepository implements FileStorageRepository {
     // Ensure baseUrl doesn't end with / and urlPath doesn't start with /
     const cleanBaseUrl = this.baseUrl.replace(/\/$/, '');
     const cleanUrlPath = urlPath.replace(/^\//, '');
-    
+
     // Build URL by properly encoding path segments
     // Split the path and encode each segment individually
-    const pathSegments = cleanUrlPath.split('/').filter(segment => segment.length > 0);
-    const encodedSegments = pathSegments.map(segment => {
+    const pathSegments = cleanUrlPath
+      .split('/')
+      .filter((segment) => segment.length > 0);
+    const encodedSegments = pathSegments.map((segment) => {
       // Only encode if the segment contains characters that need encoding
       // UUIDs and simple filenames should be fine, but encode to be safe
       try {
         // Try to decode first to see if it's already encoded
-        const decoded = decodeURIComponent(segment);
+        decodeURIComponent(segment);
         // If decoding works and result is same, it wasn't encoded
         // Encode it to ensure it's properly formatted
         return encodeURIComponent(segment);
@@ -207,10 +229,10 @@ export class LocalFileStorageRepository implements FileStorageRepository {
         return encodeURIComponent(segment);
       }
     });
-    
+
     const encodedPath = encodedSegments.join('/');
     const fullUrl = `${cleanBaseUrl}/${encodedPath}`;
-    
+
     // Validate and return properly formatted URL
     try {
       const url = new URL(fullUrl);
@@ -228,4 +250,3 @@ export class LocalFileStorageRepository implements FileStorageRepository {
     }
   }
 }
-

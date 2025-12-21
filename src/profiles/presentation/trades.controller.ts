@@ -1,8 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-} from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TradeService } from '../application/services/trade.service';
 import { Public } from '../../shared/presentation/decorators/public.decorator';
@@ -23,7 +19,10 @@ export class TradesController {
   @Public()
   @Get('with-professionals')
   @ApiOperation({ summary: 'Get trades that have active professionals' })
-  @ApiResponse({ status: 200, description: 'List of trades with active professionals' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of trades with active professionals',
+  })
   async findWithActiveProfessionals() {
     return this.tradeService.findWithActiveProfessionals();
   }
@@ -37,4 +36,3 @@ export class TradesController {
     return this.tradeService.findById(id);
   }
 }
-

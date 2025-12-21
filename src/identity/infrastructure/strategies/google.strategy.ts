@@ -21,7 +21,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ): Promise<any> {
     const { id, name, emails, photos } = profile;
-    
+
     const user = {
       googleId: id,
       email: emails?.[0]?.value,
@@ -29,8 +29,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       lastName: name?.familyName || '',
       profilePictureUrl: photos?.[0]?.value || null,
     };
-    
+
     done(null, user);
   }
 }
-

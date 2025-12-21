@@ -1,5 +1,18 @@
-import { Controller, Get, Post, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
@@ -16,8 +29,14 @@ export class ContactController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a contact request' })
-  @ApiResponse({ status: 201, description: 'Contact request created successfully' })
-  async createContact(@CurrentUser() user: UserEntity, @Body() createDto: CreateContactDto) {
+  @ApiResponse({
+    status: 201,
+    description: 'Contact request created successfully',
+  })
+  async createContact(
+    @CurrentUser() user: UserEntity,
+    @Body() createDto: CreateContactDto,
+  ) {
     return this.contactService.create(user.id, createDto);
   }
 
@@ -28,4 +47,3 @@ export class ContactController {
     return this.contactService.findByUserId(user.id);
   }
 }
-

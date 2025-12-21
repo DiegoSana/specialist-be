@@ -12,7 +12,13 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
@@ -32,7 +38,10 @@ export class ReviewsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a review' })
   @ApiResponse({ status: 201, description: 'Review created successfully' })
-  async create(@CurrentUser() user: UserEntity, @Body() createDto: CreateReviewDto) {
+  async create(
+    @CurrentUser() user: UserEntity,
+    @Body() createDto: CreateReviewDto,
+  ) {
     return this.reviewService.create(user.id, createDto);
   }
 
@@ -100,4 +109,3 @@ export class ProfessionalReviewsController {
     return this.reviewService.findByProfessionalId(professionalId);
   }
 }
-

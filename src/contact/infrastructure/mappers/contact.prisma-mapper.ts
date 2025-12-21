@@ -12,7 +12,9 @@ export class PrismaContactMapper {
     );
   }
 
-  static toPersistenceCreate(input: Omit<ContactEntity, 'id' | 'createdAt'>): Record<string, unknown> {
+  static toPersistenceCreate(
+    input: Omit<ContactEntity, 'id' | 'createdAt'>,
+  ): Record<string, unknown> {
     return {
       fromUserId: input.fromUserId,
       toUserId: input.toUserId,
@@ -21,4 +23,3 @@ export class PrismaContactMapper {
     };
   }
 }
-

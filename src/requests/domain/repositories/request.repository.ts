@@ -6,7 +6,11 @@ export interface RequestRepository {
   findByClientId(clientId: string): Promise<RequestEntity[]>;
   findByProfessionalId(professionalId: string): Promise<RequestEntity[]>;
   findPublicRequests(tradeIds?: string[]): Promise<RequestEntity[]>;
-  findAvailableForProfessional(tradeIds: string[], city?: string, zone?: string): Promise<RequestEntity[]>;
+  findAvailableForProfessional(
+    tradeIds: string[],
+    city?: string,
+    zone?: string,
+  ): Promise<RequestEntity[]>;
   create(request: {
     clientId: string;
     professionalId: string | null;

@@ -56,11 +56,6 @@ import { ProfilesModule } from '../profiles/profiles.module';
       useClass: PrismaUserRepository,
     },
   ],
-  exports: [
-    AuthenticationService,
-    JwtStrategy,
-    JwtAuthGuard,
-    USER_REPOSITORY,
-  ],
+  exports: [AuthenticationService, JwtStrategy, JwtAuthGuard, USER_REPOSITORY],
 })
 export class IdentityModule {}

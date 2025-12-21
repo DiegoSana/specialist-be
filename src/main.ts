@@ -22,7 +22,11 @@ async function bootstrap() {
     // CORS - Environment-aware configuration
     const allowedOrigins = process.env.CORS_ORIGINS
       ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'];
+      : [
+          'http://localhost:3000',
+          'http://localhost:3001',
+          'http://127.0.0.1:3001',
+        ];
 
     app.enableCors({
       origin: allowedOrigins,
@@ -61,4 +65,3 @@ bootstrap().catch((error) => {
   console.error('Fatal error:', error);
   process.exit(1);
 });
-

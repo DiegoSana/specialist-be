@@ -14,4 +14,3 @@ export class ReviewEntity {
     return this.rating >= 1 && this.rating <= 5;
   }
 }
-

@@ -16,4 +16,3 @@ export interface ClientRepository {
 
 // Token for dependency injection
 export const CLIENT_REPOSITORY = Symbol('ClientRepository');
-

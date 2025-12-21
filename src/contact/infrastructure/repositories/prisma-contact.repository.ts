@@ -31,4 +31,3 @@ export class PrismaContactRepository implements ContactRepository {
     return contacts.map((c) => PrismaContactMapper.toDomain(c));
   }
 }
-
