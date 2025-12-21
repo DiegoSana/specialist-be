@@ -3,12 +3,12 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import {
   FileStorageRepository,
   FILE_STORAGE_REPOSITORY,
 } from '../../domain/repositories/file-storage.repository';
-import { Inject } from '@nestjs/common';
 import { FileEntity } from '../../domain/entities/file.entity';
 import {
   FileCategory,
@@ -17,24 +17,17 @@ import {
 import { FileTypeVO } from '../../domain/value-objects/file-type.vo';
 import { FileSizeVO } from '../../domain/value-objects/file-size.vo';
 import { UploadFileDto } from '../dto/upload-file.dto';
-import {
-  REQUEST_REPOSITORY,
-  RequestRepository,
-} from '../../../requests/domain/repositories/request.repository';
-import {
-  PROFESSIONAL_REPOSITORY,
-  ProfessionalRepository,
-} from '../../../profiles/domain/repositories/professional.repository';
+// Cross-context dependencies - using Services instead of Repositories (DDD)
+import { RequestService } from '../../../requests/application/services/request.service';
+import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 
 @Injectable()
 export class FileStorageService {
   constructor(
     @Inject(FILE_STORAGE_REPOSITORY)
     private readonly fileStorageRepository: FileStorageRepository,
-    @Inject(REQUEST_REPOSITORY)
-    private readonly requestRepository: RequestRepository,
-    @Inject(PROFESSIONAL_REPOSITORY)
-    private readonly professionalRepository: ProfessionalRepository,
+    private readonly requestService: RequestService,
+    private readonly professionalService: ProfessionalService,
   ) {}
 
   async uploadFile(
@@ -52,23 +45,21 @@ export class FileStorageService {
 
     // Validate requestId if provided
     if (uploadDto.requestId) {
-      const request = await this.requestRepository.findById(
-        uploadDto.requestId,
-      );
-      if (!request) {
-        throw new NotFoundException('Request not found');
-      }
-
+      const request = await this.requestService.findById(uploadDto.requestId);
       // Check if user is the client who created the request
       const isClient = request.clientId === userId;
 
       // Check if user is the professional assigned to the request
       let isProfessional = false;
       if (request.professionalId) {
-        const professional =
-          await this.professionalRepository.findByUserId(userId);
-        isProfessional =
-          professional !== null && professional.id === request.professionalId;
+        try {
+          const professional =
+            await this.professionalService.findByUserId(userId);
+          isProfessional = professional.id === request.professionalId;
+        } catch {
+          // User doesn't have a professional profile
+          isProfessional = false;
+        }
       }
 
       // Verify user is either the client or the assigned professional
@@ -157,32 +148,37 @@ export class FileStorageService {
 
     // For request photos, check access based on request type
     if (file.category === FileCategory.REQUEST_PHOTO && file.requestId) {
-      const request = await this.requestRepository.findById(file.requestId);
-      if (!request) {
-        return false;
-      }
+      try {
+        const request = await this.requestService.findById(file.requestId);
 
-      // PUBLIC REQUESTS: All logged-in users can see photos
-      if (request.isPublic) {
-        return true; // userId is already verified as not null above
-      }
+        // PUBLIC REQUESTS: All logged-in users can see photos
+        if (request.isPublic) {
+          return true; // userId is already verified as not null above
+        }
 
-      // DIRECT REQUESTS: Only client and assigned specialist can see photos
-      // Check if user is the client (owner)
-      if (request.clientId === userId) {
-        return true;
-      }
-
-      // Check if user is the assigned professional
-      if (request.professionalId) {
-        const professional =
-          await this.professionalRepository.findByUserId(userId);
-        if (professional && professional.id === request.professionalId) {
+        // DIRECT REQUESTS: Only client and assigned specialist can see photos
+        // Check if user is the client (owner)
+        if (request.clientId === userId) {
           return true;
         }
-      }
 
-      return false;
+        // Check if user is the assigned professional
+        if (request.professionalId) {
+          try {
+            const professional =
+              await this.professionalService.findByUserId(userId);
+            if (professional.id === request.professionalId) {
+              return true;
+            }
+          } catch {
+            // User doesn't have a professional profile
+          }
+        }
+
+        return false;
+      } catch {
+        return false;
+      }
     }
 
     return false;

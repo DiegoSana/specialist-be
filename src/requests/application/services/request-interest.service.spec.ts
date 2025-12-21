@@ -7,7 +7,7 @@ import {
 import { RequestInterestService } from './request-interest.service';
 import { REQUEST_INTEREST_REPOSITORY } from '../../domain/repositories/request-interest.repository';
 import { REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
-import { PROFESSIONAL_REPOSITORY } from '../../../profiles/domain/repositories/professional.repository';
+import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import {
   createMockProfessional,
   createMockRequest,
@@ -31,7 +31,7 @@ describe('RequestInterestService', () => {
   let service: RequestInterestService;
   let mockRequestInterestRepository: any;
   let mockRequestRepository: any;
-  let mockProfessionalRepository: any;
+  let mockProfessionalService: any;
 
   beforeEach(async () => {
     mockRequestInterestRepository = {
@@ -47,7 +47,7 @@ describe('RequestInterestService', () => {
       save: jest.fn(),
     };
 
-    mockProfessionalRepository = {
+    mockProfessionalService = {
       findByUserId: jest.fn(),
     };
 
@@ -59,10 +59,7 @@ describe('RequestInterestService', () => {
           useValue: mockRequestInterestRepository,
         },
         { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
-        {
-          provide: PROFESSIONAL_REPOSITORY,
-          useValue: mockProfessionalRepository,
-        },
+        { provide: ProfessionalService, useValue: mockProfessionalService },
       ],
     }).compile();
 
@@ -95,7 +92,7 @@ describe('RequestInterestService', () => {
       });
       const interest = createMockInterest();
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestRepository.findById.mockResolvedValue(request);
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         null,
@@ -117,7 +114,7 @@ describe('RequestInterestService', () => {
     });
 
     it('should throw ForbiddenException if user is not a professional', async () => {
-      mockProfessionalRepository.findByUserId.mockResolvedValue(null);
+      mockProfessionalService.findByUserId.mockResolvedValue(null);
 
       await expect(
         service.expressInterest('request-123', 'user-123', dto),
@@ -126,7 +123,7 @@ describe('RequestInterestService', () => {
 
     it('should throw NotFoundException if request not found', async () => {
       const professional = createMockProfessional();
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestRepository.findById.mockResolvedValue(null);
 
       await expect(
@@ -138,7 +135,7 @@ describe('RequestInterestService', () => {
       const professional = createMockProfessional();
       const request = createMockRequest({ isPublic: false });
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestRepository.findById.mockResolvedValue(request);
 
       await expect(
@@ -153,7 +150,7 @@ describe('RequestInterestService', () => {
         status: RequestStatus.ACCEPTED,
       });
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestRepository.findById.mockResolvedValue(request);
 
       await expect(
@@ -169,7 +166,7 @@ describe('RequestInterestService', () => {
       });
       const existingInterest = createMockInterest();
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestRepository.findById.mockResolvedValue(request);
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         existingInterest,
@@ -198,7 +195,7 @@ describe('RequestInterestService', () => {
         tradeId: 'trade-1',
       });
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestRepository.findById.mockResolvedValue(request);
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         null,
@@ -218,7 +215,7 @@ describe('RequestInterestService', () => {
       });
       const interest = createMockInterest();
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestRepository.findById.mockResolvedValue(request);
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         null,
@@ -239,7 +236,7 @@ describe('RequestInterestService', () => {
       const professional = createMockProfessional();
       const interest = createMockInterest();
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         interest,
       );
@@ -254,7 +251,7 @@ describe('RequestInterestService', () => {
     });
 
     it('should throw ForbiddenException if user is not a professional', async () => {
-      mockProfessionalRepository.findByUserId.mockResolvedValue(null);
+      mockProfessionalService.findByUserId.mockResolvedValue(null);
 
       await expect(
         service.removeInterest('request-123', 'user-123'),
@@ -264,7 +261,7 @@ describe('RequestInterestService', () => {
     it('should throw NotFoundException if interest not found', async () => {
       const professional = createMockProfessional();
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         null,
       );
@@ -320,7 +317,7 @@ describe('RequestInterestService', () => {
       const professional = createMockProfessional();
       const interest = createMockInterest();
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         interest,
       );
@@ -336,7 +333,7 @@ describe('RequestInterestService', () => {
     it('should return false if no interest exists', async () => {
       const professional = createMockProfessional();
 
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         null,
       );
@@ -350,7 +347,7 @@ describe('RequestInterestService', () => {
     });
 
     it('should return false if user is not a professional', async () => {
-      mockProfessionalRepository.findByUserId.mockResolvedValue(null);
+      mockProfessionalService.findByUserId.mockResolvedValue(null);
 
       const result = await service.hasExpressedInterest(
         'request-123',

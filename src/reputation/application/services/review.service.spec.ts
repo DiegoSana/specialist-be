@@ -7,9 +7,9 @@ import {
 } from '@nestjs/common';
 import { ReviewService } from './review.service';
 import { REVIEW_REPOSITORY } from '../../domain/repositories/review.repository';
-import { PROFESSIONAL_REPOSITORY } from '../../../profiles/domain/repositories/professional.repository';
-import { REQUEST_REPOSITORY } from '../../../requests/domain/repositories/request.repository';
-import { USER_REPOSITORY } from '../../../identity/domain/repositories/user.repository';
+import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { RequestService } from '../../../requests/application/services/request.service';
+import { UserService } from '../../../identity/application/services/user.service';
 import {
   createMockUser,
   createMockProfessional,
@@ -34,9 +34,9 @@ const createMockReview = (overrides?: Partial<ReviewEntity>): ReviewEntity => {
 describe('ReviewService', () => {
   let service: ReviewService;
   let mockReviewRepository: any;
-  let mockProfessionalRepository: any;
-  let mockRequestRepository: any;
-  let mockUserRepository: any;
+  let mockProfessionalService: any;
+  let mockRequestService: any;
+  let mockUserService: any;
 
   beforeEach(async () => {
     mockReviewRepository = {
@@ -47,16 +47,16 @@ describe('ReviewService', () => {
       delete: jest.fn(),
     };
 
-    mockProfessionalRepository = {
-      findById: jest.fn(),
+    mockProfessionalService = {
+      getByIdOrFail: jest.fn(),
       updateRating: jest.fn(),
     };
 
-    mockRequestRepository = {
+    mockRequestService = {
       findById: jest.fn(),
     };
 
-    mockUserRepository = {
+    mockUserService = {
       findById: jest.fn(),
     };
 
@@ -64,12 +64,9 @@ describe('ReviewService', () => {
       providers: [
         ReviewService,
         { provide: REVIEW_REPOSITORY, useValue: mockReviewRepository },
-        {
-          provide: PROFESSIONAL_REPOSITORY,
-          useValue: mockProfessionalRepository,
-        },
-        { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
-        { provide: USER_REPOSITORY, useValue: mockUserRepository },
+        { provide: ProfessionalService, useValue: mockProfessionalService },
+        { provide: RequestService, useValue: mockRequestService },
+        { provide: UserService, useValue: mockUserService },
       ],
     }).compile();
 
@@ -160,18 +157,18 @@ describe('ReviewService', () => {
       });
       const review = createMockReview();
 
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockProfessionalRepository.findById.mockResolvedValue(professional);
-      mockRequestRepository.findById.mockResolvedValue(request);
+      mockUserService.findById.mockResolvedValue(user);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockRequestService.findById.mockResolvedValue(request);
       mockReviewRepository.findByRequestId.mockResolvedValue(null);
       mockReviewRepository.save.mockResolvedValue(review);
       mockReviewRepository.findByProfessionalId.mockResolvedValue([review]);
-      mockProfessionalRepository.updateRating.mockResolvedValue(undefined);
+      mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       const result = await service.create('user-123', createDto);
 
       expect(result).toEqual(review);
-      expect(mockProfessionalRepository.updateRating).toHaveBeenCalledWith(
+      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith(
         'prof-123',
         5,
         1,
@@ -180,7 +177,7 @@ describe('ReviewService', () => {
 
     it('should throw BadRequestException if user is not a client', async () => {
       const user = createMockUser({ hasClientProfile: false });
-      mockUserRepository.findById.mockResolvedValue(user);
+      mockUserService.findById.mockResolvedValue(user);
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
         BadRequestException,
@@ -188,7 +185,7 @@ describe('ReviewService', () => {
     });
 
     it('should throw BadRequestException if user not found', async () => {
-      mockUserRepository.findById.mockResolvedValue(null);
+      mockUserService.findById.mockResolvedValue(null);
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
         BadRequestException,
@@ -197,8 +194,10 @@ describe('ReviewService', () => {
 
     it('should throw NotFoundException if professional not found', async () => {
       const user = createMockUser({ hasClientProfile: true });
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockProfessionalRepository.findById.mockResolvedValue(null);
+      mockUserService.findById.mockResolvedValue(user);
+      mockProfessionalService.getByIdOrFail.mockRejectedValue(
+        new NotFoundException('Professional not found'),
+      );
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
         NotFoundException,
@@ -209,8 +208,8 @@ describe('ReviewService', () => {
       const user = createMockUser({ hasClientProfile: true });
       const professional = createMockProfessional();
 
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockProfessionalRepository.findById.mockResolvedValue(professional);
+      mockUserService.findById.mockResolvedValue(user);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
 
       const dtoWithoutRequest = { ...createDto, requestId: undefined };
 
@@ -223,9 +222,11 @@ describe('ReviewService', () => {
       const user = createMockUser({ hasClientProfile: true });
       const professional = createMockProfessional();
 
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockProfessionalRepository.findById.mockResolvedValue(professional);
-      mockRequestRepository.findById.mockResolvedValue(null);
+      mockUserService.findById.mockResolvedValue(user);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockRequestService.findById.mockRejectedValue(
+        new NotFoundException('Request not found'),
+      );
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
         NotFoundException,
@@ -237,9 +238,9 @@ describe('ReviewService', () => {
       const professional = createMockProfessional();
       const request = createMockRequest({ clientId: 'other-user' });
 
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockProfessionalRepository.findById.mockResolvedValue(professional);
-      mockRequestRepository.findById.mockResolvedValue(request);
+      mockUserService.findById.mockResolvedValue(user);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockRequestService.findById.mockResolvedValue(request);
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
         ForbiddenException,
@@ -254,9 +255,9 @@ describe('ReviewService', () => {
         status: RequestStatus.PENDING,
       });
 
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockProfessionalRepository.findById.mockResolvedValue(professional);
-      mockRequestRepository.findById.mockResolvedValue(request);
+      mockUserService.findById.mockResolvedValue(user);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockRequestService.findById.mockResolvedValue(request);
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
         BadRequestException,
@@ -272,9 +273,9 @@ describe('ReviewService', () => {
       });
       const existingReview = createMockReview();
 
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockProfessionalRepository.findById.mockResolvedValue(professional);
-      mockRequestRepository.findById.mockResolvedValue(request);
+      mockUserService.findById.mockResolvedValue(user);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockRequestService.findById.mockResolvedValue(request);
       mockReviewRepository.findByRequestId.mockResolvedValue(existingReview);
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
@@ -290,9 +291,9 @@ describe('ReviewService', () => {
         status: RequestStatus.DONE,
       });
 
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockProfessionalRepository.findById.mockResolvedValue(professional);
-      mockRequestRepository.findById.mockResolvedValue(request);
+      mockUserService.findById.mockResolvedValue(user);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockRequestService.findById.mockResolvedValue(request);
       mockReviewRepository.findByRequestId.mockResolvedValue(null);
 
       const invalidDto = { ...createDto, rating: 6 };
@@ -322,7 +323,7 @@ describe('ReviewService', () => {
       mockReviewRepository.findByProfessionalId.mockResolvedValue([
         updatedReview,
       ]);
-      mockProfessionalRepository.updateRating.mockResolvedValue(undefined);
+      mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       const result = await service.update('review-123', 'user-123', updateDto);
 
@@ -390,12 +391,12 @@ describe('ReviewService', () => {
       mockReviewRepository.findById.mockResolvedValue(review);
       mockReviewRepository.delete.mockResolvedValue(undefined);
       mockReviewRepository.findByProfessionalId.mockResolvedValue([]);
-      mockProfessionalRepository.updateRating.mockResolvedValue(undefined);
+      mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       await service.delete('review-123', 'user-123');
 
       expect(mockReviewRepository.delete).toHaveBeenCalledWith('review-123');
-      expect(mockProfessionalRepository.updateRating).toHaveBeenCalledWith(
+      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith(
         'prof-123',
         0,
         0,
@@ -437,7 +438,7 @@ describe('ReviewService', () => {
 
       await service.delete('review-123', 'user-123');
 
-      expect(mockProfessionalRepository.updateRating).toHaveBeenCalledWith(
+      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith(
         'prof-123',
         4.5,
         2,

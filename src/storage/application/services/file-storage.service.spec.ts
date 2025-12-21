@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { FileStorageService } from './file-storage.service';
 import { FILE_STORAGE_REPOSITORY } from '../../domain/repositories/file-storage.repository';
-import { REQUEST_REPOSITORY } from '../../../requests/domain/repositories/request.repository';
-import { PROFESSIONAL_REPOSITORY } from '../../../profiles/domain/repositories/professional.repository';
+import { RequestService } from '../../../requests/application/services/request.service';
+import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import {
   createMockRequest,
   createMockProfessional,
@@ -17,8 +17,8 @@ import { FileCategory } from '../../domain/value-objects/file-category.vo';
 describe('FileStorageService', () => {
   let service: FileStorageService;
   let mockFileStorageRepository: any;
-  let mockRequestRepository: any;
-  let mockProfessionalRepository: any;
+  let mockRequestService: any;
+  let mockProfessionalService: any;
 
   beforeEach(async () => {
     mockFileStorageRepository = {
@@ -27,11 +27,11 @@ describe('FileStorageService', () => {
       delete: jest.fn(),
     };
 
-    mockRequestRepository = {
+    mockRequestService = {
       findById: jest.fn(),
     };
 
-    mockProfessionalRepository = {
+    mockProfessionalService = {
       findByUserId: jest.fn(),
     };
 
@@ -42,11 +42,8 @@ describe('FileStorageService', () => {
           provide: FILE_STORAGE_REPOSITORY,
           useValue: mockFileStorageRepository,
         },
-        { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
-        {
-          provide: PROFESSIONAL_REPOSITORY,
-          useValue: mockProfessionalRepository,
-        },
+        { provide: RequestService, useValue: mockRequestService },
+        { provide: ProfessionalService, useValue: mockProfessionalService },
       ],
     }).compile();
 
@@ -102,7 +99,9 @@ describe('FileStorageService', () => {
     });
 
     it('should throw NotFoundException when request not found', async () => {
-      mockRequestRepository.findById.mockResolvedValue(null);
+      mockRequestService.findById.mockRejectedValue(
+        new NotFoundException('Request not found'),
+      );
 
       await expect(
         service.uploadFile(
@@ -120,8 +119,8 @@ describe('FileStorageService', () => {
         professionalId: 'prof-123',
       });
 
-      mockRequestRepository.findById.mockResolvedValue(request);
-      mockProfessionalRepository.findByUserId.mockResolvedValue(null); // Client is not a professional
+      mockRequestService.findById.mockResolvedValue(request);
+      mockProfessionalService.findByUserId.mockResolvedValue(null); // Client is not a professional
       mockFileStorageRepository.upload.mockResolvedValue({ id: 'file-123' });
 
       const result = await service.uploadFile(
@@ -144,8 +143,8 @@ describe('FileStorageService', () => {
         userId: 'professional-user',
       });
 
-      mockRequestRepository.findById.mockResolvedValue(request);
-      mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+      mockRequestService.findById.mockResolvedValue(request);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
       mockFileStorageRepository.upload.mockResolvedValue({ id: 'file-123' });
 
       const result = await service.uploadFile(
@@ -164,8 +163,8 @@ describe('FileStorageService', () => {
         professionalId: 'prof-123',
       });
 
-      mockRequestRepository.findById.mockResolvedValue(request);
-      mockProfessionalRepository.findByUserId.mockResolvedValue(null); // Not a professional
+      mockRequestService.findById.mockResolvedValue(request);
+      mockProfessionalService.findByUserId.mockResolvedValue(null); // Not a professional
 
       await expect(
         service.uploadFile(
@@ -277,7 +276,7 @@ describe('FileStorageService', () => {
           requestId: 'req-123',
           belongsTo: (userId: string) => userId === 'client-user',
         });
-        mockRequestRepository.findById.mockResolvedValue(publicRequest);
+        mockRequestService.findById.mockResolvedValue(publicRequest);
 
         // Random logged-in user should have access
         const result = await service.canAccessFile(
@@ -301,7 +300,7 @@ describe('FileStorageService', () => {
           requestId: 'req-123',
           belongsTo: () => false,
         });
-        mockRequestRepository.findById.mockResolvedValue(publicRequest);
+        mockRequestService.findById.mockResolvedValue(publicRequest);
 
         // No user (not logged in)
         const result = await service.canAccessFile(
@@ -329,7 +328,7 @@ describe('FileStorageService', () => {
           requestId: 'req-123',
           belongsTo: (userId: string) => userId === 'client-user',
         });
-        mockRequestRepository.findById.mockResolvedValue(directRequest);
+        mockRequestService.findById.mockResolvedValue(directRequest);
 
         const result = await service.canAccessFile(
           'uploads/file.jpg',
@@ -358,8 +357,8 @@ describe('FileStorageService', () => {
           requestId: 'req-123',
           belongsTo: () => false, // Not the owner
         });
-        mockRequestRepository.findById.mockResolvedValue(directRequest);
-        mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
+        mockRequestService.findById.mockResolvedValue(directRequest);
+        mockProfessionalService.findByUserId.mockResolvedValue(professional);
 
         const result = await service.canAccessFile(
           'uploads/file.jpg',
@@ -384,8 +383,8 @@ describe('FileStorageService', () => {
           requestId: 'req-123',
           belongsTo: () => false,
         });
-        mockRequestRepository.findById.mockResolvedValue(directRequest);
-        mockProfessionalRepository.findByUserId.mockResolvedValue(null);
+        mockRequestService.findById.mockResolvedValue(directRequest);
+        mockProfessionalService.findByUserId.mockResolvedValue(null);
 
         const result = await service.canAccessFile(
           'uploads/file.jpg',
@@ -414,8 +413,8 @@ describe('FileStorageService', () => {
           requestId: 'req-123',
           belongsTo: () => false,
         });
-        mockRequestRepository.findById.mockResolvedValue(directRequest);
-        mockProfessionalRepository.findByUserId.mockResolvedValue(
+        mockRequestService.findById.mockResolvedValue(directRequest);
+        mockProfessionalService.findByUserId.mockResolvedValue(
           differentProfessional,
         );
 

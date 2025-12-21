@@ -16,19 +16,15 @@ import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { UserStatus, AuthProvider } from '@prisma/client';
 import { randomUUID } from 'crypto';
-// Cross-context dependency - Client belongs to Profiles context
-import {
-  ClientRepository,
-  CLIENT_REPOSITORY,
-} from '../../../profiles/domain/repositories/client.repository';
-import { ClientEntity } from '../../../profiles/domain/entities/client.entity';
+import { ClientService } from '../../../profiles/application/services/client.service';
+import { forwardRef } from '@nestjs/common';
 
 @Injectable()
 export class AuthenticationService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
-    @Inject(CLIENT_REPOSITORY)
-    private readonly clientRepository: ClientRepository,
+    @Inject(forwardRef(() => ClientService))
+    private readonly clientService: ClientService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -59,9 +55,7 @@ export class AuthenticationService {
     // If registering as professional, client profile will not be created
     // (user can create it later if needed)
     if (!registerDto.isProfessional) {
-      await this.clientRepository.save(
-        ClientEntity.createForUser({ id: randomUUID(), userId: user.id }),
-      );
+      await this.clientService.activateClientProfile(user.id);
     }
 
     // Reload user with profiles
@@ -178,7 +172,7 @@ export class AuthenticationService {
         );
         user = await this.userRepository.findById(existingUser.id, true);
       } else {
-        // Create new user with Google account (aggregate completo)
+        // Create new user with Google account (no profiles by default)
         user = await this.userRepository.save(
           UserEntity.createOAuth({
             id: randomUUID(),
@@ -192,12 +186,7 @@ export class AuthenticationService {
           }),
         );
 
-        // Create client profile for new user
-        await this.clientRepository.save(
-          ClientEntity.createForUser({ id: randomUUID(), userId: user.id }),
-        );
-
-        // Reload user with profiles
+        // Note: No profile is created here - user must complete profile setup
         user = await this.userRepository.findById(user.id, true);
       }
     }
@@ -268,7 +257,7 @@ export class AuthenticationService {
       }
 
       if (!user) {
-        // Create new user with Facebook account
+        // Create new user with Facebook account (without profile - user must choose)
         // Generate a placeholder email if Facebook didn't provide one
         const email =
           facebookUser.email ||
@@ -287,12 +276,8 @@ export class AuthenticationService {
           }),
         );
 
-        // Create client profile for new user
-        await this.clientRepository.save(
-          ClientEntity.createForUser({ id: randomUUID(), userId: user.id }),
-        );
-
-        // Reload user with profiles
+        // Note: No profile is created here - user must complete profile setup
+        // Reload user (will have no profiles)
         user = await this.userRepository.findById(user.id, true);
       }
     }

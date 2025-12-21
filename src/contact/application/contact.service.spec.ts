@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ContactService } from './contact.service';
 import { CONTACT_REPOSITORY } from '../domain/repositories/contact.repository';
-import { USER_REPOSITORY } from '../../identity/domain/repositories/user.repository';
+import { UserService } from '../../identity/application/services/user.service';
 import { createMockUser } from '../../__mocks__/test-utils';
 import { ContactEntity } from '../domain/entities/contact.entity';
 
@@ -22,7 +22,7 @@ const createMockContact = (
 describe('ContactService', () => {
   let service: ContactService;
   let mockContactRepository: any;
-  let mockUserRepository: any;
+  let mockUserService: any;
 
   beforeEach(async () => {
     mockContactRepository = {
@@ -30,15 +30,16 @@ describe('ContactService', () => {
       findByUserId: jest.fn(),
     };
 
-    mockUserRepository = {
+    mockUserService = {
       findById: jest.fn(),
+      findByIdOrFail: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ContactService,
         { provide: CONTACT_REPOSITORY, useValue: mockContactRepository },
-        { provide: USER_REPOSITORY, useValue: mockUserRepository },
+        { provide: UserService, useValue: mockUserService },
       ],
     }).compile();
 
@@ -61,7 +62,7 @@ describe('ContactService', () => {
       const toUser = createMockUser({ id: 'user-456' });
       const contact = createMockContact();
 
-      mockUserRepository.findById
+      mockUserService.findByIdOrFail
         .mockResolvedValueOnce(fromUser)
         .mockResolvedValueOnce(toUser);
       mockContactRepository.create.mockResolvedValue(contact);
@@ -78,7 +79,9 @@ describe('ContactService', () => {
     });
 
     it('should throw NotFoundException if from user not found', async () => {
-      mockUserRepository.findById.mockResolvedValue(null);
+      mockUserService.findByIdOrFail.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
 
       await expect(service.create('non-existent', createDto)).rejects.toThrow(
         NotFoundException,
@@ -88,9 +91,9 @@ describe('ContactService', () => {
     it('should throw NotFoundException if to user not found', async () => {
       const fromUser = createMockUser({ id: 'user-123' });
 
-      mockUserRepository.findById
+      mockUserService.findByIdOrFail
         .mockResolvedValueOnce(fromUser)
-        .mockResolvedValueOnce(null);
+        .mockRejectedValueOnce(new NotFoundException('User not found'));
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
         NotFoundException,
@@ -100,7 +103,7 @@ describe('ContactService', () => {
     it('should throw BadRequestException when trying to contact yourself', async () => {
       const user = createMockUser({ id: 'user-123' });
 
-      mockUserRepository.findById.mockResolvedValue(user);
+      mockUserService.findByIdOrFail.mockResolvedValue(user);
 
       const selfContactDto = { ...createDto, toUserId: 'user-123' };
 
@@ -114,7 +117,7 @@ describe('ContactService', () => {
       const toUser = createMockUser({ id: 'user-456' });
       const contact = createMockContact({ contactType: 'whatsapp' });
 
-      mockUserRepository.findById
+      mockUserService.findByIdOrFail
         .mockResolvedValueOnce(fromUser)
         .mockResolvedValueOnce(toUser);
       mockContactRepository.create.mockResolvedValue(contact);
@@ -133,7 +136,7 @@ describe('ContactService', () => {
       const toUser = createMockUser({ id: 'user-456' });
       const contact = createMockContact({ message: null });
 
-      mockUserRepository.findById
+      mockUserService.findByIdOrFail
         .mockResolvedValueOnce(fromUser)
         .mockResolvedValueOnce(toUser);
       mockContactRepository.create.mockResolvedValue(contact);
@@ -152,7 +155,7 @@ describe('ContactService', () => {
       const toUser = createMockUser({ id: 'user-456' });
       const contact = createMockContact({ contactType: 'email' });
 
-      mockUserRepository.findById
+      mockUserService.findByIdOrFail
         .mockResolvedValueOnce(fromUser)
         .mockResolvedValueOnce(toUser);
       mockContactRepository.create.mockResolvedValue(contact);

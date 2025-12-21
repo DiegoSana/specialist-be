@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { USER_REPOSITORY } from '../../identity/domain/repositories/user.repository';
-import { PROFESSIONAL_REPOSITORY } from '../../profiles/domain/repositories/professional.repository';
+import { UserService } from '../../identity/application/services/user.service';
+import { ProfessionalService } from '../../profiles/application/services/professional.service';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
 import {
   createMockUser,
@@ -12,19 +12,20 @@ import { UserStatus, ProfessionalStatus } from '@prisma/client';
 
 describe('AdminService', () => {
   let service: AdminService;
-  let mockUserRepository: any;
-  let mockProfessionalRepository: any;
+  let mockUserService: any;
+  let mockProfessionalService: any;
   let mockPrismaService: any;
 
   beforeEach(async () => {
-    mockUserRepository = {
+    mockUserService = {
       findById: jest.fn(),
-      save: jest.fn(),
+      findByIdOrFail: jest.fn(),
+      update: jest.fn(),
     };
 
-    mockProfessionalRepository = {
+    mockProfessionalService = {
       findById: jest.fn(),
-      save: jest.fn(),
+      updateStatus: jest.fn(),
     };
 
     mockPrismaService = {
@@ -41,11 +42,8 @@ describe('AdminService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
-        { provide: USER_REPOSITORY, useValue: mockUserRepository },
-        {
-          provide: PROFESSIONAL_REPOSITORY,
-          useValue: mockProfessionalRepository,
-        },
+        { provide: UserService, useValue: mockUserService },
+        { provide: ProfessionalService, useValue: mockProfessionalService },
         { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
@@ -137,16 +135,18 @@ describe('AdminService', () => {
   describe('getUserById', () => {
     it('should return user when found', async () => {
       const user = createMockUser();
-      mockUserRepository.findById.mockResolvedValue(user);
+      mockUserService.findByIdOrFail.mockResolvedValue(user);
 
       const result = await service.getUserById('user-123');
 
       expect(result).toEqual(user);
-      expect(mockUserRepository.findById).toHaveBeenCalledWith('user-123');
+      expect(mockUserService.findByIdOrFail).toHaveBeenCalledWith('user-123');
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockUserRepository.findById.mockResolvedValue(null);
+      mockUserService.findByIdOrFail.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
 
       await expect(service.getUserById('non-existent')).rejects.toThrow(
         NotFoundException,
@@ -156,22 +156,23 @@ describe('AdminService', () => {
 
   describe('updateUserStatus', () => {
     it('should update user status successfully', async () => {
-      const user = createMockUser({ status: UserStatus.ACTIVE });
       const updatedUser = createMockUser({ status: UserStatus.SUSPENDED });
-
-      mockUserRepository.findById.mockResolvedValue(user);
-      mockUserRepository.save.mockResolvedValue(updatedUser);
+      mockUserService.update.mockResolvedValue(updatedUser);
 
       const result = await service.updateUserStatus('user-123', {
         status: UserStatus.SUSPENDED,
       });
 
       expect(result.status).toBe(UserStatus.SUSPENDED);
-      expect(mockUserRepository.save).toHaveBeenCalled();
+      expect(mockUserService.update).toHaveBeenCalledWith('user-123', {
+        status: UserStatus.SUSPENDED,
+      });
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockUserRepository.findById.mockResolvedValue(null);
+      mockUserService.update.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
 
       await expect(
         service.updateUserStatus('non-existent', {
@@ -237,26 +238,28 @@ describe('AdminService', () => {
 
   describe('updateProfessionalStatus', () => {
     it('should update professional status successfully', async () => {
-      const professional = createMockProfessional({
-        status: ProfessionalStatus.PENDING_VERIFICATION,
-      });
       const updatedProfessional = createMockProfessional({
         status: ProfessionalStatus.VERIFIED,
       });
-
-      mockProfessionalRepository.findById.mockResolvedValue(professional);
-      mockProfessionalRepository.save.mockResolvedValue(updatedProfessional);
+      mockProfessionalService.updateStatus.mockResolvedValue(
+        updatedProfessional,
+      );
 
       const result = await service.updateProfessionalStatus('prof-123', {
         status: ProfessionalStatus.VERIFIED,
       });
 
       expect(result.status).toBe(ProfessionalStatus.VERIFIED);
-      expect(mockProfessionalRepository.save).toHaveBeenCalled();
+      expect(mockProfessionalService.updateStatus).toHaveBeenCalledWith(
+        'prof-123',
+        ProfessionalStatus.VERIFIED,
+      );
     });
 
     it('should throw NotFoundException when professional not found', async () => {
-      mockProfessionalRepository.findById.mockResolvedValue(null);
+      mockProfessionalService.updateStatus.mockRejectedValue(
+        new NotFoundException('Professional not found'),
+      );
 
       await expect(
         service.updateProfessionalStatus('non-existent', {
@@ -265,16 +268,13 @@ describe('AdminService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should suspend professional', async () => {
-      const professional = createMockProfessional({
-        status: ProfessionalStatus.VERIFIED,
-      });
-      const suspendedProfessional = createMockProfessional({
+    it('should reject professional', async () => {
+      const rejectedProfessional = createMockProfessional({
         status: ProfessionalStatus.REJECTED,
       });
-
-      mockProfessionalRepository.findById.mockResolvedValue(professional);
-      mockProfessionalRepository.save.mockResolvedValue(suspendedProfessional);
+      mockProfessionalService.updateStatus.mockResolvedValue(
+        rejectedProfessional,
+      );
 
       const result = await service.updateProfessionalStatus('prof-123', {
         status: ProfessionalStatus.REJECTED,

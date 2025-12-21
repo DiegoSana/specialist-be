@@ -519,6 +519,46 @@ export const USER_REPOSITORY = 'USER_REPOSITORY';
 export const REQUEST_REPOSITORY = 'REQUEST_REPOSITORY';
 ```
 
+### Cross-Context Communication (DDD)
+
+**⚠️ IMPORTANT: Repositories must NOT be exported outside their context.**
+
+Bounded contexts must communicate through **Services**, never by directly accessing repositories from other contexts.
+
+```
+┌─────────────────┐      ┌─────────────────┐
+│ Identity Module │      │ Profiles Module │
+│                 │      │                 │
+│ UserService ────│─────►│ ClientService   │  ✅ Correct
+│ (public API)    │      │                 │
+└─────────────────┘      └─────────────────┘
+
+❌ INCORRECT:
+┌─────────────────┐      ┌─────────────────┐
+│ Other Module    │      │ Identity Module │
+│                 │      │                 │
+│ SomeService ────│─────►│ UserRepository  │  ❌ DDD Violation
+│                 │      │ (internal)      │
+└─────────────────┘      └─────────────────┘
+```
+
+**Rules:**
+1. Each module exports **only Services** (never repositories)
+2. Services are the public API of the bounded context
+3. An architectural test validates these rules
+
+**Services available for cross-context communication:**
+
+| Context | Service | Public Methods |
+|---------|---------|----------------|
+| Identity | `UserService` | `findById()`, `findByIdOrFail()`, `update()` |
+| Profiles | `ClientService` | `activateClientProfile()`, `getProfile()` |
+| Profiles | `ProfessionalService` | `findById()`, `findByUserId()` |
+| Profiles | `TradeService` | `findAll()`, `findById()` |
+| Requests | `RequestService` | `findById()`, `create()`, `update()` |
+
+> See ADR-002 for more details about this decision.
+
 ### Error Handling
 
 ```typescript

@@ -21,6 +21,6 @@ import { IdentityModule } from '../identity/identity.module';
       useClass: LocalFileStorageRepository,
     },
   ],
-  exports: [FileStorageService, FILE_STORAGE_REPOSITORY],
+  exports: [FileStorageService],
 })
 export class StorageModule {}

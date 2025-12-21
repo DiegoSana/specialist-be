@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Inject,
+  forwardRef,
 } from '@nestjs/common';
 import {
   RequestRepository,
@@ -14,31 +15,25 @@ import { CreateRequestDto } from '../dto/create-request.dto';
 import { UpdateRequestDto } from '../dto/update-request.dto';
 import { RequestStatus } from '@prisma/client';
 import { randomUUID } from 'crypto';
-// Cross-context dependencies
-import {
-  ProfessionalRepository,
-  PROFESSIONAL_REPOSITORY,
-} from '../../../profiles/domain/repositories/professional.repository';
-import {
-  UserRepository,
-  USER_REPOSITORY,
-} from '../../../identity/domain/repositories/user.repository';
+// Cross-context dependencies - using Services instead of Repositories (DDD)
+import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { UserService } from '../../../identity/application/services/user.service';
 
 @Injectable()
 export class RequestService {
   constructor(
     @Inject(REQUEST_REPOSITORY)
     private readonly requestRepository: RequestRepository,
-    @Inject(PROFESSIONAL_REPOSITORY)
-    private readonly professionalRepository: ProfessionalRepository,
-    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    @Inject(forwardRef(() => ProfessionalService))
+    private readonly professionalService: ProfessionalService,
+    private readonly userService: UserService,
   ) {}
 
   async create(
     clientId: string,
     createDto: CreateRequestDto,
   ): Promise<RequestEntity> {
-    const user = await this.userRepository.findById(clientId, true);
+    const user = await this.userService.findById(clientId, true);
     if (!user || !user.isClient()) {
       throw new BadRequestException('Only clients can create requests');
     }
@@ -52,14 +47,9 @@ export class RequestService {
           'professionalId is required for direct requests',
         );
       }
-
-      const professional = await this.professionalRepository.findById(
+      const professional = await this.professionalService.getByIdOrFail(
         createDto.professionalId,
       );
-      if (!professional) {
-        throw new NotFoundException('Professional not found');
-      }
-
       if (!professional.isActive()) {
         throw new BadRequestException('Professional is not active');
       }
@@ -127,7 +117,14 @@ export class RequestService {
       throw new NotFoundException('Request not found');
     }
 
-    const professional = await this.professionalRepository.findByUserId(userId);
+    let professional: any;
+    try {
+      professional = await this.professionalService.findByUserId(userId);
+    } catch {
+      throw new ForbiddenException(
+        'Only the assigned professional can update this request',
+      );
+    }
     if (!professional || professional.id !== request.professionalId) {
       throw new ForbiddenException(
         'Only the assigned professional can update this request',
@@ -236,10 +233,14 @@ export class RequestService {
     let isProfessional = false;
 
     if (request.professionalId) {
-      const professional =
-        await this.professionalRepository.findByUserId(userId);
-      isProfessional =
-        professional !== null && professional.id === request.professionalId;
+      try {
+        const professional =
+          await this.professionalService.findByUserId(userId);
+        isProfessional = professional.id === request.professionalId;
+      } catch {
+        // User doesn't have a professional profile
+        isProfessional = false;
+      }
     }
 
     if (!isClient && !isProfessional) {
@@ -284,10 +285,14 @@ export class RequestService {
     let isProfessional = false;
 
     if (request.professionalId) {
-      const professional =
-        await this.professionalRepository.findByUserId(userId);
-      isProfessional =
-        professional !== null && professional.id === request.professionalId;
+      try {
+        const professional =
+          await this.professionalService.findByUserId(userId);
+        isProfessional = professional.id === request.professionalId;
+      } catch {
+        // User doesn't have a professional profile
+        isProfessional = false;
+      }
     }
 
     if (!isClient && !isProfessional) {
@@ -318,7 +323,7 @@ export class RequestService {
     }
 
     // Only the assigned professional can rate the client
-    const professional = await this.professionalRepository.findByUserId(userId);
+    const professional = await this.professionalService.findByUserId(userId);
     if (!professional || professional.id !== request.professionalId) {
       throw new ForbiddenException(
         'Only the assigned professional can rate the client',
