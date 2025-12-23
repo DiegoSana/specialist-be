@@ -30,6 +30,9 @@ model User {
   professional     Professional?
   requests         Request[]     @relation("Client")
   reviewsGiven     Review[]      @relation("Reviewer")
+  inAppNotifications InAppNotification[]
+  notificationPreferences NotificationPreferences?
+  notifications     Notification[]
 
   @@map("users")
 }
@@ -168,6 +171,101 @@ model Contact {
   toUser      User     @relation("ToUser", fields: [toUserId], references: [id], onDelete: Cascade)
 
   @@map("contacts")
+}
+
+model InAppNotification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("in_app_notifications")
+}
+
+enum ExternalNotificationChannel {
+  EMAIL
+  WHATSAPP
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  WHATSAPP
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model Notification {
+  id             String   @id @default(uuid())
+  userId         String
+  type           String
+  title          String
+  body           String?
+  data           Json?
+  idempotencyKey String?  @unique
+  createdAt      DateTime @default(now())
+
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model NotificationDelivery {
+  id              String                   @id @default(uuid())
+  notificationId  String
+  channel         NotificationChannel
+  status          NotificationDeliveryStatus @default(PENDING)
+  providerMessageId String?
+  errorCode       String?
+  errorMessage    String?
+  attemptCount    Int                      @default(0)
+  lastAttemptAt   DateTime?
+  nextAttemptAt   DateTime?
+  sentAt          DateTime?
+  readAt          DateTime?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, channel])
+  @@index([channel, status, nextAttemptAt])
+  @@map("notification_deliveries")
+}
+
+model NotificationPreferences {
+  id                      String                     @id @default(uuid())
+  userId                  String                     @unique
+  inAppEnabled            Boolean                    @default(true)
+  externalEnabled         Boolean                    @default(true)
+  preferredExternalChannel ExternalNotificationChannel @default(EMAIL)
+  /// Per-type overrides (optional).
+  /// Example:
+  /// {
+  ///   "REQUEST_STATUS_CHANGED": { "externalEnabled": false },
+  ///   "REQUEST_INTEREST_EXPRESSED": { "preferredExternalChannel": "WHATSAPP" }
+  /// }
+  overrides               Json?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }
 
 enum UserRole {

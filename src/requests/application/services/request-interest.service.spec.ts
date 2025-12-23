@@ -14,6 +14,7 @@ import {
 } from '../../../__mocks__/test-utils';
 import { RequestStatus } from '@prisma/client';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
+import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
 
 const createMockInterest = (
   overrides?: Partial<RequestInterestEntity>,
@@ -32,6 +33,7 @@ describe('RequestInterestService', () => {
   let mockRequestInterestRepository: any;
   let mockRequestRepository: any;
   let mockProfessionalService: any;
+  let mockEventBus: any;
 
   beforeEach(async () => {
     mockRequestInterestRepository = {
@@ -51,6 +53,10 @@ describe('RequestInterestService', () => {
       findByUserId: jest.fn(),
     };
 
+    mockEventBus = {
+      publish: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RequestInterestService,
@@ -59,6 +65,7 @@ describe('RequestInterestService', () => {
           useValue: mockRequestInterestRepository,
         },
         { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
+        { provide: EVENT_BUS, useValue: mockEventBus },
         { provide: ProfessionalService, useValue: mockProfessionalService },
       ],
     }).compile();
@@ -111,6 +118,16 @@ describe('RequestInterestService', () => {
         professionalId: professional.id,
         message: 'I am interested',
       });
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'requests.request_interest.expressed',
+          payload: expect.objectContaining({
+            requestId: 'request-123',
+            clientId: request.clientId,
+            professionalId: professional.id,
+          }),
+        }),
+      );
     });
 
     it('should throw ForbiddenException if user is not a professional', async () => {
@@ -393,6 +410,25 @@ describe('RequestInterestService', () => {
       expect(
         mockRequestInterestRepository.removeAllByRequestId,
       ).toHaveBeenCalledWith('request-123');
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'requests.request.professional_assigned',
+          payload: expect.objectContaining({
+            requestId: updatedRequest.id,
+            clientId: updatedRequest.clientId,
+            professionalId: 'prof-123',
+          }),
+        }),
+      );
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'requests.request.status_changed',
+          payload: expect.objectContaining({
+            fromStatus: RequestStatus.PENDING,
+            toStatus: RequestStatus.ACCEPTED,
+          }),
+        }),
+      );
     });
 
     it('should throw NotFoundException if request not found', async () => {

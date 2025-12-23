@@ -15,6 +15,9 @@ import { CreateRequestDto } from '../dto/create-request.dto';
 import { UpdateRequestDto } from '../dto/update-request.dto';
 import { RequestStatus } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
+import { RequestCreatedEvent } from '../../domain/events/request-created.event';
+import { RequestStatusChangedEvent } from '../../domain/events/request-status-changed.event';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { UserService } from '../../../identity/application/services/user.service';
@@ -24,6 +27,8 @@ export class RequestService {
   constructor(
     @Inject(REQUEST_REPOSITORY)
     private readonly requestRepository: RequestRepository,
+    @Inject(EVENT_BUS)
+    private readonly eventBus: EventBus,
     @Inject(forwardRef(() => ProfessionalService))
     private readonly professionalService: ProfessionalService,
     private readonly userService: UserService,
@@ -60,7 +65,7 @@ export class RequestService {
       throw new BadRequestException('tradeId is required for public requests');
     }
 
-    return this.requestRepository.save(
+    const saved = await this.requestRepository.save(
       RequestEntity.createPending({
         id: randomUUID(),
         clientId,
@@ -73,6 +78,19 @@ export class RequestService {
         photos: createDto.photos || [],
       }),
     );
+
+    // Publish event even if Notifications decides not to notify on "created".
+    await this.eventBus.publish(
+      new RequestCreatedEvent({
+        requestId: saved.id,
+        clientId: saved.clientId,
+        isPublic: saved.isPublic,
+        professionalId: saved.professionalId,
+        tradeId: saved.tradeId,
+      }),
+    );
+
+    return saved;
   }
 
   async findById(id: string): Promise<RequestEntity> {
@@ -131,13 +149,28 @@ export class RequestService {
       );
     }
 
-    return this.requestRepository.save(
+    const fromStatus = request.status;
+    const saved = await this.requestRepository.save(
       request.withChanges({
         status: updateDto.status,
         quoteAmount: updateDto.quoteAmount,
         quoteNotes: updateDto.quoteNotes,
       }),
     );
+
+    if (updateDto.status && updateDto.status !== fromStatus) {
+      await this.eventBus.publish(
+        new RequestStatusChangedEvent({
+          requestId: saved.id,
+          clientId: saved.clientId,
+          professionalId: saved.professionalId,
+          fromStatus,
+          toStatus: saved.status,
+        }),
+      );
+    }
+
+    return saved;
   }
 
   async acceptQuote(requestId: string, userId: string): Promise<RequestEntity> {
@@ -160,11 +193,26 @@ export class RequestService {
       );
     }
 
-    return this.requestRepository.save(
+    const fromStatus = request.status;
+    const saved = await this.requestRepository.save(
       request.withChanges({
         status: RequestStatus.ACCEPTED,
       }),
     );
+
+    if (saved.status !== fromStatus) {
+      await this.eventBus.publish(
+        new RequestStatusChangedEvent({
+          requestId: saved.id,
+          clientId: saved.clientId,
+          professionalId: saved.professionalId,
+          fromStatus,
+          toStatus: saved.status,
+        }),
+      );
+    }
+
+    return saved;
   }
 
   async updateStatusByClient(
@@ -204,11 +252,26 @@ export class RequestService {
       }
     }
 
-    return this.requestRepository.save(
+    const fromStatus = request.status;
+    const saved = await this.requestRepository.save(
       request.withChanges({
         status: updateDto.status,
       }),
     );
+
+    if (updateDto.status && updateDto.status !== fromStatus) {
+      await this.eventBus.publish(
+        new RequestStatusChangedEvent({
+          requestId: saved.id,
+          clientId: saved.clientId,
+          professionalId: saved.professionalId,
+          fromStatus,
+          toStatus: saved.status,
+        }),
+      );
+    }
+
+    return saved;
   }
 
   async addRequestPhoto(
