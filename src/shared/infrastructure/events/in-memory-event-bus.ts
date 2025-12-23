@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { Logger } from '@nestjs/common';
 import { DomainEvent } from '../../domain/events/domain-event';
 import { EventBus } from '../../domain/events/event-bus';
 
@@ -10,6 +11,7 @@ import { EventBus } from '../../domain/events/event-bus';
  */
 export class InMemoryEventBus implements EventBus {
   private readonly emitter = new EventEmitter();
+  private readonly logger = new Logger(InMemoryEventBus.name);
 
   async publish(event: DomainEvent): Promise<void> {
     this.emitter.emit(event.name, event);
@@ -21,7 +23,28 @@ export class InMemoryEventBus implements EventBus {
     name: string,
     handler: (event: T) => void | Promise<void>,
   ): void {
-    this.emitter.on(name, handler);
+    this.emitter.on(name, (event: T) => {
+      try {
+        const result = handler(event);
+
+        // EventEmitter doesn't await async listeners. If a handler returns a promise,
+        // attach a rejection handler so errors don't become unhandled rejections.
+        if (result && typeof (result as Promise<void>).catch === 'function') {
+          void (result as Promise<void>).catch((err) => {
+            this.logger.error(
+              `Event handler failed (event="${name}")`,
+              err instanceof Error ? err.stack : String(err),
+            );
+          });
+        }
+      } catch (err) {
+        // Catch synchronous throws too.
+        this.logger.error(
+          `Event handler threw (event="${name}")`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      }
+    });
   }
 }
 
