@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RequestStatus } from '@prisma/client';
 import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
-import { InAppNotificationService } from '../services/in-app-notification.service';
+import { NotificationService } from '../services/notification.service';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { RequestCreatedEvent } from '../../../requests/domain/events/request-created.event';
 import { RequestInterestExpressedEvent } from '../../../requests/domain/events/request-interest-expressed.event';
@@ -20,7 +20,7 @@ export class RequestsNotificationsHandler implements OnModuleInit {
 
   constructor(
     @Inject(EVENT_BUS) private readonly eventBus: any,
-    private readonly notifications: InAppNotificationService,
+    private readonly notifications: NotificationService,
     private readonly professionalService: ProfessionalService,
   ) {}
 
@@ -67,6 +67,8 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         requestId: event.payload.requestId,
         professionalId: event.payload.professionalId,
       },
+      idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.professionalId}:${event.payload.clientId}`,
+      includeExternal: true,
     });
   }
 
@@ -86,6 +88,8 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         requestId: event.payload.requestId,
         professionalId: event.payload.professionalId,
       },
+      idempotencyKey: `${event.name}:${event.payload.requestId}:${professional.userId}:${event.payload.professionalId}`,
+      includeExternal: true,
     });
   }
 
@@ -105,6 +109,9 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         fromStatus: event.payload.fromStatus,
         toStatus: event.payload.toStatus,
       },
+      idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.clientId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
+      includeExternal: true,
+      requireExternal: true,
     });
 
     // If there's an assigned professional, notify them too.
@@ -122,6 +129,9 @@ export class RequestsNotificationsHandler implements OnModuleInit {
           fromStatus: event.payload.fromStatus,
           toStatus: event.payload.toStatus,
         },
+        idempotencyKey: `${event.name}:${event.payload.requestId}:${professional.userId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
+        includeExternal: true,
+        requireExternal: true,
       });
     }
   }
