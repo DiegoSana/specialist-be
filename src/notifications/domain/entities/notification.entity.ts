@@ -1,4 +1,5 @@
-import { NotificationChannel, NotificationDeliveryStatus } from '@prisma/client';
+import { NotificationChannel } from '../value-objects/notification-channel';
+import { NotificationDeliveryStatus } from '../value-objects/notification-delivery-status';
 
 export type NotificationDelivery = {
   channel: NotificationChannel;

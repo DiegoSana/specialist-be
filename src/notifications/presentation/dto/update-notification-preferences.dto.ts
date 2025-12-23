@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ExternalNotificationChannel } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsEnum, IsObject, IsOptional } from 'class-validator';
+import { ExternalNotificationChannel } from '../../domain/value-objects/external-notification-channel';
 
 export class UpdateNotificationPreferencesDto {
   @ApiPropertyOptional({ description: 'Enable/disable in-app notifications globally' })

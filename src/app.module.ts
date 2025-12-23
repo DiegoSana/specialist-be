@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 // Bounded Context Modules
 import { IdentityModule } from './identity/identity.module';
 import { ProfilesModule } from './profiles/profiles.module';
@@ -20,6 +21,7 @@ import { EventsModule } from './shared/infrastructure/events/events.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     EventsModule,
     HealthModule,

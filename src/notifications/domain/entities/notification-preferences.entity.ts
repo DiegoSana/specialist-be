@@ -1,4 +1,4 @@
-import { ExternalNotificationChannel } from '@prisma/client';
+import { ExternalNotificationChannel } from '../value-objects/external-notification-channel';
 
 export type NotificationTypeOverride = {
   inAppEnabled?: boolean;

@@ -1,5 +1,6 @@
 import { NotificationPreferences } from '@prisma/client';
 import { NotificationPreferencesEntity } from '../../domain/entities/notification-preferences.entity';
+import { ExternalNotificationChannel } from '../../domain/value-objects/external-notification-channel';
 
 export class NotificationPreferencesPrismaMapper {
   static toDomain(row: NotificationPreferences): NotificationPreferencesEntity {
@@ -8,7 +9,7 @@ export class NotificationPreferencesPrismaMapper {
       row.userId,
       row.inAppEnabled,
       row.externalEnabled,
-      row.preferredExternalChannel,
+      row.preferredExternalChannel as unknown as ExternalNotificationChannel,
       (row.overrides as Record<string, any> | null) ?? null,
       row.createdAt,
       row.updatedAt,
@@ -21,7 +22,7 @@ export class NotificationPreferencesPrismaMapper {
       userId: entity.userId,
       inAppEnabled: entity.inAppEnabled,
       externalEnabled: entity.externalEnabled,
-      preferredExternalChannel: entity.preferredExternalChannel,
+      preferredExternalChannel: entity.preferredExternalChannel as any,
       overrides: entity.overrides,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,

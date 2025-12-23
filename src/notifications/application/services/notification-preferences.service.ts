@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ExternalNotificationChannel } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import {
   NOTIFICATION_PREFERENCES_REPOSITORY,
@@ -9,6 +8,7 @@ import {
   NotificationPreferencesEntity,
   NotificationTypeOverride,
 } from '../../domain/entities/notification-preferences.entity';
+import { ExternalNotificationChannel } from '../../domain/value-objects/external-notification-channel';
 
 @Injectable()
 export class NotificationPreferencesService {

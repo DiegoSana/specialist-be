@@ -10,6 +10,7 @@ import { InAppNotificationService } from './application/services/in-app-notifica
 import { RequestsNotificationsHandler } from './application/handlers/requests-notifications.handler';
 import { NotificationPreferencesService } from './application/services/notification-preferences.service';
 import { NotificationService } from './application/services/notification.service';
+import { NotificationRetentionJob } from './application/jobs/notification-retention.job';
 
 // Infrastructure
 import { PrismaInAppNotificationRepository } from './infrastructure/repositories/prisma-in-app-notification.repository';
@@ -34,6 +35,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     NotificationService,
     InAppNotificationService,
     NotificationPreferencesService,
+    NotificationRetentionJob,
     RequestsNotificationsHandler,
     {
       provide: IN_APP_NOTIFICATION_REPOSITORY,

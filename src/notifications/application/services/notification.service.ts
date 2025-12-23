@@ -1,5 +1,4 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { NotificationChannel } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { NotificationEntity } from '../../domain/entities/notification.entity';
 import {
@@ -7,6 +6,7 @@ import {
   NotificationRepository,
 } from '../../domain/repositories/notification.repository';
 import { NotificationPreferencesService } from './notification-preferences.service';
+import { NotificationChannel } from '../../domain/value-objects/notification-channel';
 
 @Injectable()
 export class NotificationService {

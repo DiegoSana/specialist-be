@@ -4,8 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  NotificationChannel,
-  NotificationDeliveryStatus,
+  NotificationChannel as PrismaNotificationChannel,
+  NotificationDeliveryStatus as PrismaDeliveryStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import {
@@ -14,6 +14,7 @@ import {
 } from '../../domain/repositories/notification.repository';
 import { NotificationEntity } from '../../domain/entities/notification.entity';
 import { NotificationPrismaMapper } from '../mappers/notification.prisma-mapper';
+import { NotificationChannel } from '../../domain/value-objects/notification-channel';
 
 @Injectable()
 export class PrismaNotificationRepository implements NotificationRepository {
@@ -45,7 +46,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
         ...(query.unreadOnly
           ? {
               deliveries: {
-                some: { channel: NotificationChannel.IN_APP, readAt: null },
+                some: { channel: PrismaNotificationChannel.IN_APP, readAt: null },
               },
             }
           : {}),
@@ -88,7 +89,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
                   ...base,
                   status:
                     input.emailStatus === 'SKIPPED'
-                      ? NotificationDeliveryStatus.SKIPPED
+                      ? PrismaDeliveryStatus.SKIPPED
                       : base.status,
                 };
               }
@@ -97,7 +98,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
                   ...base,
                   status:
                     input.whatsappStatus === 'SKIPPED'
-                      ? NotificationDeliveryStatus.SKIPPED
+                      ? PrismaDeliveryStatus.SKIPPED
                       : base.status,
                 };
               }
@@ -141,7 +142,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
       where: {
         notificationId_channel: {
           notificationId,
-          channel: NotificationChannel.IN_APP,
+          channel: PrismaNotificationChannel.IN_APP,
         },
       },
       data: { readAt: now },
@@ -158,7 +159,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
   async markAllInAppRead(userId: string, now: Date): Promise<number> {
     const result = await this.prisma.notificationDelivery.updateMany({
       where: {
-        channel: NotificationChannel.IN_APP,
+        channel: PrismaNotificationChannel.IN_APP,
         readAt: null,
         notification: { userId },
       },
