@@ -18,6 +18,10 @@ import { RequestInterestEntity } from '../../domain/entities/request-interest.en
 import { RequestEntity } from '../../domain/entities/request.entity';
 import { ExpressInterestDto } from '../dto/express-interest.dto';
 import { RequestStatus } from '@prisma/client';
+import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
+import { RequestInterestExpressedEvent } from '../../domain/events/request-interest-expressed.event';
+import { RequestProfessionalAssignedEvent } from '../../domain/events/request-professional-assigned.event';
+import { RequestStatusChangedEvent } from '../../domain/events/request-status-changed.event';
 // Cross-context dependency - using Service instead of Repository (DDD)
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 
@@ -28,6 +32,8 @@ export class RequestInterestService {
     private readonly requestInterestRepository: RequestInterestRepository,
     @Inject(REQUEST_REPOSITORY)
     private readonly requestRepository: RequestRepository,
+    @Inject(EVENT_BUS)
+    private readonly eventBus: EventBus,
     @Inject(forwardRef(() => ProfessionalService))
     private readonly professionalService: ProfessionalService,
   ) {}
@@ -90,11 +96,21 @@ export class RequestInterestService {
       }
     }
 
-    return this.requestInterestRepository.add({
+    const savedInterest = await this.requestInterestRepository.add({
       requestId,
       professionalId: professional.id,
       message: dto.message || null,
     });
+
+    await this.eventBus.publish(
+      new RequestInterestExpressedEvent({
+        requestId,
+        clientId: request.clientId,
+        professionalId: professional.id,
+      }),
+    );
+
+    return savedInterest;
   }
 
   /**
@@ -216,6 +232,7 @@ export class RequestInterestService {
 
     // Assign the professional and change status to ACCEPTED
     // Also mark as no longer public
+    const fromStatus = request.status;
     const updatedRequest = await this.requestRepository.save(
       request.withChanges({
         professionalId,
@@ -226,6 +243,26 @@ export class RequestInterestService {
 
     // Clean up all interests for this request
     await this.requestInterestRepository.removeAllByRequestId(requestId);
+
+    await this.eventBus.publish(
+      new RequestProfessionalAssignedEvent({
+        requestId: updatedRequest.id,
+        clientId: updatedRequest.clientId,
+        professionalId,
+      }),
+    );
+
+    if (updatedRequest.status !== fromStatus) {
+      await this.eventBus.publish(
+        new RequestStatusChangedEvent({
+          requestId: updatedRequest.id,
+          clientId: updatedRequest.clientId,
+          professionalId: updatedRequest.professionalId,
+          fromStatus,
+          toStatus: updatedRequest.status,
+        }),
+      );
+    }
 
     return updatedRequest;
   }

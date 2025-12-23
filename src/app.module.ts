@@ -11,6 +11,7 @@ import { StorageModule } from './storage/storage.module';
 import { HealthModule } from './health/health.module';
 // Shared Infrastructure
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
+import { EventsModule } from './shared/infrastructure/events/events.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
       envFilePath: '.env',
     }),
     PrismaModule,
+    EventsModule,
     HealthModule,
     // Core Bounded Contexts
     IdentityModule,

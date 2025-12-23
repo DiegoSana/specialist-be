@@ -14,12 +14,14 @@ import {
   createMockRequest,
 } from '../../../__mocks__/test-utils';
 import { RequestStatus, ProfessionalStatus } from '@prisma/client';
+import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
 
 describe('RequestService', () => {
   let service: RequestService;
   let mockRequestRepository: any;
   let mockProfessionalService: any;
   let mockUserService: any;
+  let mockEventBus: any;
 
   beforeEach(async () => {
     mockRequestRepository = {
@@ -40,10 +42,15 @@ describe('RequestService', () => {
       findById: jest.fn(),
     };
 
+    mockEventBus = {
+      publish: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RequestService,
         { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
+        { provide: EVENT_BUS, useValue: mockEventBus },
         { provide: ProfessionalService, useValue: mockProfessionalService },
         { provide: UserService, useValue: mockUserService },
       ],
@@ -78,6 +85,8 @@ describe('RequestService', () => {
         const newRequest = createMockRequest({
           clientId: 'client-123',
           isPublic: false,
+          professionalId: 'prof-123',
+          tradeId: null,
         });
 
         mockUserService.findById.mockResolvedValue(client);
@@ -93,6 +102,16 @@ describe('RequestService', () => {
             isPublic: false,
             professionalId: 'prof-123',
             status: RequestStatus.PENDING,
+          }),
+        );
+        expect(mockEventBus.publish).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'requests.request.created',
+            payload: expect.objectContaining({
+              clientId: 'client-123',
+              isPublic: false,
+              professionalId: 'prof-123',
+            }),
           }),
         );
       });
@@ -157,8 +176,10 @@ describe('RequestService', () => {
       it('should create a public request successfully', async () => {
         const client = createMockUser({ hasClientProfile: true });
         const newRequest = createMockRequest({
+          clientId: 'client-123',
           isPublic: true,
           professionalId: null,
+          tradeId: 'trade-123',
         });
 
         mockUserService.findById.mockResolvedValue(client);
@@ -173,6 +194,17 @@ describe('RequestService', () => {
             professionalId: null,
             tradeId: 'trade-123',
             status: RequestStatus.PENDING,
+          }),
+        );
+        expect(mockEventBus.publish).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'requests.request.created',
+            payload: expect.objectContaining({
+              clientId: 'client-123',
+              isPublic: true,
+              professionalId: null,
+              tradeId: 'trade-123',
+            }),
           }),
         );
       });
@@ -227,6 +259,15 @@ describe('RequestService', () => {
       });
 
       expect(result.status).toBe(RequestStatus.IN_PROGRESS);
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'requests.request.status_changed',
+          payload: expect.objectContaining({
+            fromStatus: request.status,
+            toStatus: RequestStatus.IN_PROGRESS,
+          }),
+        }),
+      );
     });
 
     it('should throw NotFoundException if request not found', async () => {
@@ -286,6 +327,15 @@ describe('RequestService', () => {
       const result = await service.acceptQuote('req-123', 'client-123');
 
       expect(result.status).toBe(RequestStatus.ACCEPTED);
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'requests.request.status_changed',
+          payload: expect.objectContaining({
+            fromStatus: RequestStatus.PENDING,
+            toStatus: RequestStatus.ACCEPTED,
+          }),
+        }),
+      );
     });
 
     it('should throw ForbiddenException if user is not the client', async () => {
@@ -346,6 +396,15 @@ describe('RequestService', () => {
       );
 
       expect(result.status).toBe(RequestStatus.CANCELLED);
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'requests.request.status_changed',
+          payload: expect.objectContaining({
+            fromStatus: request.status,
+            toStatus: RequestStatus.CANCELLED,
+          }),
+        }),
+      );
     });
 
     it('should throw ForbiddenException if user is not the client', async () => {
