@@ -30,6 +30,7 @@ model User {
   professional     Professional?
   requests         Request[]     @relation("Client")
   reviewsGiven     Review[]      @relation("Reviewer")
+  inAppNotifications InAppNotification[]
 
   @@map("users")
 }
@@ -168,6 +169,22 @@ model Contact {
   toUser      User     @relation("ToUser", fields: [toUserId], references: [id], onDelete: Cascade)
 
   @@map("contacts")
+}
+
+model InAppNotification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("in_app_notifications")
 }
 
 enum UserRole {

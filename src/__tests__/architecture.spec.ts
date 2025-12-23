@@ -16,6 +16,7 @@ const CONTEXTS = {
   identity: 'src/identity',
   profiles: 'src/profiles',
   requests: 'src/requests',
+  notifications: 'src/notifications',
   reputation: 'src/reputation',
   storage: 'src/storage',
   admin: 'src/admin',
