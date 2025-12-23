@@ -2,8 +2,10 @@ import {
   Controller,
   Get,
   Patch,
+  Put,
   Param,
   Query,
+  Body,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -14,13 +16,18 @@ import { CurrentUser } from '../../shared/presentation/decorators/current-user.d
 import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { InAppNotificationService } from '../application/services/in-app-notification.service';
 import { ListNotificationsQueryDto } from './dto/list-notifications.query';
+import { NotificationPreferencesService } from '../application/services/notification-preferences.service';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
-  constructor(private readonly inApp: InAppNotificationService) {}
+  constructor(
+    private readonly inApp: InAppNotificationService,
+    private readonly preferences: NotificationPreferencesService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List my in-app notifications' })
@@ -49,6 +56,28 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'All notifications marked as read' })
   async markAllRead(@CurrentUser() user: UserEntity) {
     return this.inApp.markAllRead(user.id);
+  }
+
+  @Get('preferences')
+  @ApiOperation({ summary: 'Get my notification preferences' })
+  @ApiResponse({ status: 200, description: 'Notification preferences' })
+  async getPreferences(@CurrentUser() user: UserEntity) {
+    return this.preferences.getForUser(user.id);
+  }
+
+  @Put('preferences')
+  @ApiOperation({ summary: 'Update my notification preferences' })
+  @ApiResponse({ status: 200, description: 'Updated notification preferences' })
+  async updatePreferences(
+    @CurrentUser() user: UserEntity,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ) {
+    return this.preferences.upsertForUser(user.id, {
+      inAppEnabled: dto.inAppEnabled,
+      externalEnabled: dto.externalEnabled,
+      preferredExternalChannel: dto.preferredExternalChannel,
+      overrides: dto.overrides,
+    });
   }
 }
 

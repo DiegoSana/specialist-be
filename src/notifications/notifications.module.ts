@@ -7,10 +7,13 @@ import { EMAIL_SENDER } from './domain/ports/email-sender';
 // Application
 import { InAppNotificationService } from './application/services/in-app-notification.service';
 import { RequestsNotificationsHandler } from './application/handlers/requests-notifications.handler';
+import { NotificationPreferencesService } from './application/services/notification-preferences.service';
 
 // Infrastructure
 import { PrismaInAppNotificationRepository } from './infrastructure/repositories/prisma-in-app-notification.repository';
 import { SmtpEmailSender } from './infrastructure/email/smtp-email-sender';
+import { PrismaNotificationPreferencesRepository } from './infrastructure/repositories/prisma-notification-preferences.repository';
+import { NOTIFICATION_PREFERENCES_REPOSITORY } from './domain/repositories/notification-preferences.repository';
 
 // Presentation
 import { NotificationsController } from './presentation/notifications.controller';
@@ -26,17 +29,22 @@ import { ProfilesModule } from '../profiles/profiles.module';
   controllers: [NotificationsController],
   providers: [
     InAppNotificationService,
+    NotificationPreferencesService,
     RequestsNotificationsHandler,
     {
       provide: IN_APP_NOTIFICATION_REPOSITORY,
       useClass: PrismaInAppNotificationRepository,
     },
     {
+      provide: NOTIFICATION_PREFERENCES_REPOSITORY,
+      useClass: PrismaNotificationPreferencesRepository,
+    },
+    {
       provide: EMAIL_SENDER,
       useClass: SmtpEmailSender,
     },
   ],
-  exports: [InAppNotificationService],
+  exports: [InAppNotificationService, NotificationPreferencesService],
 })
 export class NotificationsModule {}
 

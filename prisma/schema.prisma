@@ -31,6 +31,7 @@ model User {
   requests         Request[]     @relation("Client")
   reviewsGiven     Review[]      @relation("Reviewer")
   inAppNotifications InAppNotification[]
+  notificationPreferences NotificationPreferences?
 
   @@map("users")
 }
@@ -185,6 +186,32 @@ model InAppNotification {
 
   @@index([userId, createdAt])
   @@map("in_app_notifications")
+}
+
+enum ExternalNotificationChannel {
+  EMAIL
+  WHATSAPP
+}
+
+model NotificationPreferences {
+  id                      String                     @id @default(uuid())
+  userId                  String                     @unique
+  inAppEnabled            Boolean                    @default(true)
+  externalEnabled         Boolean                    @default(true)
+  preferredExternalChannel ExternalNotificationChannel @default(EMAIL)
+  /// Per-type overrides (optional).
+  /// Example:
+  /// {
+  ///   "REQUEST_STATUS_CHANGED": { "externalEnabled": false },
+  ///   "REQUEST_INTEREST_EXPRESSED": { "preferredExternalChannel": "WHATSAPP" }
+  /// }
+  overrides               Json?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }
 
 enum UserRole {
