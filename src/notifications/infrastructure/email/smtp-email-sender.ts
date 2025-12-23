@@ -13,7 +13,9 @@ export class SmtpEmailSender implements EmailSender {
     const transporter = this.getOrCreateTransporter();
     const from = this.getFromOrThrow();
 
-    if (!message.text && !message.html) {
+    // Note: empty string is a valid "provided" value (dispatcher may fall back to '')
+    // Only reject when both fields are truly absent (null/undefined).
+    if (message.text == null && message.html == null) {
       throw new Error('Email message must include text or html');
     }
 
