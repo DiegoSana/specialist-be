@@ -3,6 +3,8 @@ import { NotificationChannel } from '../value-objects/notification-channel';
 export type PendingDelivery = {
   deliveryId: string;
   channel: NotificationChannel;
+  attemptCount: number;
+  nextAttemptAt: Date | null;
   notification: {
     id: string;
     userId: string;
@@ -23,10 +25,17 @@ export interface NotificationDeliveryQueue {
 
   markSent(deliveryId: string, sentAt: Date, providerMessageId?: string | null): Promise<void>;
 
-  markFailed(
+  markRetry(
     deliveryId: string,
     error: { code?: string | null; message: string },
-    failedAt: Date,
+    attemptedAt: Date,
+    nextAttemptAt: Date,
+  ): Promise<void>;
+
+  markFailedPermanently(
+    deliveryId: string,
+    error: { code?: string | null; message: string },
+    attemptedAt: Date,
   ): Promise<void>;
 }
 

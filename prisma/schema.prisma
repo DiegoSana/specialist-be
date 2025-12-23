@@ -232,6 +232,9 @@ model NotificationDelivery {
   providerMessageId String?
   errorCode       String?
   errorMessage    String?
+  attemptCount    Int                      @default(0)
+  lastAttemptAt   DateTime?
+  nextAttemptAt   DateTime?
   sentAt          DateTime?
   readAt          DateTime?
   createdAt       DateTime                 @default(now())
@@ -240,7 +243,7 @@ model NotificationDelivery {
   notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
 
   @@unique([notificationId, channel])
-  @@index([channel, status])
+  @@index([channel, status, nextAttemptAt])
   @@map("notification_deliveries")
 }
 
