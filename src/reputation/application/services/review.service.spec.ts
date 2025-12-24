@@ -69,7 +69,7 @@ describe('ReviewService', () => {
     };
 
     mockEventBus = {
-      emit: jest.fn(),
+      publish: jest.fn(),
       on: jest.fn(),
     };
 
@@ -92,23 +92,23 @@ describe('ReviewService', () => {
   });
 
   describe('findByProfessionalId', () => {
-    it('should return reviews for a professional', async () => {
+    it('should return only approved reviews for a professional', async () => {
       const reviews = [
-        createMockReview({ rating: 5 }),
-        createMockReview({ id: 'review-456', rating: 4 }),
+        createMockReview({ rating: 5, status: ReviewStatus.APPROVED }),
+        createMockReview({ id: 'review-456', rating: 4, status: ReviewStatus.APPROVED }),
       ];
-      mockReviewRepository.findByProfessionalId.mockResolvedValue(reviews);
+      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue(reviews);
 
       const result = await service.findByProfessionalId('prof-123');
 
       expect(result).toHaveLength(2);
-      expect(mockReviewRepository.findByProfessionalId).toHaveBeenCalledWith(
+      expect(mockReviewRepository.findApprovedByProfessionalId).toHaveBeenCalledWith(
         'prof-123',
       );
     });
 
-    it('should return empty array when no reviews', async () => {
-      mockReviewRepository.findByProfessionalId.mockResolvedValue([]);
+    it('should return empty array when no approved reviews', async () => {
+      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([]);
 
       const result = await service.findByProfessionalId('prof-123');
 
@@ -162,31 +162,26 @@ describe('ReviewService', () => {
       comment: 'Great service!',
     };
 
-    it('should create review successfully', async () => {
+    it('should create review with PENDING status (not update rating until approved)', async () => {
       const user = createMockUser({ hasClientProfile: true });
       const professional = createMockProfessional();
       const request = createMockRequest({
         clientId: 'user-123',
         status: RequestStatus.DONE,
       });
-      const review = createMockReview();
+      const review = createMockReview({ status: ReviewStatus.PENDING });
 
       mockUserService.findById.mockResolvedValue(user);
       mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
       mockReviewRepository.findByRequestId.mockResolvedValue(null);
       mockReviewRepository.save.mockResolvedValue(review);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue([review]);
-      mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       const result = await service.create('user-123', createDto);
 
       expect(result).toEqual(review);
-      expect(mockProfessionalService.updateRating).toHaveBeenCalledWith(
-        'prof-123',
-        5,
-        1,
-      );
+      // Rating is NOT updated on create - only when approved
+      expect(mockProfessionalService.updateRating).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if user is not a client', async () => {
@@ -334,7 +329,7 @@ describe('ReviewService', () => {
 
       mockReviewRepository.findById.mockResolvedValue(review);
       mockReviewRepository.save.mockResolvedValue(updatedReview);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue([
+      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([
         updatedReview,
       ]);
       mockProfessionalService.updateRating.mockResolvedValue(undefined);
@@ -368,7 +363,7 @@ describe('ReviewService', () => {
 
       mockReviewRepository.findById.mockResolvedValue(review);
       mockReviewRepository.save.mockResolvedValue(updatedReview);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue([
+      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([
         updatedReview,
       ]);
 
@@ -386,7 +381,7 @@ describe('ReviewService', () => {
 
       mockReviewRepository.findById.mockResolvedValue(review);
       mockReviewRepository.save.mockResolvedValue(updatedReview);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue([
+      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([
         updatedReview,
       ]);
 
@@ -404,7 +399,7 @@ describe('ReviewService', () => {
 
       mockReviewRepository.findById.mockResolvedValue(review);
       mockReviewRepository.delete.mockResolvedValue(undefined);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue([]);
+      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([]);
       mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       await service.delete('review-123', 'user-123');
@@ -446,7 +441,7 @@ describe('ReviewService', () => {
 
       mockReviewRepository.findById.mockResolvedValue(review);
       mockReviewRepository.delete.mockResolvedValue(undefined);
-      mockReviewRepository.findByProfessionalId.mockResolvedValue(
+      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue(
         remainingReviews,
       );
 
