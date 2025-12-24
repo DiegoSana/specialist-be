@@ -17,6 +17,8 @@
 - [**DOCKER.md**](./guides/DOCKER.md) - Docker setup and commands
 - [**POSTMAN_GUIDE.md**](./guides/POSTMAN_GUIDE.md) - API testing with Postman
 - [**MIGRATION_GUIDE.md**](./guides/MIGRATION_GUIDE.md) - Database migration guide
+- [**NOTIFICATIONS.md**](./guides/NOTIFICATIONS.md) - Email notifications & preferences
+- [**REVIEW_MODERATION.md**](./guides/REVIEW_MODERATION.md) - Review approval workflow
 
 ### Architecture Decision Records (ADRs)
 - [**ADR-001-DUAL-PROFILE-ARCHITECTURE.md**](./decisions/ADR-001-DUAL-PROFILE-ARCHITECTURE.md) - Dual profile system (client + professional)
@@ -45,7 +47,8 @@ specialist-be/
 │   ├── identity/           # Authentication & users
 │   ├── profiles/           # Professionals & trades
 │   ├── requests/           # Service requests
-│   ├── reputation/         # Reviews & ratings
+│   ├── reputation/         # Reviews & ratings (with moderation)
+│   ├── notifications/      # In-app & email notifications
 │   ├── storage/            # File management
 │   ├── admin/              # Admin operations
 │   ├── contact/            # Contact requests

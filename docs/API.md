@@ -13,7 +13,8 @@ The API is organized around REST principles and follows a bounded context archit
 | **Identity** | `/auth`, `/users` | Authentication & user management |
 | **Profiles** | `/professionals`, `/trades` | Professional profiles & trades catalog |
 | **Requests** | `/requests` | Service requests & job matching |
-| **Reputation** | `/reviews` | Reviews & ratings |
+| **Reputation** | `/reviews` | Reviews & ratings (with moderation) |
+| **Notifications** | `/notifications` | In-app & external notifications |
 | **Admin** | `/admin` | Administrative operations |
 | **Storage** | `/storage` | File uploads & media |
 | **Contact** | `/contact` | Contact requests |
@@ -90,12 +91,29 @@ Authorization: Bearer <token>
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/reviews` | Create review | ✅ |
+| `POST` | `/reviews` | Create review (status: PENDING) | ✅ |
 | `GET` | `/reviews?requestId=xxx` | Get review by request | ✅ |
 | `GET` | `/reviews/:id` | Get review by ID | ✅ |
 | `PATCH` | `/reviews/:id` | Update review | ✅ |
 | `DELETE` | `/reviews/:id` | Delete review | ✅ |
-| `GET` | `/professionals/:id/reviews` | Get professional's reviews | ❌ |
+| `GET` | `/professionals/:id/reviews` | Get professional's approved reviews | ❌ |
+| `GET` | `/reviews/admin/pending` | Get pending reviews (Admin) | ✅ Admin |
+| `POST` | `/reviews/:id/approve` | Approve review (Admin) | ✅ Admin |
+| `POST` | `/reviews/:id/reject` | Reject review (Admin) | ✅ Admin |
+
+> **Note**: Reviews are moderated. New reviews have `PENDING` status and only `APPROVED` reviews are visible publicly and count towards the professional's rating. See [Review Moderation Guide](./guides/REVIEW_MODERATION.md).
+
+### 🔔 Notifications (`/notifications`)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/notifications` | List my notifications | ✅ |
+| `PATCH` | `/notifications/:id/read` | Mark notification as read | ✅ |
+| `PATCH` | `/notifications/read-all` | Mark all as read | ✅ |
+| `GET` | `/notifications/preferences` | Get my notification preferences | ✅ |
+| `PUT` | `/notifications/preferences` | Update my preferences | ✅ |
+
+> See [Notifications Guide](./guides/NOTIFICATIONS.md) for email configuration and event types.
 
 ### 🔧 Admin (`/admin`)
 
