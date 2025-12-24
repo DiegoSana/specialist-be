@@ -23,6 +23,7 @@ import { NotificationService } from '../application/services/notification.servic
 import { ListNotificationsQueryDto } from './dto/list-notifications.query';
 import { NotificationPreferencesService } from '../application/services/notification-preferences.service';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { NotificationResponseDto } from './dto/notification-response.dto';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -41,10 +42,11 @@ export class NotificationsController {
     @CurrentUser() user: UserEntity,
     @Query() query: ListNotificationsQueryDto,
   ) {
-    return this.notifications.listForUser(user.id, {
+    const entities = await this.notifications.listForUser(user.id, {
       unreadOnly: query.unreadOnly,
       take: query.take,
     });
+    return NotificationResponseDto.fromEntities(entities);
   }
 
   @Patch(':id/read')
@@ -52,7 +54,8 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiResponse({ status: 200, description: 'Notification marked as read' })
   async markRead(@CurrentUser() user: UserEntity, @Param('id') id: string) {
-    return this.notifications.markRead(user.id, id);
+    const entity = await this.notifications.markRead(user.id, id);
+    return NotificationResponseDto.fromEntity(entity);
   }
 
   @Patch('read-all')
