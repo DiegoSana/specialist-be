@@ -58,6 +58,7 @@ export class RequestsNotificationsHandler implements OnModuleInit {
   private async onInterestExpressed(
     event: RequestInterestExpressedEvent,
   ): Promise<void> {
+<<<<<<< HEAD
     try {
       await this.notifications.createForUser({
         userId: event.payload.clientId,
@@ -77,11 +78,26 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         err instanceof Error ? err.stack : String(err),
       );
     }
+=======
+    await this.notifications.createForUser({
+      userId: event.payload.clientId,
+      type: 'REQUEST_INTEREST_EXPRESSED',
+      title: 'Un especialista está interesado en tu solicitud',
+      body: 'Revisá los especialistas interesados y elegí el que prefieras.',
+      data: {
+        requestId: event.payload.requestId,
+        professionalId: event.payload.professionalId,
+      },
+      idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.professionalId}:${event.payload.clientId}`,
+      includeExternal: true,
+    });
+>>>>>>> origin/main
   }
 
   private async onProfessionalAssigned(
     event: RequestProfessionalAssignedEvent,
   ): Promise<void> {
+<<<<<<< HEAD
     try {
       const professional = await this.professionalService.getByIdOrFail(
         event.payload.professionalId,
@@ -121,12 +137,63 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         userId: event.payload.clientId,
         type: 'REQUEST_STATUS_CHANGED',
         title,
+=======
+    const professional = await this.professionalService.getByIdOrFail(
+      event.payload.professionalId,
+    );
+
+    await this.notifications.createForUser({
+      userId: professional.userId,
+      type: 'REQUEST_PROFESSIONAL_ASSIGNED',
+      title: 'Te asignaron a una solicitud',
+      body: 'El cliente aceptó tu interés. Revisá los detalles de la solicitud.',
+      data: {
+        requestId: event.payload.requestId,
+        professionalId: event.payload.professionalId,
+      },
+      idempotencyKey: `${event.name}:${event.payload.requestId}:${professional.userId}:${event.payload.professionalId}`,
+      includeExternal: true,
+    });
+  }
+
+  private async onStatusChanged(event: RequestStatusChangedEvent): Promise<void> {
+    // Rule (given): every status change notifies (in-app + external later)
+    // For now, we generate in-app notifications.
+    const title = 'Actualización de tu solicitud';
+    const body = this.statusChangeBody(event.payload.fromStatus, event.payload.toStatus);
+
+    await this.notifications.createForUser({
+      userId: event.payload.clientId,
+      type: 'REQUEST_STATUS_CHANGED',
+      title,
+      body,
+      data: {
+        requestId: event.payload.requestId,
+        fromStatus: event.payload.fromStatus,
+        toStatus: event.payload.toStatus,
+      },
+      idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.clientId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
+      includeExternal: true,
+      requireExternal: true,
+    });
+
+    // If there's an assigned professional, notify them too.
+    if (event.payload.professionalId) {
+      const professional = await this.professionalService.getByIdOrFail(
+        event.payload.professionalId,
+      );
+      await this.notifications.createForUser({
+        userId: professional.userId,
+        type: 'REQUEST_STATUS_CHANGED',
+        title: 'Actualización de una solicitud asignada',
+>>>>>>> origin/main
         body,
         data: {
           requestId: event.payload.requestId,
           fromStatus: event.payload.fromStatus,
           toStatus: event.payload.toStatus,
         },
+<<<<<<< HEAD
         idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.clientId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
         includeExternal: true,
         requireExternal: true,
@@ -157,6 +224,12 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         `Failed handling ${event.name} (requestId=${event.payload.requestId}, clientId=${event.payload.clientId}, from=${event.payload.fromStatus}, to=${event.payload.toStatus}, professionalId=${event.payload.professionalId ?? 'n/a'})`,
         err instanceof Error ? err.stack : String(err),
       );
+=======
+        idempotencyKey: `${event.name}:${event.payload.requestId}:${professional.userId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
+        includeExternal: true,
+        requireExternal: true,
+      });
+>>>>>>> origin/main
     }
   }
 

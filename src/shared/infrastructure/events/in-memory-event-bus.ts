@@ -1,5 +1,8 @@
 import { EventEmitter } from 'events';
+<<<<<<< HEAD
 import { Logger } from '@nestjs/common';
+=======
+>>>>>>> origin/main
 import { DomainEvent } from '../../domain/events/domain-event';
 import { EventBus } from '../../domain/events/event-bus';
 
@@ -11,7 +14,10 @@ import { EventBus } from '../../domain/events/event-bus';
  */
 export class InMemoryEventBus implements EventBus {
   private readonly emitter = new EventEmitter();
+<<<<<<< HEAD
   private readonly logger = new Logger(InMemoryEventBus.name);
+=======
+>>>>>>> origin/main
 
   async publish(event: DomainEvent): Promise<void> {
     this.emitter.emit(event.name, event);
@@ -23,6 +29,7 @@ export class InMemoryEventBus implements EventBus {
     name: string,
     handler: (event: T) => void | Promise<void>,
   ): void {
+<<<<<<< HEAD
     this.emitter.on(name, (event: T) => {
       try {
         const result = handler(event);
@@ -45,6 +52,9 @@ export class InMemoryEventBus implements EventBus {
         );
       }
     });
+=======
+    this.emitter.on(name, handler);
+>>>>>>> origin/main
   }
 }
 
