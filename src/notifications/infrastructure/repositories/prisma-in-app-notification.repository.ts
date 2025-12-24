@@ -23,11 +23,15 @@ export class PrismaInAppNotificationRepository
   }
 
   async findById(id: string): Promise<InAppNotificationEntity | null> {
-    const row = await this.prisma.inAppNotification.findUnique({ where: { id } });
+    const row = await this.prisma.inAppNotification.findUnique({
+      where: { id },
+    });
     return row ? InAppNotificationPrismaMapper.toDomain(row) : null;
   }
 
-  async list(query: ListNotificationsQuery): Promise<InAppNotificationEntity[]> {
+  async list(
+    query: ListNotificationsQuery,
+  ): Promise<InAppNotificationEntity[]> {
     const take = Math.min(Math.max(query.take ?? 50, 1), 100);
     const rows = await this.prisma.inAppNotification.findMany({
       where: {
@@ -64,4 +68,3 @@ export class PrismaInAppNotificationRepository
     return result.count;
   }
 }
-

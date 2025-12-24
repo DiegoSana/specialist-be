@@ -35,4 +35,3 @@ export class PrismaNotificationPreferencesRepository
     return NotificationPreferencesPrismaMapper.toDomain(row);
   }
 }
-

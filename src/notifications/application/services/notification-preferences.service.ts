@@ -55,4 +55,3 @@ export class NotificationPreferencesService {
     return this.repo.upsert(next);
   }
 }
-

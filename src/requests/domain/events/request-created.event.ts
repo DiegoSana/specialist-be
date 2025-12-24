@@ -16,4 +16,3 @@ export class RequestCreatedEvent implements DomainEvent<RequestCreatedPayload> {
 
   constructor(public readonly payload: RequestCreatedPayload) {}
 }
-

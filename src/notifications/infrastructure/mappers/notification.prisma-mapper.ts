@@ -12,7 +12,9 @@ import { NotificationChannel } from '../../domain/value-objects/notification-cha
 import { NotificationDeliveryStatus } from '../../domain/value-objects/notification-delivery-status';
 
 export class NotificationPrismaMapper {
-  static toDomain(row: Notification & { deliveries: NotificationDelivery[] }): NotificationEntity {
+  static toDomain(
+    row: Notification & { deliveries: NotificationDelivery[] },
+  ): NotificationEntity {
     const deliveries: DomainDelivery[] = row.deliveries.map((d) => ({
       channel: d.channel as unknown as NotificationChannel,
       status: d.status as unknown as NotificationDeliveryStatus,
@@ -36,9 +38,17 @@ export class NotificationPrismaMapper {
     );
   }
 
-  static deliveryDefaults(channel: NotificationChannel): Pick<
+  static deliveryDefaults(
+    channel: NotificationChannel,
+  ): Pick<
     NotificationDelivery,
-    'channel' | 'status' | 'providerMessageId' | 'errorCode' | 'errorMessage' | 'sentAt' | 'readAt'
+    | 'channel'
+    | 'status'
+    | 'providerMessageId'
+    | 'errorCode'
+    | 'errorMessage'
+    | 'sentAt'
+    | 'readAt'
   > {
     const now = new Date();
     const prismaChannel = channel as unknown as PrismaNotificationChannel;
@@ -64,4 +74,3 @@ export class NotificationPrismaMapper {
     };
   }
 }
-

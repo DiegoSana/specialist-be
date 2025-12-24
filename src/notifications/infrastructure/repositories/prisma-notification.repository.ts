@@ -46,7 +46,10 @@ export class PrismaNotificationRepository implements NotificationRepository {
         ...(query.unreadOnly
           ? {
               deliveries: {
-                some: { channel: PrismaNotificationChannel.IN_APP, readAt: null },
+                some: {
+                  channel: PrismaNotificationChannel.IN_APP,
+                  readAt: null,
+                },
               },
             }
           : {}),
@@ -168,4 +171,3 @@ export class PrismaNotificationRepository implements NotificationRepository {
     return result.count;
   }
 }
-

@@ -2,10 +2,11 @@ import { NotificationPreferencesEntity } from '../entities/notification-preferen
 
 export interface NotificationPreferencesRepository {
   findByUserId(userId: string): Promise<NotificationPreferencesEntity | null>;
-  upsert(preferences: NotificationPreferencesEntity): Promise<NotificationPreferencesEntity>;
+  upsert(
+    preferences: NotificationPreferencesEntity,
+  ): Promise<NotificationPreferencesEntity>;
 }
 
 export const NOTIFICATION_PREFERENCES_REPOSITORY = Symbol(
   'NotificationPreferencesRepository',
 );
-

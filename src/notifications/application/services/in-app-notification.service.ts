@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
   IN_APP_NOTIFICATION_REPOSITORY,
@@ -32,7 +37,10 @@ export class InAppNotificationService {
     );
   }
 
-  async listForUser(userId: string, query?: { unreadOnly?: boolean; take?: number }) {
+  async listForUser(
+    userId: string,
+    query?: { unreadOnly?: boolean; take?: number },
+  ) {
     return this.repo.list({
       userId,
       unreadOnly: query?.unreadOnly,
@@ -52,4 +60,3 @@ export class InAppNotificationService {
     return { updated: count };
   }
 }
-

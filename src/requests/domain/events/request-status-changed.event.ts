@@ -19,4 +19,3 @@ export class RequestStatusChangedEvent
 
   constructor(public readonly payload: RequestStatusChangedPayload) {}
 }
-

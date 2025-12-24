@@ -20,7 +20,9 @@ export class NotificationRetentionJob {
    */
   @Cron('15 3 * * *')
   async run(): Promise<void> {
-    const days = Number(this.config.get<string>('NOTIFICATIONS_RETENTION_DAYS', '90'));
+    const days = Number(
+      this.config.get<string>('NOTIFICATIONS_RETENTION_DAYS', '90'),
+    );
     const safeDays = Number.isFinite(days) && days > 0 ? Math.floor(days) : 90;
 
     const cutoff = new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000);
@@ -30,8 +32,9 @@ export class NotificationRetentionJob {
     });
 
     if (result.count > 0) {
-      this.logger.log(`Deleted ${result.count} notifications older than ${safeDays} days.`);
+      this.logger.log(
+        `Deleted ${result.count} notifications older than ${safeDays} days.`,
+      );
     }
   }
 }
-

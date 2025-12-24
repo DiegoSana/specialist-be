@@ -16,4 +16,3 @@ export class RequestInterestExpressedEvent
 
   constructor(public readonly payload: RequestInterestExpressedPayload) {}
 }
-

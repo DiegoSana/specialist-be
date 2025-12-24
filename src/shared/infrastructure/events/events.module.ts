@@ -13,4 +13,3 @@ import { InMemoryEventBus } from './in-memory-event-bus';
   exports: [EVENT_BUS],
 })
 export class EventsModule {}
-

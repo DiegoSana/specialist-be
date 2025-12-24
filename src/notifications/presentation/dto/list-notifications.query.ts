@@ -9,7 +9,11 @@ export class ListNotificationsQueryDto {
   @IsBoolean()
   unreadOnly?: boolean;
 
-  @ApiPropertyOptional({ description: 'Max items to return', default: 50, maximum: 100 })
+  @ApiPropertyOptional({
+    description: 'Max items to return',
+    default: 50,
+    maximum: 100,
+  })
   @IsOptional()
   @Transform(({ value }) => (value === undefined ? undefined : Number(value)))
   @IsInt()
@@ -17,4 +21,3 @@ export class ListNotificationsQueryDto {
   @Max(100)
   take?: number;
 }
-

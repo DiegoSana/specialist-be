@@ -23,7 +23,11 @@ export interface NotificationDeliveryQueue {
     limit: number,
   ): Promise<PendingDelivery[]>;
 
-  markSent(deliveryId: string, sentAt: Date, providerMessageId?: string | null): Promise<void>;
+  markSent(
+    deliveryId: string,
+    sentAt: Date,
+    providerMessageId?: string | null,
+  ): Promise<void>;
 
   markRetry(
     deliveryId: string,
@@ -40,4 +44,3 @@ export interface NotificationDeliveryQueue {
 }
 
 export const NOTIFICATION_DELIVERY_QUEUE = Symbol('NotificationDeliveryQueue');
-

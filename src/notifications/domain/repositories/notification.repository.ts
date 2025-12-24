@@ -18,9 +18,12 @@ export interface NotificationRepository {
     emailStatus?: 'PENDING' | 'SKIPPED';
     whatsappStatus?: 'PENDING' | 'SKIPPED';
   }): Promise<NotificationEntity>;
-  markInAppRead(userId: string, notificationId: string, now: Date): Promise<NotificationEntity>;
+  markInAppRead(
+    userId: string,
+    notificationId: string,
+    now: Date,
+  ): Promise<NotificationEntity>;
   markAllInAppRead(userId: string, now: Date): Promise<number>;
 }
 
 export const NOTIFICATION_REPOSITORY = Symbol('NotificationRepository');
-
