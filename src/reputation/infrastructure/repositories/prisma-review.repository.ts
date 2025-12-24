@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { ReviewStatus as PrismaReviewStatus } from '@prisma/client';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { ReviewRepository } from '../../domain/repositories/review.repository';
 import { ReviewEntity } from '../../domain/entities/review.entity';
+import { ReviewStatus } from '../../domain/value-objects/review-status';
 import { PrismaReviewMapper } from '../mappers/review.prisma-mapper';
 
 @Injectable()
@@ -19,9 +21,28 @@ export class PrismaReviewRepository implements ReviewRepository {
     },
   } as const;
 
+  private readonly includeProfessionalWithUser = {
+    ...this.includeReviewer,
+    professional: {
+      select: {
+        id: true,
+        userId: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    },
+  } as const;
+
   async findById(id: string): Promise<ReviewEntity | null> {
     const review = await this.prisma.review.findUnique({
       where: { id },
+      include: this.includeProfessionalWithUser,
     });
 
     if (!review) return null;
@@ -39,6 +60,21 @@ export class PrismaReviewRepository implements ReviewRepository {
     return reviews.map((r) => PrismaReviewMapper.toDomain(r));
   }
 
+  async findApprovedByProfessionalId(
+    professionalId: string,
+  ): Promise<ReviewEntity[]> {
+    const reviews = await this.prisma.review.findMany({
+      where: {
+        professionalId,
+        status: PrismaReviewStatus.APPROVED,
+      },
+      include: this.includeReviewer,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return reviews.map((r) => PrismaReviewMapper.toDomain(r));
+  }
+
   async findByRequestId(requestId: string): Promise<ReviewEntity | null> {
     const review = await this.prisma.review.findUnique({
       where: { requestId },
@@ -49,6 +85,16 @@ export class PrismaReviewRepository implements ReviewRepository {
     return PrismaReviewMapper.toDomain(review);
   }
 
+  async findByStatus(status: ReviewStatus): Promise<ReviewEntity[]> {
+    const reviews = await this.prisma.review.findMany({
+      where: { status: status as PrismaReviewStatus },
+      include: this.includeProfessionalWithUser,
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return reviews.map((r) => PrismaReviewMapper.toDomain(r));
+  }
+
   async save(review: ReviewEntity): Promise<ReviewEntity> {
     const createData: any = {
       id: review.id,
@@ -57,20 +103,24 @@ export class PrismaReviewRepository implements ReviewRepository {
       requestId: review.requestId,
       rating: review.rating,
       comment: review.comment,
+      status: review.status,
+      moderatedAt: review.moderatedAt,
+      moderatedBy: review.moderatedBy,
     };
 
-    const updateData = { ...createData };
-    delete updateData.id;
-    // No permitir cambiar reviewer/professional/request via save.
-    delete updateData.reviewerId;
-    delete updateData.professionalId;
-    delete updateData.requestId;
+    const updateData = {
+      rating: review.rating,
+      comment: review.comment,
+      status: review.status,
+      moderatedAt: review.moderatedAt,
+      moderatedBy: review.moderatedBy,
+    };
 
     const saved = await this.prisma.review.upsert({
       where: { id: review.id },
       create: createData,
       update: updateData,
-      include: this.includeReviewer,
+      include: this.includeProfessionalWithUser,
     });
 
     return PrismaReviewMapper.toDomain(saved);

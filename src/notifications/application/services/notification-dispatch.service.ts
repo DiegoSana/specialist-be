@@ -30,10 +30,10 @@ export class NotificationDispatchService {
 
   private async dispatchEmailPending(): Promise<void> {
     // If SMTP isn't configured yet, skip silently (keep deliveries as PENDING).
+    // For local dev with Mailpit, only host and from are required (no auth needed).
     const smtpHost = this.config.get<string>('NOTIFICATIONS_SMTP_HOST');
-    const smtpUser = this.config.get<string>('NOTIFICATIONS_SMTP_USER');
     const smtpFrom = this.config.get<string>('NOTIFICATIONS_SMTP_FROM');
-    if (!smtpHost || !smtpUser || !smtpFrom) return;
+    if (!smtpHost || !smtpFrom) return;
 
     const batchSize = Number(
       this.config.get<string>('NOTIFICATIONS_DISPATCH_BATCH_SIZE', '25'),
