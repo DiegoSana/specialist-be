@@ -20,7 +20,8 @@ export class NotificationDispatchService {
 
   async dispatchPending(): Promise<void> {
     const enabled =
-      this.config.get<string>('NOTIFICATIONS_DISPATCH_ENABLED', 'false') === 'true';
+      this.config.get<string>('NOTIFICATIONS_DISPATCH_ENABLED', 'false') ===
+      'true';
     if (!enabled) return;
 
     await this.dispatchEmailPending();
@@ -37,22 +38,34 @@ export class NotificationDispatchService {
     const batchSize = Number(
       this.config.get<string>('NOTIFICATIONS_DISPATCH_BATCH_SIZE', '25'),
     );
-    const limit = Number.isFinite(batchSize) ? Math.max(1, Math.floor(batchSize)) : 25;
+    const limit = Number.isFinite(batchSize)
+      ? Math.max(1, Math.floor(batchSize))
+      : 25;
 
     const maxAttempts = Number(
       this.config.get<string>('NOTIFICATIONS_DISPATCH_MAX_ATTEMPTS', '5'),
     );
     const safeMaxAttempts =
-      Number.isFinite(maxAttempts) && maxAttempts > 0 ? Math.floor(maxAttempts) : 5;
+      Number.isFinite(maxAttempts) && maxAttempts > 0
+        ? Math.floor(maxAttempts)
+        : 5;
 
     const baseSeconds = Number(
-      this.config.get<string>('NOTIFICATIONS_DISPATCH_RETRY_BASE_SECONDS', '60'),
+      this.config.get<string>(
+        'NOTIFICATIONS_DISPATCH_RETRY_BASE_SECONDS',
+        '60',
+      ),
     );
     const safeBaseSeconds =
-      Number.isFinite(baseSeconds) && baseSeconds > 0 ? Math.floor(baseSeconds) : 60;
+      Number.isFinite(baseSeconds) && baseSeconds > 0
+        ? Math.floor(baseSeconds)
+        : 60;
 
     const maxBackoffSeconds = Number(
-      this.config.get<string>('NOTIFICATIONS_DISPATCH_RETRY_MAX_SECONDS', '3600'),
+      this.config.get<string>(
+        'NOTIFICATIONS_DISPATCH_RETRY_MAX_SECONDS',
+        '3600',
+      ),
     );
     const safeMaxBackoffSeconds =
       Number.isFinite(maxBackoffSeconds) && maxBackoffSeconds > 0
@@ -80,7 +93,9 @@ export class NotificationDispatchService {
       } catch (err: any) {
         const attemptedAt = new Date();
         const message =
-          typeof err?.message === 'string' ? err.message : 'Failed to send email';
+          typeof err?.message === 'string'
+            ? err.message
+            : 'Failed to send email';
         const code = typeof err?.code === 'string' ? err.code : null;
 
         const nextAttemptNumber = item.attemptCount + 1; // about to record this failure
@@ -101,7 +116,9 @@ export class NotificationDispatchService {
           safeBaseSeconds,
           safeMaxBackoffSeconds,
         );
-        const nextAttemptAt = new Date(attemptedAt.getTime() + delaySeconds * 1000);
+        const nextAttemptAt = new Date(
+          attemptedAt.getTime() + delaySeconds * 1000,
+        );
 
         this.logger.warn(
           `Email delivery failed (deliveryId=${item.deliveryId}, attempts=${nextAttemptNumber}/${safeMaxAttempts}). Retrying in ${delaySeconds}s: ${message}`,
@@ -130,4 +147,3 @@ export class NotificationDispatchService {
     return Math.max(1, Math.floor(raw + jitter));
   }
 }
-

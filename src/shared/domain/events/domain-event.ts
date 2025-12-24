@@ -3,4 +3,3 @@ export interface DomainEvent<TPayload = unknown> {
   readonly occurredAt: Date;
   readonly payload: TPayload;
 }
-

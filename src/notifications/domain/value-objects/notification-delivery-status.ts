@@ -4,4 +4,3 @@ export enum NotificationDeliveryStatus {
   FAILED = 'FAILED',
   SKIPPED = 'SKIPPED',
 }
-

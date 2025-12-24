@@ -6,4 +6,3 @@ export interface EventBus {
 
 // Token for dependency injection (ports & adapters)
 export const EVENT_BUS = Symbol('EventBus');
-

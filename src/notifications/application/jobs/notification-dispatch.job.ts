@@ -12,4 +12,3 @@ export class NotificationDispatchJob {
     await this.dispatch.dispatchPending();
   }
 }
-

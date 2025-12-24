@@ -40,7 +40,9 @@ export class SmtpEmailSender implements EmailSender {
     if (this.transporter) return this.transporter;
 
     const host = this.config.get<string>('NOTIFICATIONS_SMTP_HOST');
-    const port = Number(this.config.get<string>('NOTIFICATIONS_SMTP_PORT', '587'));
+    const port = Number(
+      this.config.get<string>('NOTIFICATIONS_SMTP_PORT', '587'),
+    );
     const user = this.config.get<string>('NOTIFICATIONS_SMTP_USER');
     const pass = this.config.get<string>('NOTIFICATIONS_SMTP_PASS');
 
@@ -64,4 +66,3 @@ export class SmtpEmailSender implements EmailSender {
     return this.transporter;
   }
 }
-

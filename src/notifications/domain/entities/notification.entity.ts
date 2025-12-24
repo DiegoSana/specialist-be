@@ -25,8 +25,9 @@ export class NotificationEntity {
   ) {}
 
   inAppReadAt(): Date | null {
-    return this.deliveries.find((d) => d.channel === NotificationChannel.IN_APP)
-      ?.readAt ?? null;
+    return (
+      this.deliveries.find((d) => d.channel === NotificationChannel.IN_APP)
+        ?.readAt ?? null
+    );
   }
 }
-

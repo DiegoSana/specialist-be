@@ -1,4 +1,9 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { NotificationEntity } from '../../domain/entities/notification.entity';
 import {
@@ -38,12 +43,16 @@ export class NotificationService {
     const prefs = await this.preferences.getForUser(input.userId);
     const effective = prefs.effectiveFor(input.type);
 
-    const channels: NotificationChannel[] = [NotificationChannel.IN_APP];
+    const channels: NotificationChannel[] = [];
+    if (effective.inAppEnabled) {
+      channels.push(NotificationChannel.IN_APP);
+    }
 
     let externalChannel: NotificationChannel | null = null;
     const wantsExternal = input.includeExternal !== false;
     const shouldCreateExternal =
-      wantsExternal && (effective.externalEnabled || input.requireExternal === true);
+      wantsExternal &&
+      (effective.externalEnabled || input.requireExternal === true);
 
     if (shouldCreateExternal) {
       externalChannel =
@@ -69,11 +78,16 @@ export class NotificationService {
       emailStatus:
         externalChannel === NotificationChannel.EMAIL ? 'PENDING' : 'SKIPPED',
       whatsappStatus:
-        externalChannel === NotificationChannel.WHATSAPP ? 'PENDING' : 'SKIPPED',
+        externalChannel === NotificationChannel.WHATSAPP
+          ? 'PENDING'
+          : 'SKIPPED',
     });
   }
 
-  async listForUser(userId: string, query?: { unreadOnly?: boolean; take?: number }) {
+  async listForUser(
+    userId: string,
+    query?: { unreadOnly?: boolean; take?: number },
+  ) {
     return this.repo.listForUser({
       userId,
       unreadOnly: query?.unreadOnly,
@@ -94,4 +108,3 @@ export class NotificationService {
     return { updated: count };
   }
 }
-

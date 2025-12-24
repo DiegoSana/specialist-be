@@ -7,7 +7,9 @@ export type ListNotificationsQuery = {
 };
 
 export interface InAppNotificationRepository {
-  create(notification: InAppNotificationEntity): Promise<InAppNotificationEntity>;
+  create(
+    notification: InAppNotificationEntity,
+  ): Promise<InAppNotificationEntity>;
   findById(id: string): Promise<InAppNotificationEntity | null>;
   list(query: ListNotificationsQuery): Promise<InAppNotificationEntity[]>;
   save(notification: InAppNotificationEntity): Promise<InAppNotificationEntity>;
@@ -17,4 +19,3 @@ export interface InAppNotificationRepository {
 export const IN_APP_NOTIFICATION_REPOSITORY = Symbol(
   'InAppNotificationRepository',
 );
-

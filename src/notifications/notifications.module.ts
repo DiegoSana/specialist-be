@@ -67,4 +67,3 @@ import { ProfilesModule } from '../profiles/profiles.module';
   exports: [NotificationService, NotificationPreferencesService],
 })
 export class NotificationsModule {}
-

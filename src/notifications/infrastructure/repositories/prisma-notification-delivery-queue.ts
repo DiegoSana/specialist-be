@@ -11,7 +11,9 @@ import {
 import { NotificationChannel } from '../../domain/value-objects/notification-channel';
 
 @Injectable()
-export class PrismaNotificationDeliveryQueue implements NotificationDeliveryQueue {
+export class PrismaNotificationDeliveryQueue
+  implements NotificationDeliveryQueue
+{
   constructor(private readonly prisma: PrismaService) {}
 
   async takePendingDeliveries(
@@ -111,4 +113,3 @@ export class PrismaNotificationDeliveryQueue implements NotificationDeliveryQueu
     });
   }
 }
-

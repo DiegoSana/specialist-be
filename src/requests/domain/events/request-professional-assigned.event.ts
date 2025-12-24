@@ -16,4 +16,3 @@ export class RequestProfessionalAssignedEvent
 
   constructor(public readonly payload: RequestProfessionalAssignedPayload) {}
 }
-

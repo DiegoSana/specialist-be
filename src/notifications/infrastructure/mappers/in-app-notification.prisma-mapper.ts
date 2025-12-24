@@ -15,10 +15,9 @@ export class InAppNotificationPrismaMapper {
     );
   }
 
-  static toPersistence(entity: InAppNotificationEntity): Omit<
-    InAppNotification,
-    'createdAt'
-  > & { createdAt?: Date } {
+  static toPersistence(
+    entity: InAppNotificationEntity,
+  ): Omit<InAppNotification, 'createdAt'> & { createdAt?: Date } {
     return {
       id: entity.id,
       userId: entity.userId,
@@ -31,4 +30,3 @@ export class InAppNotificationPrismaMapper {
     };
   }
 }
-
