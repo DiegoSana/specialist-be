@@ -30,6 +30,7 @@ model User {
   professional     Professional?
   requests         Request[]     @relation("Client")
   reviewsGiven     Review[]      @relation("Reviewer")
+  reviewsModerated Review[]      @relation("Moderator")
   inAppNotifications InAppNotification[]
   notificationPreferences NotificationPreferences?
   notifications     Notification[]
@@ -151,13 +152,23 @@ model Review {
   requestId      String?      @unique
   rating         Int
   comment        String?
+  status         ReviewStatus @default(PENDING)
+  moderatedAt    DateTime?
+  moderatedBy    String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   request        Request?     @relation(fields: [requestId], references: [id])
   reviewer       User         @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  moderator      User?        @relation("Moderator", fields: [moderatedBy], references: [id])
 
   @@map("reviews")
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Contact {

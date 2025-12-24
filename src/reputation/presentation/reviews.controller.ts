@@ -20,6 +20,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
+import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { ReviewService } from '../application/services/review.service';
@@ -92,6 +93,39 @@ export class ReviewsController {
   @ApiResponse({ status: 204, description: 'Review deleted successfully' })
   async delete(@Param('id') id: string, @CurrentUser() user: UserEntity) {
     await this.reviewService.delete(id, user.id);
+  }
+
+  // ========== Admin Moderation Endpoints ==========
+
+  @Get('admin/pending')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get pending reviews for moderation (admin only)' })
+  @ApiResponse({ status: 200, description: 'List of pending reviews' })
+  async findPending() {
+    return this.reviewService.findPending();
+  }
+
+  @Post(':id/approve')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Approve a review (admin only)' })
+  @ApiResponse({ status: 200, description: 'Review approved successfully' })
+  @ApiResponse({ status: 400, description: 'Review is not pending' })
+  async approve(@Param('id') id: string, @CurrentUser() user: UserEntity) {
+    return this.reviewService.approve(id, user.id);
+  }
+
+  @Post(':id/reject')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reject a review (admin only)' })
+  @ApiResponse({ status: 200, description: 'Review rejected successfully' })
+  @ApiResponse({ status: 400, description: 'Review is not pending' })
+  async reject(@Param('id') id: string, @CurrentUser() user: UserEntity) {
+    return this.reviewService.reject(id, user.id);
   }
 }
 

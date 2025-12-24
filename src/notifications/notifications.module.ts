@@ -2,12 +2,12 @@ import { Module, forwardRef } from '@nestjs/common';
 
 // Domain
 import { IN_APP_NOTIFICATION_REPOSITORY } from './domain/repositories/in-app-notification.repository';
-import { EMAIL_SENDER } from './domain/ports/email-sender';
 import { NOTIFICATION_REPOSITORY } from './domain/repositories/notification.repository';
 
 // Application
 import { InAppNotificationService } from './application/services/in-app-notification.service';
 import { RequestsNotificationsHandler } from './application/handlers/requests-notifications.handler';
+import { ReviewsNotificationsHandler } from './application/handlers/reviews-notifications.handler';
 import { NotificationPreferencesService } from './application/services/notification-preferences.service';
 import { NotificationService } from './application/services/notification.service';
 import { NotificationRetentionJob } from './application/jobs/notification-retention.job';
@@ -16,7 +16,7 @@ import { NotificationDispatchJob } from './application/jobs/notification-dispatc
 
 // Infrastructure
 import { PrismaInAppNotificationRepository } from './infrastructure/repositories/prisma-in-app-notification.repository';
-import { SmtpEmailSender } from './infrastructure/email/smtp-email-sender';
+import { emailSenderProvider } from './infrastructure/email/email-sender.factory';
 import { PrismaNotificationPreferencesRepository } from './infrastructure/repositories/prisma-notification-preferences.repository';
 import { NOTIFICATION_PREFERENCES_REPOSITORY } from './domain/repositories/notification-preferences.repository';
 import { PrismaNotificationRepository } from './infrastructure/repositories/prisma-notification.repository';
@@ -43,6 +43,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     NotificationDispatchService,
     NotificationDispatchJob,
     RequestsNotificationsHandler,
+    ReviewsNotificationsHandler,
     {
       provide: IN_APP_NOTIFICATION_REPOSITORY,
       useClass: PrismaInAppNotificationRepository,
@@ -55,10 +56,8 @@ import { ProfilesModule } from '../profiles/profiles.module';
       provide: NOTIFICATION_PREFERENCES_REPOSITORY,
       useClass: PrismaNotificationPreferencesRepository,
     },
-    {
-      provide: EMAIL_SENDER,
-      useClass: SmtpEmailSender,
-    },
+    // Dynamic email sender based on EMAIL_PROVIDER env var
+    emailSenderProvider,
     {
       provide: NOTIFICATION_DELIVERY_QUEUE,
       useClass: PrismaNotificationDeliveryQueue,

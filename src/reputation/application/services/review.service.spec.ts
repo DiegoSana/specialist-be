@@ -16,7 +16,9 @@ import {
   createMockRequest,
 } from '../../../__mocks__/test-utils';
 import { ReviewEntity } from '../../domain/entities/review.entity';
+import { ReviewStatus } from '../../domain/value-objects/review-status';
 import { RequestStatus } from '@prisma/client';
+import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
 
 const createMockReview = (overrides?: Partial<ReviewEntity>): ReviewEntity => {
   return new ReviewEntity(
@@ -26,6 +28,9 @@ const createMockReview = (overrides?: Partial<ReviewEntity>): ReviewEntity => {
     overrides?.requestId || 'request-123',
     overrides?.rating || 5,
     overrides?.comment || 'Great service!',
+    overrides?.status || ReviewStatus.PENDING,
+    overrides?.moderatedAt || null,
+    overrides?.moderatedBy || null,
     overrides?.createdAt || new Date(),
     overrides?.updatedAt || new Date(),
   );
@@ -37,12 +42,15 @@ describe('ReviewService', () => {
   let mockProfessionalService: any;
   let mockRequestService: any;
   let mockUserService: any;
+  let mockEventBus: any;
 
   beforeEach(async () => {
     mockReviewRepository = {
       findByProfessionalId: jest.fn(),
+      findApprovedByProfessionalId: jest.fn(),
       findById: jest.fn(),
       findByRequestId: jest.fn(),
+      findByStatus: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
     };
@@ -60,6 +68,11 @@ describe('ReviewService', () => {
       findById: jest.fn(),
     };
 
+    mockEventBus = {
+      emit: jest.fn(),
+      on: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReviewService,
@@ -67,6 +80,7 @@ describe('ReviewService', () => {
         { provide: ProfessionalService, useValue: mockProfessionalService },
         { provide: RequestService, useValue: mockRequestService },
         { provide: UserService, useValue: mockUserService },
+        { provide: EVENT_BUS, useValue: mockEventBus },
       ],
     }).compile();
 

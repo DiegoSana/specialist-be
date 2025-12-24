@@ -47,22 +47,24 @@ export class SmtpEmailSender implements EmailSender {
     const user = this.config.get<string>('NOTIFICATIONS_SMTP_USER');
     const pass = this.config.get<string>('NOTIFICATIONS_SMTP_PASS');
 
-    if (!host || !user || !pass) {
-      throw new Error(
-        'SMTP is not configured (NOTIFICATIONS_SMTP_HOST/USER/PASS)',
-      );
+    if (!host) {
+      throw new Error('SMTP is not configured (NOTIFICATIONS_SMTP_HOST)');
     }
 
-    // For Gmail SMTP, typical setup is:
-    // - host: smtp.gmail.com
-    // - port: 587
-    // - secure: false (STARTTLS)
-    this.transporter = nodemailer.createTransport({
+    // For local Mailpit: no auth required
+    // For Gmail SMTP: host=smtp.gmail.com, port=587, secure=false (STARTTLS)
+    const transportOptions: nodemailer.TransportOptions = {
       host,
       port,
       secure: port === 465,
-      auth: { user, pass },
-    });
+    } as nodemailer.TransportOptions;
+
+    // Only add auth if credentials are provided (Mailpit doesn't need auth)
+    if (user && pass) {
+      (transportOptions as Record<string, unknown>).auth = { user, pass };
+    }
+
+    this.transporter = nodemailer.createTransport(transportOptions);
 
     return this.transporter;
   }

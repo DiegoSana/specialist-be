@@ -21,6 +21,19 @@ services:
     networks:
       - especialistas-network
 
+  # Mailpit - Local email testing server
+  # Web UI: http://localhost:8025
+  # SMTP: localhost:1025
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: especialistas-mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - especialistas-network
+
   app:
     build:
       context: .
@@ -42,14 +55,21 @@ services:
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
       FACEBOOK_CALLBACK_URL: ${FACEBOOK_CALLBACK_URL}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      # Notifications SMTP
-      NOTIFICATIONS_SMTP_HOST: ${NOTIFICATIONS_SMTP_HOST}
-      NOTIFICATIONS_SMTP_PORT: ${NOTIFICATIONS_SMTP_PORT:-587}
-      NOTIFICATIONS_SMTP_USER: ${NOTIFICATIONS_SMTP_USER}
-      NOTIFICATIONS_SMTP_PASS: ${NOTIFICATIONS_SMTP_PASS}
-      NOTIFICATIONS_SMTP_FROM: ${NOTIFICATIONS_SMTP_FROM}
+      # Email provider: 'smtp' | 'mailgun' (default: smtp)
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp}
+      # Notifications SMTP (for smtp provider or mailpit local)
+      # Using localhost because app has network_mode: host
+      NOTIFICATIONS_SMTP_HOST: ${NOTIFICATIONS_SMTP_HOST:-localhost}
+      NOTIFICATIONS_SMTP_PORT: ${NOTIFICATIONS_SMTP_PORT:-1025}
+      NOTIFICATIONS_SMTP_USER: ${NOTIFICATIONS_SMTP_USER:-}
+      NOTIFICATIONS_SMTP_PASS: ${NOTIFICATIONS_SMTP_PASS:-}
+      NOTIFICATIONS_SMTP_FROM: ${NOTIFICATIONS_SMTP_FROM:-noreply@specialist.local}
+      # Mailgun API (for mailgun provider)
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY:-}
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN:-}
+      MAILGUN_FROM: ${MAILGUN_FROM:-}
       # Notifications dispatch
-      NOTIFICATIONS_DISPATCH_ENABLED: ${NOTIFICATIONS_DISPATCH_ENABLED:-false}
+      NOTIFICATIONS_DISPATCH_ENABLED: ${NOTIFICATIONS_DISPATCH_ENABLED:-true}
     depends_on:
       postgres:
         condition: service_healthy

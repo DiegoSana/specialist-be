@@ -11,6 +11,7 @@ import {
   REVIEW_REPOSITORY,
 } from '../../domain/repositories/review.repository';
 import { ReviewEntity } from '../../domain/entities/review.entity';
+import { ReviewStatus } from '../../domain/value-objects/review-status';
 import { CreateReviewDto } from '../dto/create-review.dto';
 import { UpdateReviewDto } from '../dto/update-review.dto';
 import { Rating } from '../../domain/value-objects/rating.vo';
@@ -19,6 +20,8 @@ import { randomUUID } from 'crypto';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { RequestService } from '../../../requests/application/services/request.service';
 import { UserService } from '../../../identity/application/services/user.service';
+import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
+import { ReviewApprovedEvent } from '../../domain/events/review-approved.event';
 
 @Injectable()
 export class ReviewService {
@@ -28,10 +31,15 @@ export class ReviewService {
     private readonly professionalService: ProfessionalService,
     private readonly requestService: RequestService,
     private readonly userService: UserService,
+    @Inject(EVENT_BUS) private readonly eventBus: EventBus,
   ) {}
 
+  /**
+   * Find reviews for a professional (public display).
+   * Only returns APPROVED reviews.
+   */
   async findByProfessionalId(professionalId: string): Promise<ReviewEntity[]> {
-    return this.reviewRepository.findByProfessionalId(professionalId);
+    return this.reviewRepository.findApprovedByProfessionalId(professionalId);
   }
 
   async findById(id: string): Promise<ReviewEntity> {
@@ -99,10 +107,81 @@ export class ReviewService {
       }),
     );
 
-    // Update professional rating
-    await this.updateProfessionalRating(createDto.professionalId);
+    // Note: Rating is NOT updated until review is approved
+    // await this.updateProfessionalRating(createDto.professionalId);
 
     return review;
+  }
+
+  /**
+   * Approve a pending review. Only admins can approve.
+   * This triggers a notification to the professional.
+   */
+  async approve(reviewId: string, moderatorId: string): Promise<ReviewEntity> {
+    const review = await this.findById(reviewId);
+
+    if (!review.isPending()) {
+      throw new BadRequestException('Review is not pending moderation');
+    }
+
+    // Verify moderator is admin
+    const moderator = await this.userService.findById(moderatorId);
+    if (!moderator || !moderator.isAdmin) {
+      throw new ForbiddenException('Only admins can approve reviews');
+    }
+
+    const approvedReview = review.approve(moderatorId);
+    const saved = await this.reviewRepository.save(approvedReview);
+
+    // Now update professional rating (only for approved reviews)
+    await this.updateProfessionalRating(review.professionalId);
+
+    // Get professional to find their userId
+    const professional = await this.professionalService.getByIdOrFail(
+      review.professionalId,
+    );
+
+    // Emit event for notifications
+    await this.eventBus.publish(
+      new ReviewApprovedEvent({
+        reviewId: saved.id,
+        reviewerId: saved.reviewerId,
+        professionalId: saved.professionalId,
+        professionalUserId: professional.userId,
+        rating: saved.rating,
+        comment: saved.comment,
+        moderatorId,
+      }),
+    );
+
+    return saved;
+  }
+
+  /**
+   * Reject a pending review. Only admins can reject.
+   */
+  async reject(reviewId: string, moderatorId: string): Promise<ReviewEntity> {
+    const review = await this.findById(reviewId);
+
+    if (!review.isPending()) {
+      throw new BadRequestException('Review is not pending moderation');
+    }
+
+    // Verify moderator is admin
+    const moderator = await this.userService.findById(moderatorId);
+    if (!moderator || !moderator.isAdmin) {
+      throw new ForbiddenException('Only admins can reject reviews');
+    }
+
+    const rejectedReview = review.reject(moderatorId);
+    return this.reviewRepository.save(rejectedReview);
+  }
+
+  /**
+   * Find all pending reviews for moderation.
+   */
+  async findPending(): Promise<ReviewEntity[]> {
+    return this.reviewRepository.findByStatus(ReviewStatus.PENDING);
   }
 
   async update(
@@ -161,8 +240,10 @@ export class ReviewService {
   private async updateProfessionalRating(
     professionalId: string,
   ): Promise<void> {
-    const reviews =
-      await this.reviewRepository.findByProfessionalId(professionalId);
+    // Only count APPROVED reviews for rating calculation
+    const reviews = await this.reviewRepository.findApprovedByProfessionalId(
+      professionalId,
+    );
 
     if (reviews.length === 0) {
       await this.professionalService.updateRating(professionalId, 0, 0);
