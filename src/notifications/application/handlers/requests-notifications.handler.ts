@@ -60,11 +60,17 @@ export class RequestsNotificationsHandler implements OnModuleInit {
     event: RequestInterestExpressedEvent,
   ): Promise<void> {
     try {
+      const { requestTitle, professionalName } = event.payload;
+      const title = `${professionalName} mostró interés en tu solicitud`;
+      const body = requestTitle
+        ? `"${requestTitle}" - Revisá los especialistas interesados y elegí el que prefieras.`
+        : 'Revisá los especialistas interesados y elegí el que prefieras.';
+
       await this.notifications.createForUser({
         userId: event.payload.clientId,
         type: 'REQUEST_INTEREST_EXPRESSED',
-        title: 'Un especialista está interesado en tu solicitud',
-        body: 'Revisá los especialistas interesados y elegí el que prefieras.',
+        title,
+        body,
         data: {
           requestId: event.payload.requestId,
           professionalId: event.payload.professionalId,
@@ -87,12 +93,17 @@ export class RequestsNotificationsHandler implements OnModuleInit {
       const professional = await this.professionalService.getByIdOrFail(
         event.payload.professionalId,
       );
+      const { requestTitle, clientName } = event.payload;
+      const title = `${clientName} te asignó a una solicitud`;
+      const body = requestTitle
+        ? `"${requestTitle}" - Revisá los detalles de la solicitud.`
+        : 'Revisá los detalles de la solicitud.';
 
       await this.notifications.createForUser({
         userId: professional.userId,
         type: 'REQUEST_PROFESSIONAL_ASSIGNED',
-        title: 'Te asignaron a una solicitud',
-        body: 'El cliente aceptó tu interés. Revisá los detalles de la solicitud.',
+        title,
+        body,
         data: {
           requestId: event.payload.requestId,
           professionalId: event.payload.professionalId,
@@ -112,47 +123,61 @@ export class RequestsNotificationsHandler implements OnModuleInit {
     event: RequestStatusChangedEvent,
   ): Promise<void> {
     try {
-      // Rule (given): every status change notifies (in-app + external later)
-      // For now, we generate in-app notifications.
-      const title = 'Actualización de tu solicitud';
-      const body = this.statusChangeBody(
-        event.payload.fromStatus,
-        event.payload.toStatus,
-      );
+      const {
+        requestTitle,
+        clientName,
+        professionalName,
+        changedByUserId,
+        toStatus,
+      } = event.payload;
+      const clientMadeChange = changedByUserId === event.payload.clientId;
+      const statusLabel = this.statusLabel(toStatus);
+      const requestRef = requestTitle ? `"${requestTitle}"` : 'la solicitud';
+
+      // Notification for client
+      const clientTitle = clientMadeChange
+        ? `Moviste ${requestRef} a "${statusLabel}"`
+        : `${professionalName || 'El especialista'} movió ${requestRef} a "${statusLabel}"`;
 
       await this.notifications.createForUser({
         userId: event.payload.clientId,
         type: 'REQUEST_STATUS_CHANGED',
-        title,
-        body,
+        title: clientTitle,
+        body: this.statusChangeBody(toStatus, clientMadeChange),
         data: {
           requestId: event.payload.requestId,
           fromStatus: event.payload.fromStatus,
           toStatus: event.payload.toStatus,
         },
         idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.clientId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
-        includeExternal: true,
-        requireExternal: true,
+        includeExternal: !clientMadeChange,
+        requireExternal: !clientMadeChange,
       });
 
-      // If there's an assigned professional, notify them too.
+      // Notification for professional (if assigned)
       if (event.payload.professionalId) {
         const professional = await this.professionalService.getByIdOrFail(
           event.payload.professionalId,
         );
+        const professionalMadeChange = changedByUserId === professional.userId;
+
+        const profTitle = professionalMadeChange
+          ? `Moviste ${requestRef} a "${statusLabel}"`
+          : `${clientName} movió ${requestRef} a "${statusLabel}"`;
+
         await this.notifications.createForUser({
           userId: professional.userId,
           type: 'REQUEST_STATUS_CHANGED',
-          title: 'Actualización de una solicitud asignada',
-          body,
+          title: profTitle,
+          body: this.statusChangeBody(toStatus, professionalMadeChange),
           data: {
             requestId: event.payload.requestId,
             fromStatus: event.payload.fromStatus,
             toStatus: event.payload.toStatus,
           },
           idempotencyKey: `${event.name}:${event.payload.requestId}:${professional.userId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
-          includeExternal: true,
-          requireExternal: true,
+          includeExternal: !professionalMadeChange,
+          requireExternal: !professionalMadeChange,
         });
       }
     } catch (err) {
@@ -163,19 +188,32 @@ export class RequestsNotificationsHandler implements OnModuleInit {
     }
   }
 
-  private statusChangeBody(from: RequestStatus, to: RequestStatus): string {
-    if (to === RequestStatus.ACCEPTED) {
-      return 'La solicitud fue aceptada.';
+  private statusLabel(status: RequestStatus): string {
+    const labels: Record<RequestStatus, string> = {
+      [RequestStatus.PENDING]: 'Pendiente',
+      [RequestStatus.ACCEPTED]: 'Aceptada',
+      [RequestStatus.IN_PROGRESS]: 'En progreso',
+      [RequestStatus.DONE]: 'Finalizada',
+      [RequestStatus.CANCELLED]: 'Cancelada',
+    };
+    return labels[status] || status;
+  }
+
+  private statusChangeBody(status: RequestStatus, selfAction: boolean): string {
+    if (selfAction) {
+      // User made the change themselves
+      return '';
     }
-    if (to === RequestStatus.IN_PROGRESS) {
-      return 'La solicitud está en progreso.';
+    // Someone else made the change
+    if (status === RequestStatus.IN_PROGRESS) {
+      return 'El trabajo ha comenzado.';
     }
-    if (to === RequestStatus.DONE) {
-      return 'La solicitud se marcó como finalizada.';
+    if (status === RequestStatus.DONE) {
+      return '¡El trabajo está completo!';
     }
-    if (to === RequestStatus.CANCELLED) {
+    if (status === RequestStatus.CANCELLED) {
       return 'La solicitud fue cancelada.';
     }
-    return `La solicitud cambió de estado: ${from} → ${to}.`;
+    return '';
   }
 }

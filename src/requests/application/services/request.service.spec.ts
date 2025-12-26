@@ -68,6 +68,7 @@ describe('RequestService', () => {
       const directRequestDto = {
         isPublic: false,
         professionalId: 'prof-123',
+        title: 'Electrical work needed',
         description: 'Need help with electrical work',
         address: 'Test Address 123',
       };
@@ -132,6 +133,7 @@ describe('RequestService', () => {
         await expect(
           service.create('client-123', {
             isPublic: false,
+            title: 'Test',
             description: 'Test',
           }),
         ).rejects.toThrow(BadRequestException);
@@ -170,6 +172,7 @@ describe('RequestService', () => {
       const publicRequestDto = {
         isPublic: true,
         tradeId: 'trade-123',
+        title: 'Electrician needed',
         description: 'Looking for an electrician',
       };
 
@@ -214,7 +217,11 @@ describe('RequestService', () => {
         mockUserService.findById.mockResolvedValue(client);
 
         await expect(
-          service.create('client-123', { isPublic: true, description: 'Test' }),
+          service.create('client-123', {
+            isPublic: true,
+            title: 'Test',
+            description: 'Test',
+          }),
         ).rejects.toThrow(BadRequestException);
       });
     });

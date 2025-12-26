@@ -7,6 +7,7 @@ export class RequestEntity {
     professionalId: string | null;
     tradeId: string | null;
     isPublic: boolean;
+    title: string;
     description: string;
     address: string | null;
     availability: string | null;
@@ -20,6 +21,7 @@ export class RequestEntity {
       params.professionalId,
       params.tradeId,
       params.isPublic,
+      params.title,
       params.description,
       params.address,
       params.availability,
@@ -40,6 +42,7 @@ export class RequestEntity {
     public readonly professionalId: string | null,
     public readonly tradeId: string | null,
     public readonly isPublic: boolean,
+    public readonly title: string,
     public readonly description: string,
     public readonly address: string | null,
     public readonly availability: string | null,
@@ -85,6 +88,7 @@ export class RequestEntity {
     professionalId?: string | null;
     tradeId?: string | null;
     isPublic?: boolean;
+    title?: string;
     description?: string;
     address?: string | null;
     availability?: string | null;
@@ -105,6 +109,7 @@ export class RequestEntity {
         : this.professionalId,
       changes.tradeId !== undefined ? changes.tradeId : this.tradeId,
       changes.isPublic !== undefined ? changes.isPublic : this.isPublic,
+      changes.title !== undefined ? changes.title : this.title,
       changes.description !== undefined
         ? changes.description
         : this.description,

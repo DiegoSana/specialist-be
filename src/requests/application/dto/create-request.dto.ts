@@ -37,7 +37,12 @@ export class CreateRequestDto {
   @IsBoolean()
   isPublic?: boolean;
 
-  @ApiProperty({ example: 'I need electrical work done in my house...' })
+  @ApiProperty({ example: 'Reparación de cañería en baño' })
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @ApiProperty({ example: 'Tengo una pérdida de agua en el baño principal...' })
   @IsString()
   @IsNotEmpty()
   description: string;
