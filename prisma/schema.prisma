@@ -111,6 +111,7 @@ model Request {
   professionalId String?       // Optional for public requests
   tradeId        String?       // Trade for public requests
   isPublic       Boolean       @default(false)
+  title          String        @default("")
   description    String
   address        String?
   availability   String?

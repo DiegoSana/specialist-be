@@ -2,8 +2,10 @@ import { DomainEvent } from '../../../shared/domain/events/domain-event';
 
 export type RequestInterestExpressedPayload = {
   requestId: string;
+  requestTitle: string;
   clientId: string;
   professionalId: string;
+  professionalName: string;
 };
 
 export class RequestInterestExpressedEvent

@@ -159,6 +159,7 @@ export const createMockRequest = (
     professionalId: string | null;
     tradeId: string | null;
     isPublic: boolean;
+    title: string;
     description: string;
     address: string | null;
     availability: string | null;
@@ -178,6 +179,7 @@ export const createMockRequest = (
     professionalId: 'professional-123',
     tradeId: 'trade-123',
     isPublic: false,
+    title: 'Test Request Title',
     description: 'Test description',
     address: 'Test Address 123',
     availability: 'Monday to Friday',
@@ -198,6 +200,7 @@ export const createMockRequest = (
     defaults.professionalId,
     defaults.tradeId,
     defaults.isPublic,
+    defaults.title,
     defaults.description,
     defaults.address,
     defaults.availability,

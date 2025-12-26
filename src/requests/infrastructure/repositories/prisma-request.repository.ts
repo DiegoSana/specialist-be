@@ -151,6 +151,7 @@ export class PrismaRequestRepository implements RequestRepository {
       professionalId: request.professionalId,
       tradeId: request.tradeId,
       isPublic: request.isPublic,
+      title: request.title,
       description: request.description,
       address: request.address,
       availability: request.availability,

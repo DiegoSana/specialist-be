@@ -2,7 +2,9 @@ import { DomainEvent } from '../../../shared/domain/events/domain-event';
 
 export type RequestProfessionalAssignedPayload = {
   requestId: string;
+  requestTitle: string;
   clientId: string;
+  clientName: string;
   professionalId: string;
 };
 

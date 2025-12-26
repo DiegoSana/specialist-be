@@ -72,6 +72,7 @@ export class RequestService {
         professionalId: isPublic ? null : createDto.professionalId!,
         tradeId: createDto.tradeId || null,
         isPublic,
+        title: createDto.title,
         description: createDto.description,
         address: createDto.address || null,
         availability: createDto.availability || null,
@@ -159,13 +160,24 @@ export class RequestService {
     );
 
     if (updateDto.status && updateDto.status !== fromStatus) {
+      // Get names for notification
+      const client = (saved as any).client;
+      const prof = (saved as any).professional;
       await this.eventBus.publish(
         new RequestStatusChangedEvent({
           requestId: saved.id,
+          requestTitle: saved.title,
           clientId: saved.clientId,
+          clientName: client
+            ? `${client.firstName} ${client.lastName}`
+            : 'Cliente',
           professionalId: saved.professionalId,
+          professionalName: prof?.user
+            ? `${prof.user.firstName} ${prof.user.lastName}`
+            : null,
           fromStatus,
           toStatus: saved.status,
+          changedByUserId: userId,
         }),
       );
     }
@@ -201,13 +213,24 @@ export class RequestService {
     );
 
     if (saved.status !== fromStatus) {
+      // Get names for notification
+      const client = (saved as any).client;
+      const prof = (saved as any).professional;
       await this.eventBus.publish(
         new RequestStatusChangedEvent({
           requestId: saved.id,
+          requestTitle: saved.title,
           clientId: saved.clientId,
+          clientName: client
+            ? `${client.firstName} ${client.lastName}`
+            : 'Cliente',
           professionalId: saved.professionalId,
+          professionalName: prof?.user
+            ? `${prof.user.firstName} ${prof.user.lastName}`
+            : null,
           fromStatus,
           toStatus: saved.status,
+          changedByUserId: userId,
         }),
       );
     }
@@ -260,13 +283,24 @@ export class RequestService {
     );
 
     if (updateDto.status && updateDto.status !== fromStatus) {
+      // Get names for notification
+      const client = (saved as any).client;
+      const prof = (saved as any).professional;
       await this.eventBus.publish(
         new RequestStatusChangedEvent({
           requestId: saved.id,
+          requestTitle: saved.title,
           clientId: saved.clientId,
+          clientName: client
+            ? `${client.firstName} ${client.lastName}`
+            : 'Cliente',
           professionalId: saved.professionalId,
+          professionalName: prof?.user
+            ? `${prof.user.firstName} ${prof.user.lastName}`
+            : null,
           fromStatus,
           toStatus: saved.status,
+          changedByUserId: userId,
         }),
       );
     }

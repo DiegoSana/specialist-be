@@ -105,8 +105,12 @@ export class RequestInterestService {
     await this.eventBus.publish(
       new RequestInterestExpressedEvent({
         requestId,
+        requestTitle: request.title,
         clientId: request.clientId,
         professionalId: professional.id,
+        professionalName: professional.user
+          ? `${professional.user.firstName} ${professional.user.lastName}`
+          : 'Especialista',
       }),
     );
 
@@ -244,10 +248,19 @@ export class RequestInterestService {
     // Clean up all interests for this request
     await this.requestInterestRepository.removeAllByRequestId(requestId);
 
+    // Get names for notifications
+    const client = (updatedRequest as any).client;
+    const prof = (updatedRequest as any).professional;
+    const clientName = client
+      ? `${client.firstName} ${client.lastName}`
+      : 'Cliente';
+
     await this.eventBus.publish(
       new RequestProfessionalAssignedEvent({
         requestId: updatedRequest.id,
+        requestTitle: updatedRequest.title,
         clientId: updatedRequest.clientId,
+        clientName,
         professionalId,
       }),
     );
@@ -256,10 +269,16 @@ export class RequestInterestService {
       await this.eventBus.publish(
         new RequestStatusChangedEvent({
           requestId: updatedRequest.id,
+          requestTitle: updatedRequest.title,
           clientId: updatedRequest.clientId,
+          clientName,
           professionalId: updatedRequest.professionalId,
+          professionalName: prof?.user
+            ? `${prof.user.firstName} ${prof.user.lastName}`
+            : null,
           fromStatus,
           toStatus: updatedRequest.status,
+          changedByUserId: userId,
         }),
       );
     }

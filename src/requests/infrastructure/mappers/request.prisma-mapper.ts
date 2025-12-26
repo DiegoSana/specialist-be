@@ -9,6 +9,7 @@ export class PrismaRequestMapper {
       request.professionalId,
       request.tradeId,
       request.isPublic,
+      request.title || '',
       request.description,
       request.address,
       request.availability,
@@ -81,6 +82,7 @@ export class PrismaRequestMapper {
     professionalId: string | null;
     tradeId: string | null;
     isPublic: boolean;
+    title: string;
     description: string;
     address: string | null;
     availability: string | null;
@@ -94,6 +96,7 @@ export class PrismaRequestMapper {
       professionalId: input.professionalId,
       tradeId: input.tradeId,
       isPublic: input.isPublic,
+      title: input.title,
       description: input.description,
       address: input.address,
       availability: input.availability,
@@ -109,6 +112,7 @@ export class PrismaRequestMapper {
   ): Record<string, unknown> {
     const updateData: Record<string, unknown> = {};
 
+    if (partial.title !== undefined) updateData.title = partial.title;
     if (partial.description !== undefined)
       updateData.description = partial.description;
     if (partial.status !== undefined) updateData.status = partial.status;
