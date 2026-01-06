@@ -10,7 +10,7 @@
 |--------|----------|-------|-------------|
 | Requests | ✅ | ✅ | ⬜ |
 | Request Interest | ✅ | ✅ | ⬜ |
-| Reviews | ⬜ | ✅ | ⬜ |
+| Reviews | ✅ | ✅ | ⬜ |
 | Notifications | ⬜ | ✅ | ⬜ |
 | Profiles | ⬜ | ✅ | ⬜ |
 | Identity | ⬜ | ✅ | ⬜ |
@@ -37,14 +37,26 @@
   - [x] Soporte para Admin en todos los permisos
   - [x] Actualizar tests
 
-### ⬜ Pendiente
+### ✅ Completado
 
-- [ ] **Reviews Module**
-  - [ ] Crear `ReviewAuthContext` o reutilizar patrón
-  - [ ] Agregar `canBeModeratedBy(ctx)` a `ReviewEntity`
-  - [ ] Agregar `canBeViewedBy(ctx)` para reviews pendientes
-  - [ ] Refactorizar `ReviewService`
-  - [ ] Actualizar `ReviewsController`
+- [x] **Requests Module** (completado anteriormente)
+
+- [x] **Reviews Module**
+  - [x] Crear `ReviewAuthContext` interface en dominio
+  - [x] Agregar métodos de autorización a `ReviewEntity`:
+    - `canBeViewedBy(ctx)` - APPROVED: público, PENDING/REJECTED: solo reviewer + admin
+    - `canBeModifiedBy(ctx)` - solo reviewer y solo si PENDING
+    - `canBeModeratedBy(ctx)` - solo admins y solo si PENDING
+  - [x] Agregar `buildAuthContext()` helper a entidad
+  - [x] Refactorizar `ReviewService`:
+    - `findByIdForUser()` - con validación de permisos
+    - `findByRequestIdForUser()` - con validación de permisos
+    - `update()` / `delete()` - valida canBeModifiedBy
+    - `approve()` / `reject()` - valida canBeModeratedBy
+  - [x] Actualizar `ReviewsController`
+  - [x] Actualizar tests (37 tests pasando)
+
+### ⬜ Pendiente
 
 - [ ] **Notifications Module**
   - [ ] Verificar que usuarios solo vean sus notificaciones

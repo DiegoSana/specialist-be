@@ -1,5 +1,14 @@
 import { ReviewStatus } from '../value-objects/review-status';
 
+/**
+ * Authorization context for review operations
+ */
+export interface ReviewAuthContext {
+  userId: string;
+  isAdmin: boolean;
+  isReviewer: boolean; // Is the user the one who created this review?
+}
+
 export class ReviewEntity {
   static create(params: {
     id: string;
@@ -110,5 +119,62 @@ export class ReviewEntity {
       this.createdAt,
       moderatedAt,
     );
+  }
+
+  // ========== Authorization Methods ==========
+
+  /**
+   * Build auth context from user data
+   */
+  buildAuthContext(userId: string, isAdmin: boolean): ReviewAuthContext {
+    return {
+      userId,
+      isAdmin,
+      isReviewer: this.reviewerId === userId,
+    };
+  }
+
+  /**
+   * Who can view this review?
+   * - APPROVED reviews: anyone (public)
+   * - PENDING reviews: reviewer + admins
+   * - REJECTED reviews: reviewer + admins
+   */
+  canBeViewedBy(ctx: ReviewAuthContext): boolean {
+    // Approved reviews are public
+    if (this.isApproved()) {
+      return true;
+    }
+
+    // Pending or rejected: only reviewer or admin
+    return ctx.isReviewer || ctx.isAdmin;
+  }
+
+  /**
+   * Who can modify (update/delete) this review?
+   * - Only the reviewer who created it
+   * - Only if still PENDING (once approved/rejected, cannot modify)
+   */
+  canBeModifiedBy(ctx: ReviewAuthContext): boolean {
+    // Must be the reviewer
+    if (!ctx.isReviewer) {
+      return false;
+    }
+
+    // Can only modify pending reviews
+    return this.isPending();
+  }
+
+  /**
+   * Who can moderate (approve/reject) this review?
+   * - Only admins
+   * - Only if PENDING
+   */
+  canBeModeratedBy(ctx: ReviewAuthContext): boolean {
+    if (!ctx.isAdmin) {
+      return false;
+    }
+
+    return this.isPending();
   }
 }

@@ -313,26 +313,89 @@ describe('ReviewService', () => {
     });
   });
 
+  describe('findByIdForUser', () => {
+    it('should return approved review for any user', async () => {
+      const review = createMockReview({
+        reviewerId: 'other-user',
+        status: ReviewStatus.APPROVED,
+      });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
+
+      const result = await service.findByIdForUser('review-123', 'user-123');
+
+      expect(result).toEqual(review);
+    });
+
+    it('should return pending review for the reviewer', async () => {
+      const review = createMockReview({
+        reviewerId: 'user-123',
+        status: ReviewStatus.PENDING,
+      });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
+
+      const result = await service.findByIdForUser('review-123', 'user-123');
+
+      expect(result).toEqual(review);
+    });
+
+    it('should return pending review for admin', async () => {
+      const review = createMockReview({
+        reviewerId: 'other-user',
+        status: ReviewStatus.PENDING,
+      });
+      const admin = createMockUser({ id: 'admin-123', isAdmin: true });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(admin);
+
+      const result = await service.findByIdForUser('review-123', 'admin-123');
+
+      expect(result).toEqual(review);
+    });
+
+    it('should throw ForbiddenException for pending review by non-owner', async () => {
+      const review = createMockReview({
+        reviewerId: 'other-user',
+        status: ReviewStatus.PENDING,
+      });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
+
+      await expect(
+        service.findByIdForUser('review-123', 'user-123'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
   describe('update', () => {
     const updateDto = {
       rating: 4,
       comment: 'Updated comment',
     };
 
-    it('should update review successfully', async () => {
-      const review = createMockReview({ reviewerId: 'user-123' });
+    it('should update pending review by owner', async () => {
+      const review = createMockReview({
+        reviewerId: 'user-123',
+        status: ReviewStatus.PENDING,
+      });
       const updatedReview = createMockReview({
         ...review,
         rating: 4,
         comment: 'Updated comment',
       });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
 
       mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
       mockReviewRepository.save.mockResolvedValue(updatedReview);
-      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([
-        updatedReview,
-      ]);
-      mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       const result = await service.update('review-123', 'user-123', updateDto);
 
@@ -349,23 +412,46 @@ describe('ReviewService', () => {
     });
 
     it('should throw ForbiddenException if user is not review owner', async () => {
-      const review = createMockReview({ reviewerId: 'other-user' });
+      const review = createMockReview({
+        reviewerId: 'other-user',
+        status: ReviewStatus.PENDING,
+      });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
       mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
 
       await expect(
         service.update('review-123', 'user-123', updateDto),
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should update only rating', async () => {
-      const review = createMockReview({ reviewerId: 'user-123' });
-      const updatedReview = createMockReview({ ...review, rating: 3 });
+    it('should throw BadRequestException if review is already approved', async () => {
+      const review = createMockReview({
+        reviewerId: 'user-123',
+        status: ReviewStatus.APPROVED,
+      });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
 
       mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
+
+      await expect(
+        service.update('review-123', 'user-123', updateDto),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should update only rating', async () => {
+      const review = createMockReview({
+        reviewerId: 'user-123',
+        status: ReviewStatus.PENDING,
+      });
+      const updatedReview = createMockReview({ ...review, rating: 3 });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
       mockReviewRepository.save.mockResolvedValue(updatedReview);
-      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([
-        updatedReview,
-      ]);
 
       await service.update('review-123', 'user-123', { rating: 3 });
 
@@ -373,17 +459,19 @@ describe('ReviewService', () => {
     });
 
     it('should update only comment', async () => {
-      const review = createMockReview({ reviewerId: 'user-123' });
+      const review = createMockReview({
+        reviewerId: 'user-123',
+        status: ReviewStatus.PENDING,
+      });
       const updatedReview = createMockReview({
         ...review,
         comment: 'New comment',
       });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
 
       mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
       mockReviewRepository.save.mockResolvedValue(updatedReview);
-      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([
-        updatedReview,
-      ]);
 
       await service.update('review-123', 'user-123', {
         comment: 'New comment',
@@ -394,10 +482,15 @@ describe('ReviewService', () => {
   });
 
   describe('delete', () => {
-    it('should delete review successfully', async () => {
-      const review = createMockReview({ reviewerId: 'user-123' });
+    it('should delete pending review by owner', async () => {
+      const review = createMockReview({
+        reviewerId: 'user-123',
+        status: ReviewStatus.PENDING,
+      });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
 
       mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
       mockReviewRepository.delete.mockResolvedValue(undefined);
       mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([]);
       mockProfessionalService.updateRating.mockResolvedValue(undefined);
@@ -421,11 +514,32 @@ describe('ReviewService', () => {
     });
 
     it('should throw ForbiddenException if user is not review owner', async () => {
-      const review = createMockReview({ reviewerId: 'other-user' });
+      const review = createMockReview({
+        reviewerId: 'other-user',
+        status: ReviewStatus.PENDING,
+      });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
       mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
 
       await expect(service.delete('review-123', 'user-123')).rejects.toThrow(
         ForbiddenException,
+      );
+    });
+
+    it('should throw BadRequestException if review is already approved', async () => {
+      const review = createMockReview({
+        reviewerId: 'user-123',
+        status: ReviewStatus.APPROVED,
+      });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
+
+      await expect(service.delete('review-123', 'user-123')).rejects.toThrow(
+        BadRequestException,
       );
     });
 
@@ -433,13 +547,16 @@ describe('ReviewService', () => {
       const review = createMockReview({
         reviewerId: 'user-123',
         professionalId: 'prof-123',
+        status: ReviewStatus.PENDING,
       });
       const remainingReviews = [
-        createMockReview({ rating: 4 }),
-        createMockReview({ rating: 5 }),
+        createMockReview({ rating: 4, status: ReviewStatus.APPROVED }),
+        createMockReview({ rating: 5, status: ReviewStatus.APPROVED }),
       ];
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
 
       mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
       mockReviewRepository.delete.mockResolvedValue(undefined);
       mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue(
         remainingReviews,
@@ -452,6 +569,92 @@ describe('ReviewService', () => {
         4.5,
         2,
       );
+    });
+  });
+
+  describe('approve', () => {
+    it('should approve pending review by admin', async () => {
+      const review = createMockReview({ status: ReviewStatus.PENDING });
+      const admin = createMockUser({ id: 'admin-123', isAdmin: true });
+      const professional = createMockProfessional();
+      const approvedReview = review.approve('admin-123');
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(admin);
+      mockReviewRepository.save.mockResolvedValue(approvedReview);
+      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([
+        approvedReview,
+      ]);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+
+      const result = await service.approve('review-123', 'admin-123');
+
+      expect(result.status).toBe(ReviewStatus.APPROVED);
+      expect(mockEventBus.publish).toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException if user is not admin', async () => {
+      const review = createMockReview({ status: ReviewStatus.PENDING });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
+
+      await expect(
+        service.approve('review-123', 'user-123'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException if review is not pending', async () => {
+      const review = createMockReview({ status: ReviewStatus.APPROVED });
+      const admin = createMockUser({ id: 'admin-123', isAdmin: true });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(admin);
+
+      await expect(
+        service.approve('review-123', 'admin-123'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('reject', () => {
+    it('should reject pending review by admin', async () => {
+      const review = createMockReview({ status: ReviewStatus.PENDING });
+      const admin = createMockUser({ id: 'admin-123', isAdmin: true });
+      const rejectedReview = review.reject('admin-123');
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(admin);
+      mockReviewRepository.save.mockResolvedValue(rejectedReview);
+
+      const result = await service.reject('review-123', 'admin-123');
+
+      expect(result.status).toBe(ReviewStatus.REJECTED);
+    });
+
+    it('should throw ForbiddenException if user is not admin', async () => {
+      const review = createMockReview({ status: ReviewStatus.PENDING });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
+
+      await expect(
+        service.reject('review-123', 'user-123'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException if review is not pending', async () => {
+      const review = createMockReview({ status: ReviewStatus.REJECTED });
+      const admin = createMockUser({ id: 'admin-123', isAdmin: true });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(admin);
+
+      await expect(
+        service.reject('review-123', 'admin-123'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });
