@@ -11,6 +11,7 @@
 - [**ARCHITECTURE.md**](./architecture/ARCHITECTURE.md) - System architecture and bounded contexts
 - [**DOMAIN_MODEL.md**](./architecture/DOMAIN_MODEL.md) - Domain entities and relationships
 - [**ROLES_ARCHITECTURE.md**](./architecture/ROLES_ARCHITECTURE.md) - User roles and permissions
+- [**AUTHORIZATION_PATTERN.md**](./architecture/AUTHORIZATION_PATTERN.md) - Hybrid Service + Domain permission validation ⭐
 - [**STORAGE_IMPLEMENTATION.md**](./architecture/STORAGE_IMPLEMENTATION.md) - File storage system design
 
 ### Guides

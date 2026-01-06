@@ -199,7 +199,8 @@ Controller → Request DTO → Service → Domain Entity → Response DTO → Cl
 
 ## 📚 Documentación Pendiente
 
-- [ ] Documentar patrón de autorización `AuthContext` + métodos de dominio
+- [x] Documentar patrón de autorización `AuthContext` + métodos de dominio
+  - Creado `docs/architecture/AUTHORIZATION_PATTERN.md`
 - [ ] Actualizar README con nuevos endpoints
 - [ ] Documentar flujos de permisos por rol (Cliente, Especialista, Admin)
 - [ ] Agregar diagramas de estado de Request
