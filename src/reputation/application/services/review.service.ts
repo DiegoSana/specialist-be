@@ -10,7 +10,10 @@ import {
   ReviewRepository,
   REVIEW_REPOSITORY,
 } from '../../domain/repositories/review.repository';
-import { ReviewEntity } from '../../domain/entities/review.entity';
+import {
+  ReviewEntity,
+  ReviewAuthContext,
+} from '../../domain/entities/review.entity';
 import { ReviewStatus } from '../../domain/value-objects/review-status';
 import { CreateReviewDto } from '../dto/create-review.dto';
 import { UpdateReviewDto } from '../dto/update-review.dto';
@@ -35,6 +38,18 @@ export class ReviewService {
   ) {}
 
   /**
+   * Build authorization context for a user
+   */
+  async buildAuthContext(
+    review: ReviewEntity,
+    userId: string,
+  ): Promise<ReviewAuthContext> {
+    const user = await this.userService.findById(userId);
+    const isAdmin = user?.isAdmin ?? false;
+    return review.buildAuthContext(userId, isAdmin);
+  }
+
+  /**
    * Find reviews for a professional (public display).
    * Only returns APPROVED reviews.
    */
@@ -42,6 +57,9 @@ export class ReviewService {
     return this.reviewRepository.findApprovedByProfessionalId(professionalId);
   }
 
+  /**
+   * Find review by ID (internal use, no permission check)
+   */
   async findById(id: string): Promise<ReviewEntity> {
     const review = await this.reviewRepository.findById(id);
     if (!review) {
@@ -50,8 +68,44 @@ export class ReviewService {
     return review;
   }
 
+  /**
+   * Find review by ID with permission validation
+   */
+  async findByIdForUser(id: string, userId: string): Promise<ReviewEntity> {
+    const review = await this.findById(id);
+    const ctx = await this.buildAuthContext(review, userId);
+
+    if (!review.canBeViewedBy(ctx)) {
+      throw new ForbiddenException('You do not have permission to view this review');
+    }
+
+    return review;
+  }
+
   async findByRequestId(requestId: string): Promise<ReviewEntity | null> {
     return this.reviewRepository.findByRequestId(requestId);
+  }
+
+  /**
+   * Find review by request ID with permission validation
+   */
+  async findByRequestIdForUser(
+    requestId: string,
+    userId: string,
+  ): Promise<ReviewEntity | null> {
+    const review = await this.findByRequestId(requestId);
+    if (!review) {
+      return null;
+    }
+
+    const ctx = await this.buildAuthContext(review, userId);
+    if (!review.canBeViewedBy(ctx)) {
+      throw new ForbiddenException(
+        'You do not have permission to view this review',
+      );
+    }
+
+    return review;
   }
 
   async create(
@@ -119,15 +173,13 @@ export class ReviewService {
    */
   async approve(reviewId: string, moderatorId: string): Promise<ReviewEntity> {
     const review = await this.findById(reviewId);
+    const ctx = await this.buildAuthContext(review, moderatorId);
 
-    if (!review.isPending()) {
+    if (!review.canBeModeratedBy(ctx)) {
+      if (!ctx.isAdmin) {
+        throw new ForbiddenException('Only admins can approve reviews');
+      }
       throw new BadRequestException('Review is not pending moderation');
-    }
-
-    // Verify moderator is admin
-    const moderator = await this.userService.findById(moderatorId);
-    if (!moderator || !moderator.isAdmin) {
-      throw new ForbiddenException('Only admins can approve reviews');
     }
 
     const approvedReview = review.approve(moderatorId);
@@ -162,15 +214,13 @@ export class ReviewService {
    */
   async reject(reviewId: string, moderatorId: string): Promise<ReviewEntity> {
     const review = await this.findById(reviewId);
+    const ctx = await this.buildAuthContext(review, moderatorId);
 
-    if (!review.isPending()) {
+    if (!review.canBeModeratedBy(ctx)) {
+      if (!ctx.isAdmin) {
+        throw new ForbiddenException('Only admins can reject reviews');
+      }
       throw new BadRequestException('Review is not pending moderation');
-    }
-
-    // Verify moderator is admin
-    const moderator = await this.userService.findById(moderatorId);
-    if (!moderator || !moderator.isAdmin) {
-      throw new ForbiddenException('Only admins can reject reviews');
     }
 
     const rejectedReview = review.reject(moderatorId);
@@ -186,16 +236,19 @@ export class ReviewService {
 
   async update(
     id: string,
-    reviewerId: string,
+    userId: string,
     updateDto: UpdateReviewDto,
   ): Promise<ReviewEntity> {
-    const review = await this.reviewRepository.findById(id);
-    if (!review) {
-      throw new NotFoundException('Review not found');
-    }
+    const review = await this.findById(id);
+    const ctx = await this.buildAuthContext(review, userId);
 
-    if (review.reviewerId !== reviewerId) {
-      throw new ForbiddenException('You can only update your own reviews');
+    if (!review.canBeModifiedBy(ctx)) {
+      if (!ctx.isReviewer) {
+        throw new ForbiddenException('You can only update your own reviews');
+      }
+      throw new BadRequestException(
+        'Cannot modify review after it has been moderated',
+      );
     }
 
     const updateData: { rating?: number; comment?: string | null } = {};
@@ -213,27 +266,30 @@ export class ReviewService {
       review.withChanges(updateData),
     );
 
-    // Update professional rating
-    await this.updateProfessionalRating(review.professionalId);
+    // Note: Don't update rating yet since review is still pending
+    // Rating is only updated when approved
 
     return updatedReview;
   }
 
-  async delete(id: string, reviewerId: string): Promise<void> {
-    const review = await this.reviewRepository.findById(id);
-    if (!review) {
-      throw new NotFoundException('Review not found');
-    }
+  async delete(id: string, userId: string): Promise<void> {
+    const review = await this.findById(id);
+    const ctx = await this.buildAuthContext(review, userId);
 
-    if (review.reviewerId !== reviewerId) {
-      throw new ForbiddenException('You can only delete your own reviews');
+    if (!review.canBeModifiedBy(ctx)) {
+      if (!ctx.isReviewer) {
+        throw new ForbiddenException('You can only delete your own reviews');
+      }
+      throw new BadRequestException(
+        'Cannot delete review after it has been moderated',
+      );
     }
 
     const professionalId = review.professionalId;
 
     await this.reviewRepository.delete(id);
 
-    // Update professional rating
+    // Update professional rating (in case it was approved and we're allowing admin delete)
     await this.updateProfessionalRating(professionalId);
   }
 

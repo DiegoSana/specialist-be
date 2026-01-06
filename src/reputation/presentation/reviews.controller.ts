@@ -51,9 +51,10 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get review by ID' })
   @ApiResponse({ status: 200, description: 'Review details' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Review not found' })
-  async findById(@Param('id') id: string) {
-    return this.reviewService.findById(id);
+  async findById(@Param('id') id: string, @CurrentUser() user: UserEntity) {
+    return this.reviewService.findByIdForUser(id, user.id);
   }
 
   @Get()
@@ -62,9 +63,16 @@ export class ReviewsController {
   @ApiOperation({ summary: 'Get review by request ID' })
   @ApiQuery({ name: 'requestId', required: true })
   @ApiResponse({ status: 200, description: 'Review details' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Review not found' })
-  async findByRequestId(@Query('requestId') requestId: string) {
-    const review = await this.reviewService.findByRequestId(requestId);
+  async findByRequestId(
+    @Query('requestId') requestId: string,
+    @CurrentUser() user: UserEntity,
+  ) {
+    const review = await this.reviewService.findByRequestIdForUser(
+      requestId,
+      user.id,
+    );
     if (!review) {
       throw new NotFoundException('Review not found for this request');
     }
