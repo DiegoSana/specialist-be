@@ -15,7 +15,10 @@ import {
   REQUEST_REPOSITORY,
 } from '../../domain/repositories/request.repository';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
-import { RequestEntity } from '../../domain/entities/request.entity';
+import {
+  RequestEntity,
+  RequestAuthContext,
+} from '../../domain/entities/request.entity';
 import { ExpressInterestDto } from '../dto/express-interest.dto';
 import { RequestStatus } from '@prisma/client';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
@@ -39,21 +42,35 @@ export class RequestInterestService {
   ) {}
 
   /**
-   * Specialist expresses interest in a public request
+   * Build auth context from userId
+   */
+  async buildAuthContext(
+    userId: string,
+    isAdmin: boolean = false,
+  ): Promise<RequestAuthContext> {
+    let professionalId: string | null = null;
+
+    try {
+      const professional = await this.professionalService.findByUserId(userId);
+      professionalId = professional?.id ?? null;
+    } catch {
+      // User doesn't have a professional profile
+    }
+
+    return { userId, professionalId, isAdmin };
+  }
+
+  /**
+   * Specialist expresses interest in a public request.
+   * Uses domain entity's canExpressInterestBy for permission validation.
    */
   async expressInterest(
     requestId: string,
-    userId: string,
+    ctx: RequestAuthContext,
     dto: ExpressInterestDto,
   ): Promise<RequestInterestEntity> {
-    // Get professional profile
-    let professional: any;
-    try {
-      professional = await this.professionalService.findByUserId(userId);
-    } catch {
-      throw new ForbiddenException('Only specialists can express interest');
-    }
-    if (!professional) {
+    // Must have a professional profile
+    if (!ctx.professionalId) {
       throw new ForbiddenException('Only specialists can express interest');
     }
 
@@ -63,28 +80,35 @@ export class RequestInterestService {
       throw new NotFoundException('Request not found');
     }
 
-    // Validate request is public and pending
-    if (!request.isPublic) {
-      throw new BadRequestException(
-        'Can only express interest in public requests',
-      );
-    }
-
-    if (request.status !== RequestStatus.PENDING) {
-      throw new BadRequestException('Request is no longer accepting interest');
+    // Validate using domain logic
+    if (!request.canExpressInterestBy(ctx)) {
+      if (!request.isPublic) {
+        throw new BadRequestException(
+          'Can only express interest in public requests',
+        );
+      }
+      if (!request.isPending()) {
+        throw new BadRequestException('Request is no longer accepting interest');
+      }
+      throw new ForbiddenException('Cannot express interest in this request');
     }
 
     // Check if already expressed interest
     const existingInterest =
       await this.requestInterestRepository.findByRequestAndProfessional(
         requestId,
-        professional.id,
+        ctx.professionalId,
       );
     if (existingInterest) {
       throw new BadRequestException(
         'You have already expressed interest in this request',
       );
     }
+
+    // Get professional info (includes user data via findByUserId)
+    const professional = await this.professionalService.findByUserId(
+      ctx.userId,
+    ) as any;
 
     // Validate professional has matching trade
     if (request.tradeId) {
@@ -98,7 +122,7 @@ export class RequestInterestService {
 
     const savedInterest = await this.requestInterestRepository.add({
       requestId,
-      professionalId: professional.id,
+      professionalId: ctx.professionalId,
       message: dto.message || null,
     });
 
@@ -107,7 +131,7 @@ export class RequestInterestService {
         requestId,
         requestTitle: request.title,
         clientId: request.clientId,
-        professionalId: professional.id,
+        professionalId: ctx.professionalId!,
         professionalName: professional.user
           ? `${professional.user.firstName} ${professional.user.lastName}`
           : 'Especialista',
@@ -120,43 +144,42 @@ export class RequestInterestService {
   /**
    * Specialist removes their interest
    */
-  async removeInterest(requestId: string, userId: string): Promise<void> {
-    let professional: any;
-    try {
-      professional = await this.professionalService.findByUserId(userId);
-    } catch {
-      throw new ForbiddenException('Only specialists can remove interest');
-    }
-    if (!professional) {
+  async removeInterest(
+    requestId: string,
+    ctx: RequestAuthContext,
+  ): Promise<void> {
+    if (!ctx.professionalId) {
       throw new ForbiddenException('Only specialists can remove interest');
     }
 
     const interest =
       await this.requestInterestRepository.findByRequestAndProfessional(
         requestId,
-        professional.id,
+        ctx.professionalId,
       );
     if (!interest) {
       throw new NotFoundException('Interest not found');
     }
 
-    await this.requestInterestRepository.remove(requestId, professional.id);
+    await this.requestInterestRepository.remove(requestId, ctx.professionalId);
   }
 
   /**
-   * Get all interested specialists for a request (for client)
+   * Get all interested specialists for a request.
+   * Only client owner or admins can view.
    */
   async getInterestedProfessionals(
     requestId: string,
-    userId: string,
+    ctx: RequestAuthContext,
   ): Promise<RequestInterestEntity[]> {
     const request = await this.requestRepository.findById(requestId);
     if (!request) {
       throw new NotFoundException('Request not found');
     }
 
-    // Only the client can see interested professionals
-    if (request.clientId !== userId) {
+    // Only client owner or admin can see interested professionals
+    const isOwner = request.clientId === ctx.userId;
+    if (!ctx.isAdmin && !isOwner) {
       throw new ForbiddenException(
         'Only the request owner can view interested specialists',
       );
@@ -170,32 +193,27 @@ export class RequestInterestService {
    */
   async hasExpressedInterest(
     requestId: string,
-    userId: string,
+    ctx: RequestAuthContext,
   ): Promise<boolean> {
-    let professional: any;
-    try {
-      professional = await this.professionalService.findByUserId(userId);
-    } catch {
-      return false;
-    }
-    if (!professional) {
+    if (!ctx.professionalId) {
       return false;
     }
 
     const interest =
       await this.requestInterestRepository.findByRequestAndProfessional(
         requestId,
-        professional.id,
+        ctx.professionalId,
       );
     return interest !== null;
   }
 
   /**
-   * Client assigns a specialist to the request
+   * Client assigns a specialist to the request.
+   * Uses domain entity's canAssignProfessionalBy for permission validation.
    */
   async assignProfessional(
     requestId: string,
-    userId: string,
+    ctx: RequestAuthContext,
     professionalId: string,
   ): Promise<RequestEntity> {
     const request = await this.requestRepository.findById(requestId);
@@ -203,23 +221,22 @@ export class RequestInterestService {
       throw new NotFoundException('Request not found');
     }
 
-    // Only the client can assign
-    if (request.clientId !== userId) {
-      throw new ForbiddenException(
-        'Only the request owner can assign a specialist',
-      );
-    }
-
-    // Must be a public request
-    if (!request.isPublic) {
-      throw new BadRequestException(
-        'Can only assign specialists to public requests',
-      );
-    }
-
-    // Must be pending
-    if (request.status !== RequestStatus.PENDING) {
-      throw new BadRequestException('Request is no longer pending');
+    // Validate using domain logic
+    if (!request.canAssignProfessionalBy(ctx)) {
+      if (request.clientId !== ctx.userId && !ctx.isAdmin) {
+        throw new ForbiddenException(
+          'Only the request owner can assign a specialist',
+        );
+      }
+      if (!request.isPublic) {
+        throw new BadRequestException(
+          'Can only assign specialists to public requests',
+        );
+      }
+      if (!request.isPending()) {
+        throw new BadRequestException('Request is no longer pending');
+      }
+      throw new ForbiddenException('Cannot assign professional to this request');
     }
 
     // Verify professional exists and has expressed interest
@@ -278,7 +295,7 @@ export class RequestInterestService {
             : null,
           fromStatus,
           toStatus: updatedRequest.status,
-          changedByUserId: userId,
+          changedByUserId: ctx.userId,
         }),
       );
     }

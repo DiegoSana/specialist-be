@@ -1,5 +1,14 @@
 import { RequestStatus } from '@prisma/client';
 
+/**
+ * Context for authorization checks
+ */
+export interface RequestAuthContext {
+  userId: string;
+  professionalId?: string | null;
+  isAdmin?: boolean;
+}
+
 export class RequestEntity {
   static createPending(params: {
     id: string;
@@ -82,6 +91,146 @@ export class RequestEntity {
 
   isPublicRequest(): boolean {
     return this.isPublic;
+  }
+
+  // ==================== AUTHORIZATION METHODS ====================
+
+  /**
+   * Helper to check if user is the client owner
+   */
+  private isClient(ctx: RequestAuthContext): boolean {
+    return this.clientId === ctx.userId;
+  }
+
+  /**
+   * Helper to check if user is the assigned professional
+   */
+  private isAssignedProfessional(ctx: RequestAuthContext): boolean {
+    return !!(
+      this.professionalId &&
+      ctx.professionalId &&
+      ctx.professionalId === this.professionalId
+    );
+  }
+
+  /**
+   * Determines if a user can view this request.
+   * Rules:
+   * - Admins can view any request
+   * - The client who created the request can view it
+   * - The assigned professional can view it
+   * - Any professional can view available public requests (pending, no professional assigned)
+   */
+  canBeViewedBy(ctx: RequestAuthContext): boolean {
+    if (ctx.isAdmin) return true;
+    if (this.isClient(ctx)) return true;
+    if (this.isAssignedProfessional(ctx)) return true;
+
+    // Available public request (any professional can view to express interest)
+    if (
+      this.isPublic &&
+      this.status === RequestStatus.PENDING &&
+      !this.professionalId &&
+      ctx.professionalId
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Determines if a user can manage photos (add/remove) on this request.
+   * Rules:
+   * - Admins can manage photos on any request
+   * - Client can manage photos on their requests
+   * - Assigned professional can manage photos
+   * - Cannot manage photos on cancelled requests
+   */
+  canManagePhotosBy(ctx: RequestAuthContext): boolean {
+    if (this.isCancelled()) return false;
+    if (ctx.isAdmin) return true;
+    if (this.isClient(ctx)) return true;
+    if (this.isAssignedProfessional(ctx)) return true;
+    return false;
+  }
+
+  /**
+   * Determines if a user can change the status of this request.
+   * Rules:
+   * - Admins can change any status
+   * - Client can: CANCEL (from non-terminal states)
+   * - Assigned professional can: PENDING→ACCEPTED, ACCEPTED→IN_PROGRESS, IN_PROGRESS→DONE
+   */
+  canChangeStatusBy(ctx: RequestAuthContext, newStatus: RequestStatus): boolean {
+    if (ctx.isAdmin) return true;
+
+    // Client permissions
+    if (this.isClient(ctx)) {
+      // Client can cancel from non-terminal states
+      if (newStatus === RequestStatus.CANCELLED) {
+        return !this.isDone() && !this.isCancelled();
+      }
+      return false;
+    }
+
+    // Assigned professional permissions
+    if (this.isAssignedProfessional(ctx)) {
+      // Professional can accept pending direct requests
+      if (this.isPending() && newStatus === RequestStatus.ACCEPTED) {
+        return true;
+      }
+      // Professional can start work on accepted requests
+      if (this.isAccepted() && newStatus === RequestStatus.IN_PROGRESS) {
+        return true;
+      }
+      // Professional can complete in-progress requests
+      if (this.isInProgress() && newStatus === RequestStatus.DONE) {
+        return true;
+      }
+      return false;
+    }
+
+    return false;
+  }
+
+  /**
+   * Determines if a user can rate the client on this request.
+   * Rules:
+   * - Only the assigned professional can rate
+   * - Only after work is done (DONE status)
+   * - Only once (clientRating must be null)
+   */
+  canRateClientBy(ctx: RequestAuthContext): boolean {
+    if (!this.isDone()) return false;
+    if (this.clientRating !== null) return false; // Already rated
+    return this.isAssignedProfessional(ctx);
+  }
+
+  /**
+   * Determines if a professional can express interest in this request.
+   * Rules:
+   * - Must be a public request
+   * - Must be pending
+   * - Must not have an assigned professional yet
+   * - User must have a professional profile
+   */
+  canExpressInterestBy(ctx: RequestAuthContext): boolean {
+    if (!ctx.professionalId) return false;
+    return this.isPublic && this.isPending() && !this.professionalId;
+  }
+
+  /**
+   * Determines if a user can assign a professional to this request.
+   * Rules:
+   * - Admins can assign
+   * - Only the client owner can assign
+   * - Request must be public and pending
+   */
+  canAssignProfessionalBy(ctx: RequestAuthContext): boolean {
+    if (ctx.isAdmin) return true;
+    if (!this.isClient(ctx)) return false;
+    return this.isPublic && this.isPending();
   }
 
   withChanges(changes: {

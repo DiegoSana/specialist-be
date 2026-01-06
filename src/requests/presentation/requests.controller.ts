@@ -105,27 +105,30 @@ export class RequestsController {
   @ApiOperation({ summary: 'Get request by ID' })
   @ApiResponse({ status: 200, description: 'Request details' })
   @ApiResponse({ status: 404, description: 'Request not found' })
-  async findById(@Param('id') id: string) {
-    return this.requestService.findById(id);
+  @ApiResponse({ status: 403, description: 'Access denied' })
+  async findById(@Param('id') id: string, @CurrentUser() user: UserEntity) {
+    const ctx = await this.requestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+    return this.requestService.findByIdForUser(id, ctx);
   }
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update request (status, quote, etc.)' })
+  @ApiOperation({ summary: 'Update request status' })
   @ApiResponse({ status: 200, description: 'Request updated successfully' })
+  @ApiResponse({ status: 403, description: 'Not authorized to update' })
   async update(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
     @Body() updateDto: UpdateRequestDto,
   ) {
-    // Determine if user is client or professional and route accordingly
-    const request = await this.requestService.findById(id);
-
-    if (request.clientId === user.id) {
-      return this.requestService.updateStatusByClient(id, user.id, updateDto);
-    }
-
-    return this.requestService.updateStatus(id, user.id, updateDto);
+    const ctx = await this.requestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+    return this.requestService.updateStatus(id, ctx, updateDto);
   }
 
   // ==================== PHOTOS ====================
@@ -134,24 +137,34 @@ export class RequestsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Add photo to request' })
   @ApiResponse({ status: 201, description: 'Photo added successfully' })
+  @ApiResponse({ status: 403, description: 'Not authorized to add photos' })
   async addPhoto(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
     @Body() body: { url: string },
   ) {
-    return this.requestService.addRequestPhoto(id, user.id, body.url);
+    const ctx = await this.requestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+    return this.requestService.addRequestPhoto(id, ctx, body.url);
   }
 
   @Delete(':id/photos')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove photo from request' })
   @ApiResponse({ status: 200, description: 'Photo removed successfully' })
+  @ApiResponse({ status: 403, description: 'Not authorized to remove photos' })
   async removePhoto(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
     @Body() body: { url: string },
   ) {
-    return this.requestService.removeRequestPhoto(id, user.id, body.url);
+    const ctx = await this.requestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+    return this.requestService.removeRequestPhoto(id, ctx, body.url);
   }
 
   // ==================== INTEREST (for public requests) ====================
@@ -162,12 +175,17 @@ export class RequestsController {
     summary: 'Express interest in a public request (professional only)',
   })
   @ApiResponse({ status: 201, description: 'Interest expressed successfully' })
+  @ApiResponse({ status: 403, description: 'Not authorized to express interest' })
   async expressInterest(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
     @Body() dto: ExpressInterestDto,
   ) {
-    return this.requestInterestService.expressInterest(id, user.id, dto);
+    const ctx = await this.requestInterestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+    return this.requestInterestService.expressInterest(id, ctx, dto);
   }
 
   @Delete(':id/interest')
@@ -178,7 +196,11 @@ export class RequestsController {
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
   ) {
-    await this.requestInterestService.removeInterest(id, user.id);
+    const ctx = await this.requestInterestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+    await this.requestInterestService.removeInterest(id, ctx);
   }
 
   @Get(':id/interest')
@@ -188,50 +210,54 @@ export class RequestsController {
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
   ) {
+    const ctx = await this.requestInterestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
     const hasInterest = await this.requestInterestService.hasExpressedInterest(
       id,
-      user.id,
+      ctx,
     );
     return { hasInterest };
   }
 
   @Get(':id/interests')
-  @ApiOperation({ summary: 'Get all interested professionals (client only)' })
+  @ApiOperation({ summary: 'Get all interested professionals (client/admin only)' })
   @ApiResponse({ status: 200, description: 'List of interested professionals' })
+  @ApiResponse({ status: 403, description: 'Not authorized to view interests' })
   async getInterestedProfessionals(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
   ) {
-    return this.requestInterestService.getInterestedProfessionals(id, user.id);
+    const ctx = await this.requestInterestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+    return this.requestInterestService.getInterestedProfessionals(id, ctx);
   }
 
   @Post(':id/assign')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Assign a professional to request (client only)' })
+  @ApiOperation({ summary: 'Assign a professional to request (client/admin only)' })
   @ApiResponse({
     status: 200,
     description: 'Professional assigned successfully',
   })
+  @ApiResponse({ status: 403, description: 'Not authorized to assign' })
   async assignProfessional(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
     @Body() dto: AssignProfessionalDto,
   ) {
+    const ctx = await this.requestInterestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
     return this.requestInterestService.assignProfessional(
       id,
-      user.id,
+      ctx,
       dto.professionalId,
     );
-  }
-
-  // ==================== ACCEPT QUOTE ====================
-
-  @Post(':id/accept')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Accept quote (client only)' })
-  @ApiResponse({ status: 200, description: 'Quote accepted successfully' })
-  async acceptQuote(@Param('id') id: string, @CurrentUser() user: UserEntity) {
-    return this.requestService.acceptQuote(id, user.id);
   }
 
   // ==================== CLIENT RATING (by professional) ====================
@@ -242,16 +268,16 @@ export class RequestsController {
     summary: 'Rate client (professional only, after work is done)',
   })
   @ApiResponse({ status: 200, description: 'Client rated successfully' })
+  @ApiResponse({ status: 403, description: 'Not authorized to rate client' })
   async rateClient(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
     @Body() body: { rating: number; comment?: string },
   ) {
-    return this.requestService.rateClient(
-      id,
+    const ctx = await this.requestService.buildAuthContext(
       user.id,
-      body.rating,
-      body.comment,
+      user.isAdminUser(),
     );
+    return this.requestService.rateClient(id, ctx, body.rating, body.comment);
   }
 }

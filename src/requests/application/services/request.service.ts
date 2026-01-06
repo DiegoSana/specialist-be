@@ -10,7 +10,10 @@ import {
   RequestRepository,
   REQUEST_REPOSITORY,
 } from '../../domain/repositories/request.repository';
-import { RequestEntity } from '../../domain/entities/request.entity';
+import {
+  RequestEntity,
+  RequestAuthContext,
+} from '../../domain/entities/request.entity';
 import { CreateRequestDto } from '../dto/create-request.dto';
 import { UpdateRequestDto } from '../dto/update-request.dto';
 import { RequestStatus } from '@prisma/client';
@@ -102,6 +105,44 @@ export class RequestService {
     return request;
   }
 
+  /**
+   * Find a request by ID with access control validation.
+   * Throws ForbiddenException if the user doesn't have permission.
+   */
+  async findByIdForUser(
+    id: string,
+    ctx: RequestAuthContext,
+  ): Promise<RequestEntity> {
+    const request = await this.findById(id);
+
+    if (!request.canBeViewedBy(ctx)) {
+      throw new ForbiddenException(
+        'You do not have permission to view this request',
+      );
+    }
+
+    return request;
+  }
+
+  /**
+   * Build auth context from userId (resolves professionalId if needed)
+   */
+  async buildAuthContext(
+    userId: string,
+    isAdmin: boolean = false,
+  ): Promise<RequestAuthContext> {
+    let professionalId: string | null = null;
+
+    try {
+      const professional = await this.professionalService.findByUserId(userId);
+      professionalId = professional?.id ?? null;
+    } catch {
+      // User doesn't have a professional profile
+    }
+
+    return { userId, professionalId, isAdmin };
+  }
+
   async findByClientId(clientId: string): Promise<RequestEntity[]> {
     return this.requestRepository.findByClientId(clientId);
   }
@@ -126,153 +167,22 @@ export class RequestService {
     );
   }
 
+  /**
+   * Update request status with authorization check.
+   * Uses domain entity's canChangeStatusBy for permission validation.
+   */
   async updateStatus(
     requestId: string,
-    userId: string,
+    ctx: RequestAuthContext,
     updateDto: UpdateRequestDto,
   ): Promise<RequestEntity> {
-    const request = await this.requestRepository.findById(requestId);
-    if (!request) {
-      throw new NotFoundException('Request not found');
-    }
+    const request = await this.findById(requestId);
 
-    let professional: any;
-    try {
-      professional = await this.professionalService.findByUserId(userId);
-    } catch {
+    // Validate status change permission using domain logic
+    if (updateDto.status && !request.canChangeStatusBy(ctx, updateDto.status)) {
       throw new ForbiddenException(
-        'Only the assigned professional can update this request',
+        'You do not have permission to change this request status',
       );
-    }
-    if (!professional || professional.id !== request.professionalId) {
-      throw new ForbiddenException(
-        'Only the assigned professional can update this request',
-      );
-    }
-
-    const fromStatus = request.status;
-    const saved = await this.requestRepository.save(
-      request.withChanges({
-        status: updateDto.status,
-        quoteAmount: updateDto.quoteAmount,
-        quoteNotes: updateDto.quoteNotes,
-      }),
-    );
-
-    if (updateDto.status && updateDto.status !== fromStatus) {
-      // Get names for notification
-      const client = (saved as any).client;
-      const prof = (saved as any).professional;
-      await this.eventBus.publish(
-        new RequestStatusChangedEvent({
-          requestId: saved.id,
-          requestTitle: saved.title,
-          clientId: saved.clientId,
-          clientName: client
-            ? `${client.firstName} ${client.lastName}`
-            : 'Cliente',
-          professionalId: saved.professionalId,
-          professionalName: prof?.user
-            ? `${prof.user.firstName} ${prof.user.lastName}`
-            : null,
-          fromStatus,
-          toStatus: saved.status,
-          changedByUserId: userId,
-        }),
-      );
-    }
-
-    return saved;
-  }
-
-  async acceptQuote(requestId: string, userId: string): Promise<RequestEntity> {
-    const request = await this.requestRepository.findById(requestId);
-    if (!request) {
-      throw new NotFoundException('Request not found');
-    }
-
-    if (request.clientId !== userId) {
-      throw new ForbiddenException('Only the client can accept the quote');
-    }
-
-    if (request.status !== RequestStatus.PENDING) {
-      throw new BadRequestException('Only pending requests can be accepted');
-    }
-
-    if (!request.quoteAmount) {
-      throw new BadRequestException(
-        'Request must have a quote before it can be accepted',
-      );
-    }
-
-    const fromStatus = request.status;
-    const saved = await this.requestRepository.save(
-      request.withChanges({
-        status: RequestStatus.ACCEPTED,
-      }),
-    );
-
-    if (saved.status !== fromStatus) {
-      // Get names for notification
-      const client = (saved as any).client;
-      const prof = (saved as any).professional;
-      await this.eventBus.publish(
-        new RequestStatusChangedEvent({
-          requestId: saved.id,
-          requestTitle: saved.title,
-          clientId: saved.clientId,
-          clientName: client
-            ? `${client.firstName} ${client.lastName}`
-            : 'Cliente',
-          professionalId: saved.professionalId,
-          professionalName: prof?.user
-            ? `${prof.user.firstName} ${prof.user.lastName}`
-            : null,
-          fromStatus,
-          toStatus: saved.status,
-          changedByUserId: userId,
-        }),
-      );
-    }
-
-    return saved;
-  }
-
-  async updateStatusByClient(
-    requestId: string,
-    userId: string,
-    updateDto: UpdateRequestDto,
-  ): Promise<RequestEntity> {
-    const request = await this.requestRepository.findById(requestId);
-    if (!request) {
-      throw new NotFoundException('Request not found');
-    }
-
-    if (request.clientId !== userId) {
-      throw new ForbiddenException('Only the client can update this request');
-    }
-
-    // Client can only cancel or accept
-    if (
-      updateDto.status &&
-      updateDto.status !== RequestStatus.CANCELLED &&
-      updateDto.status !== RequestStatus.ACCEPTED
-    ) {
-      throw new BadRequestException(
-        'Clients can only cancel or accept requests',
-      );
-    }
-
-    // If accepting, validate quote exists
-    if (updateDto.status === RequestStatus.ACCEPTED) {
-      if (!request.quoteAmount) {
-        throw new BadRequestException(
-          'Request must have a quote before it can be accepted',
-        );
-      }
-      if (request.status !== RequestStatus.PENDING) {
-        throw new BadRequestException('Only pending requests can be accepted');
-      }
     }
 
     const fromStatus = request.status;
@@ -300,7 +210,7 @@ export class RequestService {
             : null,
           fromStatus,
           toStatus: saved.status,
-          changedByUserId: userId,
+          changedByUserId: ctx.userId,
         }),
       );
     }
@@ -308,48 +218,27 @@ export class RequestService {
     return saved;
   }
 
+
+  /**
+   * Add a photo to a request with authorization check.
+   */
   async addRequestPhoto(
     requestId: string,
-    userId: string,
+    ctx: RequestAuthContext,
     url: string,
   ): Promise<RequestEntity> {
-    // Validate URL format before proceeding
+    // Validate URL format
     try {
       new URL(url);
-    } catch (error) {
+    } catch {
       throw new BadRequestException(`Invalid URL format: ${url}`);
     }
 
-    const request = await this.requestRepository.findById(requestId);
-    if (!request) {
-      throw new NotFoundException('Request not found');
-    }
+    const request = await this.findById(requestId);
 
-    // Check if user is either the client or the assigned professional
-    const isClient = request.clientId === userId;
-    let isProfessional = false;
-
-    if (request.professionalId) {
-      try {
-        const professional =
-          await this.professionalService.findByUserId(userId);
-        isProfessional = professional.id === request.professionalId;
-      } catch {
-        // User doesn't have a professional profile
-        isProfessional = false;
-      }
-    }
-
-    if (!isClient && !isProfessional) {
+    if (!request.canManagePhotosBy(ctx)) {
       throw new ForbiddenException(
-        'Only the client or assigned professional can add photos to this request',
-      );
-    }
-
-    // Don't allow adding photos to cancelled requests
-    if (request.status === RequestStatus.CANCELLED) {
-      throw new BadRequestException(
-        'Photos cannot be added to cancelled requests',
+        'You do not have permission to add photos to this request',
       );
     }
 
@@ -358,90 +247,66 @@ export class RequestService {
       throw new BadRequestException('This photo is already in the request');
     }
 
-    const updatedPhotos = [...currentPhotos, url];
-
     return this.requestRepository.save(
       request.withChanges({
-        photos: updatedPhotos,
+        photos: [...currentPhotos, url],
       }),
     );
   }
 
+  /**
+   * Remove a photo from a request with authorization check.
+   */
   async removeRequestPhoto(
     requestId: string,
-    userId: string,
+    ctx: RequestAuthContext,
     url: string,
   ): Promise<RequestEntity> {
-    const request = await this.requestRepository.findById(requestId);
-    if (!request) {
-      throw new NotFoundException('Request not found');
-    }
+    const request = await this.findById(requestId);
 
-    // Check if user is either the client or the assigned professional
-    const isClient = request.clientId === userId;
-    let isProfessional = false;
-
-    if (request.professionalId) {
-      try {
-        const professional =
-          await this.professionalService.findByUserId(userId);
-        isProfessional = professional.id === request.professionalId;
-      } catch {
-        // User doesn't have a professional profile
-        isProfessional = false;
-      }
-    }
-
-    if (!isClient && !isProfessional) {
+    if (!request.canManagePhotosBy(ctx)) {
       throw new ForbiddenException(
-        'Only the client or assigned professional can remove photos from this request',
+        'You do not have permission to remove photos from this request',
       );
     }
 
     const currentPhotos = request.photos || [];
-    const updatedPhotos = currentPhotos.filter((photo) => photo !== url);
-
     return this.requestRepository.save(
       request.withChanges({
-        photos: updatedPhotos,
+        photos: currentPhotos.filter((photo) => photo !== url),
       }),
     );
   }
 
+  /**
+   * Rate the client on a completed request.
+   * Only the assigned professional can rate, and only after work is done.
+   */
   async rateClient(
     requestId: string,
-    userId: string,
+    ctx: RequestAuthContext,
     rating: number,
     comment?: string,
   ): Promise<RequestEntity> {
-    const request = await this.requestRepository.findById(requestId);
-    if (!request) {
-      throw new NotFoundException('Request not found');
-    }
+    const request = await this.findById(requestId);
 
-    // Only the assigned professional can rate the client
-    const professional = await this.professionalService.findByUserId(userId);
-    if (!professional || professional.id !== request.professionalId) {
+    if (!request.canRateClientBy(ctx)) {
+      if (!request.isDone()) {
+        throw new BadRequestException(
+          'Can only rate client after work is completed',
+        );
+      }
+      if (request.clientRating !== null) {
+        throw new BadRequestException(
+          'Client has already been rated for this request',
+        );
+      }
       throw new ForbiddenException(
         'Only the assigned professional can rate the client',
       );
     }
 
-    // Can only rate after work is done
-    if (request.status !== RequestStatus.DONE) {
-      throw new BadRequestException(
-        'Can only rate client after work is completed',
-      );
-    }
-
-    // Check if already rated
-    if (request.clientRating !== null) {
-      throw new BadRequestException(
-        'Client has already been rated for this request',
-      );
-    }
-
-    // Validate rating
+    // Validate rating value
     if (rating < 1 || rating > 5) {
       throw new BadRequestException('Rating must be between 1 and 5');
     }
