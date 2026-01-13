@@ -27,6 +27,7 @@ import { ReviewService } from '../application/services/review.service';
 import { CreateReviewDto } from '../application/dto/create-review.dto';
 import { UpdateReviewDto } from '../application/dto/update-review.dto';
 import { Public } from '../../shared/presentation/decorators/public.decorator';
+import { ReviewResponseDto, PublicReviewDto } from './dto/review-response.dto';
 
 @ApiTags('Reviews')
 @Controller('reviews')
@@ -38,23 +39,28 @@ export class ReviewsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a review' })
-  @ApiResponse({ status: 201, description: 'Review created successfully' })
+  @ApiResponse({ status: 201, description: 'Review created successfully', type: ReviewResponseDto })
   async create(
     @CurrentUser() user: UserEntity,
     @Body() createDto: CreateReviewDto,
-  ) {
-    return this.reviewService.create(user.id, createDto);
+  ): Promise<ReviewResponseDto> {
+    const entity = await this.reviewService.create(user.id, createDto);
+    return ReviewResponseDto.fromEntity(entity);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get review by ID' })
-  @ApiResponse({ status: 200, description: 'Review details' })
+  @ApiResponse({ status: 200, description: 'Review details', type: ReviewResponseDto })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Review not found' })
-  async findById(@Param('id') id: string, @CurrentUser() user: UserEntity) {
-    return this.reviewService.findByIdForUser(id, user.id);
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+  ): Promise<ReviewResponseDto> {
+    const entity = await this.reviewService.findByIdForUser(id, user.id);
+    return ReviewResponseDto.fromEntity(entity);
   }
 
   @Get()
@@ -62,21 +68,21 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get review by request ID' })
   @ApiQuery({ name: 'requestId', required: true })
-  @ApiResponse({ status: 200, description: 'Review details' })
+  @ApiResponse({ status: 200, description: 'Review details', type: ReviewResponseDto })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async findByRequestId(
     @Query('requestId') requestId: string,
     @CurrentUser() user: UserEntity,
-  ) {
-    const review = await this.reviewService.findByRequestIdForUser(
+  ): Promise<ReviewResponseDto> {
+    const entity = await this.reviewService.findByRequestIdForUser(
       requestId,
       user.id,
     );
-    if (!review) {
+    if (!entity) {
       throw new NotFoundException('Review not found for this request');
     }
-    return review;
+    return ReviewResponseDto.fromEntity(entity);
   }
 
   @Patch(':id')
@@ -84,13 +90,14 @@ export class ReviewsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a review' })
-  @ApiResponse({ status: 200, description: 'Review updated successfully' })
+  @ApiResponse({ status: 200, description: 'Review updated successfully', type: ReviewResponseDto })
   async update(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
     @Body() updateDto: UpdateReviewDto,
-  ) {
-    return this.reviewService.update(id, user.id, updateDto);
+  ): Promise<ReviewResponseDto> {
+    const entity = await this.reviewService.update(id, user.id, updateDto);
+    return ReviewResponseDto.fromEntity(entity);
   }
 
   @Delete(':id')
@@ -99,7 +106,10 @@ export class ReviewsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a review' })
   @ApiResponse({ status: 204, description: 'Review deleted successfully' })
-  async delete(@Param('id') id: string, @CurrentUser() user: UserEntity) {
+  async delete(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+  ): Promise<void> {
     await this.reviewService.delete(id, user.id);
   }
 
@@ -109,9 +119,10 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard, AdminGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get pending reviews for moderation (admin only)' })
-  @ApiResponse({ status: 200, description: 'List of pending reviews' })
-  async findPending() {
-    return this.reviewService.findPending();
+  @ApiResponse({ status: 200, description: 'List of pending reviews', type: [ReviewResponseDto] })
+  async findPending(): Promise<ReviewResponseDto[]> {
+    const entities = await this.reviewService.findPending();
+    return ReviewResponseDto.fromEntities(entities);
   }
 
   @Post(':id/approve')
@@ -119,10 +130,14 @@ export class ReviewsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Approve a review (admin only)' })
-  @ApiResponse({ status: 200, description: 'Review approved successfully' })
+  @ApiResponse({ status: 200, description: 'Review approved successfully', type: ReviewResponseDto })
   @ApiResponse({ status: 400, description: 'Review is not pending' })
-  async approve(@Param('id') id: string, @CurrentUser() user: UserEntity) {
-    return this.reviewService.approve(id, user.id);
+  async approve(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+  ): Promise<ReviewResponseDto> {
+    const entity = await this.reviewService.approve(id, user.id);
+    return ReviewResponseDto.fromEntity(entity);
   }
 
   @Post(':id/reject')
@@ -130,10 +145,14 @@ export class ReviewsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reject a review (admin only)' })
-  @ApiResponse({ status: 200, description: 'Review rejected successfully' })
+  @ApiResponse({ status: 200, description: 'Review rejected successfully', type: ReviewResponseDto })
   @ApiResponse({ status: 400, description: 'Review is not pending' })
-  async reject(@Param('id') id: string, @CurrentUser() user: UserEntity) {
-    return this.reviewService.reject(id, user.id);
+  async reject(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+  ): Promise<ReviewResponseDto> {
+    const entity = await this.reviewService.reject(id, user.id);
+    return ReviewResponseDto.fromEntity(entity);
   }
 }
 
@@ -146,8 +165,11 @@ export class ProfessionalReviewsController {
   @Public()
   @Get(':professionalId/reviews')
   @ApiOperation({ summary: 'Get reviews for a professional (public)' })
-  @ApiResponse({ status: 200, description: 'List of reviews' })
-  async findByProfessionalId(@Param('professionalId') professionalId: string) {
-    return this.reviewService.findByProfessionalId(professionalId);
+  @ApiResponse({ status: 200, description: 'List of reviews', type: [PublicReviewDto] })
+  async findByProfessionalId(
+    @Param('professionalId') professionalId: string,
+  ): Promise<PublicReviewDto[]> {
+    const entities = await this.reviewService.findByProfessionalId(professionalId);
+    return PublicReviewDto.fromEntities(entities);
   }
 }

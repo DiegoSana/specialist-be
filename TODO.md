@@ -215,13 +215,20 @@ Controller → Request DTO → Service → Domain Entity → Response DTO → Cl
   - [x] `addGalleryItem` / `removeGalleryItem` - Retorna `ProfessionalResponseDto`
   - [x] Swagger decorators actualizados con tipos de respuesta
 
-- [ ] **ReviewsController**
-  - [ ] `findByProfessional` - Crear `ReviewListResponseDto`
-  - [ ] `create` - Crear `ReviewResponseDto`
+- [x] **ReviewsController** ✅
+  - [x] Crear `ReviewResponseDto` en `presentation/dto/`
+  - [x] Crear `PublicReviewDto` (para endpoints públicos, sin info de moderación)
+  - [x] `create` - Retorna `ReviewResponseDto`
+  - [x] `findById` - Retorna `ReviewResponseDto`
+  - [x] `findByRequestId` - Retorna `ReviewResponseDto`
+  - [x] `update` - Retorna `ReviewResponseDto`
+  - [x] `delete` - Retorna void
+  - [x] `findPending` (admin) - Retorna `ReviewResponseDto[]`
+  - [x] `approve` / `reject` (admin) - Retorna `ReviewResponseDto`
+  - [x] `ProfessionalReviewsController.findByProfessionalId` - Retorna `PublicReviewDto[]`
+  - [x] Swagger decorators actualizados con tipos de respuesta
 
-- [ ] **NotificationsController**
-  - [ ] Ya tiene `NotificationResponseDto` ✅
-  - [ ] Revisar si cubre todos los campos necesarios
+- [x] **NotificationsController** ✅ (ya tenía DTOs implementados)
 
 - [ ] **ClientsController**
   - [ ] Revisar respuestas
