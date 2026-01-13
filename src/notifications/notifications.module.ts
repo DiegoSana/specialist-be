@@ -25,6 +25,7 @@ import { PrismaNotificationDeliveryQueue } from './infrastructure/repositories/p
 
 // Presentation
 import { NotificationsController } from './presentation/notifications.controller';
+import { AdminNotificationsController } from './presentation/admin-notifications.controller';
 
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
@@ -34,7 +35,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
 
 @Module({
   imports: [PrismaModule, forwardRef(() => ProfilesModule)],
-  controllers: [NotificationsController],
+  controllers: [NotificationsController, AdminNotificationsController],
   providers: [
     NotificationService,
     InAppNotificationService,

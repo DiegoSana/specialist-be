@@ -54,7 +54,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiResponse({ status: 200, description: 'Notification marked as read' })
   async markRead(@CurrentUser() user: UserEntity, @Param('id') id: string) {
-    const entity = await this.notifications.markRead(user.id, id);
+    const entity = await this.notifications.markRead(user, id);
     return NotificationResponseDto.fromEntity(entity);
   }
 

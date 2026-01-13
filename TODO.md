@@ -1,6 +1,6 @@
 # 🔧 Tareas Pendientes - Specialist Backend
 
-> Última actualización: 2026-01-06 (actualizado)
+> Última actualización: 2026-01-13 (actualizado)
 
 ---
 
@@ -11,9 +11,10 @@
 | Requests | ✅ | ✅ | ⬜ |
 | Request Interest | ✅ | ✅ | ⬜ |
 | Reviews | ✅ | ✅ | ⬜ |
-| Notifications | ⬜ | ✅ | ⬜ |
+| Notifications | ✅ | ✅ | ⬜ |
 | Profiles | ⬜ | ✅ | ⬜ |
 | Identity | ⬜ | ✅ | ⬜ |
+| **Companies** | ⬜ | ⬜ | ⬜ |
 
 ---
 
@@ -56,12 +57,24 @@
   - [x] Actualizar `ReviewsController`
   - [x] Actualizar tests (37 tests pasando)
 
-### ⬜ Pendiente
+### ✅ Completado
 
-- [ ] **Notifications Module**
-  - [ ] Verificar que usuarios solo vean sus notificaciones
-  - [ ] Agregar permisos de admin para ver/gestionar notificaciones
-  - [ ] Revisar `markAsRead` y `markAllAsRead`
+- [x] **Notifications Module**
+  - [x] Crear `NotificationAuthContext` interface en dominio
+  - [x] Agregar métodos de autorización a `NotificationEntity`:
+    - `canBeViewedBy(ctx)` - owner o admin
+    - `canBeMarkedReadBy(ctx)` - solo owner
+    - `canBeResentBy(ctx)` - solo admin con delivery fallido
+  - [x] Refactorizar `NotificationService.markRead()` para usar métodos de dominio
+  - [x] Agregar métodos admin: `findByIdForUser()`, `listAll()`, `getDeliveryStats()`, `resendNotification()`
+  - [x] Crear `AdminNotificationsController`:
+    - `GET /admin/notifications` - listar todas con filtros
+    - `GET /admin/notifications/stats` - estadísticas de delivery
+    - `GET /admin/notifications/:id` - ver detalle
+    - `POST /admin/notifications/:id/resend` - reenviar fallidas
+  - [x] Actualizar tests
+
+### ⬜ Pendiente
 
 - [ ] **Profiles Module**
   - [ ] Verificar permisos en `ProfessionalService`
@@ -207,6 +220,317 @@ Controller → Request DTO → Service → Domain Entity → Response DTO → Cl
 
 ---
 
+## 🏢 Nueva Feature: Perfil de Empresa
+
+### Descripción
+
+Nuevo tipo de perfil para empresas (ej: constructoras, empresas de mantenimiento, etc.).
+Misma funcionalidad que especialistas pero diferenciado para evolución futura.
+
+---
+
+### 🏗️ Arquitectura: ServiceProvider
+
+Para desacoplar `Request` y `Review` del tipo de proveedor, introducimos una capa abstracta:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      ServiceProvider                         │
+│  - id: UUID                                                  │
+│  - type: PROFESSIONAL | COMPANY                              │
+│  - averageRating: Float (calculado)                          │
+│  - reviewCount: Int                                          │
+│  - createdAt, updatedAt                                      │
+├─────────────────────────────────────────────────────────────┤
+│         ▲                              ▲                     │
+│         │ 1:1                          │ 1:1                 │
+│    ┌────┴─────┐                  ┌─────┴─────┐               │
+│    │Professional│                │  Company  │               │
+│    │  - userId  │                │  - userId │               │
+│    │  - bio     │                │  - name   │               │
+│    │  - trades  │                │  - trades │               │
+│    └────────────┘                └───────────┘               │
+└─────────────────────────────────────────────────────────────┘
+                          │
+            ┌─────────────┴─────────────┐
+            │ 1:N                       │ 1:N
+            ▼                           ▼
+┌───────────────────────┐    ┌───────────────────────┐
+│       Request         │    │        Review         │
+│  - providerId (FK)    │    │  - requestId (FK)     │
+│  - clientId           │    │  - serviceProviderId  │
+│  - status             │    │  - rating, comment    │
+└───────────────────────┘    └───────────────────────┘
+```
+
+**Beneficios:**
+- ✅ FK constraints reales en BD
+- ✅ Un solo campo `providerId` en Request (no `professionalId` + `companyId`)
+- ✅ Reviews siempre atadas a Request completado
+- ✅ Rating se agrega a ServiceProvider
+- ✅ Escala a N tipos de proveedores futuros
+
+---
+
+### ⬜ Fase 1: Migración a ServiceProvider
+
+#### 1.1 Schema Changes
+
+```prisma
+// NUEVO
+model ServiceProvider {
+  id            String       @id @default(uuid())
+  type          ProviderType
+  averageRating Float        @default(0)
+  reviewCount   Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  professional  Professional?
+  company       Company?
+  requests      Request[]
+  reviews       Review[]
+}
+
+enum ProviderType {
+  PROFESSIONAL
+  COMPANY
+}
+
+// MODIFICADO
+model Professional {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  serviceProviderId String   @unique  // ← NUEVO
+  serviceProvider   ServiceProvider @relation(...)
+  // ... resto igual
+}
+
+// MODIFICADO
+model Request {
+  // ANTES: professionalId String?
+  // DESPUÉS:
+  providerId        String?
+  provider          ServiceProvider? @relation(...)
+  // ... resto igual
+}
+
+// MODIFICADO  
+model Review {
+  // ANTES: professionalId String
+  // DESPUÉS:
+  requestId         String
+  request           Request @relation(...)
+  serviceProviderId String   // Denormalizado para queries
+  serviceProvider   ServiceProvider @relation(...)
+  // ... resto igual
+}
+```
+
+#### 1.2 Migración de Datos
+
+- [ ] Crear tabla `ServiceProvider`
+- [ ] Para cada `Professional` existente:
+  - Crear `ServiceProvider` con `type=PROFESSIONAL`
+  - Actualizar `Professional.serviceProviderId`
+- [ ] Migrar `Request.professionalId` → `Request.providerId`
+- [ ] Migrar `Review.professionalId` → `Review.serviceProviderId`
+- [ ] Eliminar columnas viejas
+
+#### 1.3 Domain Layer
+
+- [ ] Crear `ServiceProviderEntity`
+  ```typescript
+  class ServiceProviderEntity {
+    constructor(
+      public readonly id: string,
+      public readonly type: ProviderType,
+      public readonly averageRating: number,
+      public readonly reviewCount: number,
+    ) {}
+    
+    canReceiveRequest(): boolean
+    canBeReviewed(): boolean
+    updateRating(newReview: Review): void
+  }
+  ```
+
+- [ ] Modificar `ProfessionalEntity` para componer `ServiceProviderEntity`
+- [ ] Actualizar `RequestEntity`:
+  - Cambiar `professionalId` → `providerId`
+  - Actualizar métodos `canXxxBy` para usar `providerId`
+
+- [ ] Actualizar `ReviewEntity`:
+  - Cambiar relación a `serviceProviderId`
+  - Review siempre requiere `requestId`
+
+#### 1.4 Application Layer
+
+- [ ] Crear `ServiceProviderService` (queries comunes)
+- [ ] Actualizar `ProfessionalService`:
+  - `create()` también crea `ServiceProvider`
+  - Queries incluyen `serviceProvider` relation
+- [ ] Actualizar `RequestService`:
+  - Cambiar `professionalId` → `providerId` en todas las operaciones
+- [ ] Actualizar `ReviewService`:
+  - Al crear review, actualizar `ServiceProvider.averageRating`
+
+#### 1.5 Presentation Layer
+
+- [ ] Actualizar DTOs (transparente para clientes API)
+- [ ] Mantener backward compatibility si es necesario
+
+---
+
+### ⬜ Fase 2: Modelo Company
+
+#### 2.1 Schema
+
+```prisma
+model Company {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  serviceProviderId String   @unique
+  serviceProvider   ServiceProvider @relation(...)
+  user              User     @relation(...)
+  
+  // Datos de empresa
+  companyName       String
+  legalName         String?
+  taxId             String?  // CUIT/RUT
+  description       String?
+  foundedYear       Int?
+  employeeCount     Int?
+  
+  // Contacto
+  website           String?
+  phone             String?
+  email             String?
+  
+  // Ubicación
+  address           String?
+  city              String?
+  state             String?
+  country           String?
+  
+  // Verificación
+  verified          Boolean  @default(false)
+  verifiedAt        DateTime?
+  
+  // Relaciones
+  trades            Trade[]  @relation("CompanyTrades")
+  photos            CompanyPhoto[]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+```
+
+#### 2.2 Domain Layer
+
+- [ ] Crear `CompanyEntity`
+  ```typescript
+  class CompanyEntity {
+    constructor(
+      public readonly id: string,
+      public readonly userId: string,
+      public readonly serviceProvider: ServiceProviderEntity,
+      public readonly companyName: string,
+      public readonly legalName: string | null,
+      // ... más campos
+    ) {}
+    
+    // Métodos de autorización
+    canBeViewedBy(ctx: CompanyAuthContext): boolean
+    canBeEditedBy(ctx: CompanyAuthContext): boolean
+  }
+  ```
+
+- [ ] Crear `CompanyAuthContext` interface
+
+#### 2.3 Application Layer
+
+- [ ] Crear `CompanyService`
+  - `create(userId, data)` - crea Company + ServiceProvider
+  - `update(id, data, ctx)` - actualiza con permisos
+  - `findById(id)` - perfil público
+  - `findByUserId(userId)` - mi perfil
+  - `search(filters)` - búsqueda con filtros
+
+- [ ] Crear DTOs:
+  - `CreateCompanyDto`
+  - `UpdateCompanyDto`
+  - `CompanyResponseDto`
+  - `CompanyListResponseDto`
+
+#### 2.4 Presentation Layer
+
+- [ ] Crear `CompaniesController`
+  ```
+  POST   /companies        - crear perfil
+  PATCH  /companies/:id    - actualizar
+  GET    /companies/:id    - ver perfil público
+  GET    /companies/me     - mi perfil
+  GET    /companies        - buscar empresas
+  DELETE /companies/:id    - eliminar (soft delete?)
+  ```
+
+#### 2.5 Identity Integration
+
+- [ ] Agregar a `User`:
+  ```prisma
+  model User {
+    // existente
+    company           Company?
+  }
+  ```
+
+- [ ] Actualizar `UserEntity`:
+  - Agregar `hasCompanyProfile: boolean`
+  - Agregar `companyId: string | null`
+
+- [ ] Actualizar `/auth/me` response
+
+#### 2.6 Notifications
+
+- [ ] Actualizar handlers para soportar Company como provider
+- [ ] Notificaciones cuando empresa recibe interés/asignación
+
+---
+
+### ⬜ Fase 3: Testing
+
+- [ ] Tests unitarios para `ServiceProviderEntity`
+- [ ] Tests unitarios para `CompanyEntity`
+- [ ] Tests de integración para migración
+- [ ] Tests E2E para flujo completo de empresa
+
+---
+
+### Consideraciones Futuras (No MVP)
+
+- [ ] Múltiples empleados por empresa con roles
+- [ ] Dashboard de empresa con métricas
+- [ ] Verificación de empresa (documentos legales)
+- [ ] Planes de suscripción para empresas
+- [ ] Portal de empleados de la empresa
+- [ ] Asignación de solicitudes a empleados específicos
+
+### Prioridad
+
+🟡 **Media** - Implementar después de estabilizar permisos y DTOs
+
+### Orden de Implementación Sugerido
+
+1. **Fase 1** (ServiceProvider) - ~2-3 días
+2. **Fase 2** (Company model) - ~2-3 días  
+3. **Fase 3** (Testing) - ~1-2 días
+4. **Frontend** - ~3-4 días
+
+**Total estimado: ~10-12 días**
+
+---
+
 ## 🚀 Mejoras Futuras (Backlog)
 
 ### Performance
@@ -234,7 +558,7 @@ Controller → Request DTO → Service → Domain Entity → Response DTO → Cl
 3. Revisar módulo de Reviews (permisos de moderación)
 
 ### Próxima Semana
-1. Refactorizar Notifications module
+1. ~~Refactorizar Notifications module~~ ✅
 2. Revisar DTOs en controladores principales
 3. Revisar Profiles module
 
