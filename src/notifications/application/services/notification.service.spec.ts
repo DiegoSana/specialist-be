@@ -22,6 +22,10 @@ describe('NotificationService', () => {
       create: jest.fn(async (input) => input.notification),
       markInAppRead: jest.fn(),
       markAllInAppRead: jest.fn(),
+      // Admin methods
+      listAll: jest.fn(),
+      getDeliveryStats: jest.fn(),
+      markForResend: jest.fn(),
     };
 
     mockPreferences = {

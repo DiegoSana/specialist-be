@@ -7,6 +7,23 @@ export type ListUserNotificationsQuery = {
   take?: number;
 };
 
+export type ListAllNotificationsQuery = {
+  userId?: string;
+  type?: string;
+  unreadOnly?: boolean;
+  hasFailedDelivery?: boolean;
+  take?: number;
+  skip?: number;
+};
+
+export type NotificationDeliveryStats = {
+  total: number;
+  byStatus: Record<string, number>;
+  byChannel: Record<string, number>;
+  failedLast24h: number;
+  pendingExternal: number;
+};
+
 export interface NotificationRepository {
   findById(id: string): Promise<NotificationEntity | null>;
   findByIdempotencyKey(key: string): Promise<NotificationEntity | null>;
@@ -24,6 +41,13 @@ export interface NotificationRepository {
     now: Date,
   ): Promise<NotificationEntity>;
   markAllInAppRead(userId: string, now: Date): Promise<number>;
+
+  // Admin methods
+  listAll(
+    query: ListAllNotificationsQuery,
+  ): Promise<{ items: NotificationEntity[]; total: number }>;
+  getDeliveryStats(): Promise<NotificationDeliveryStats>;
+  markForResend(notificationId: string): Promise<NotificationEntity>;
 }
 
 export const NOTIFICATION_REPOSITORY = Symbol('NotificationRepository');
