@@ -178,7 +178,8 @@ export class ProfessionalResponseDto {
 
 /**
  * Simplified DTO for public search results.
- * Excludes sensitive fields like whatsapp, address, etc.
+ * Excludes sensitive contact fields (whatsapp, address, website).
+ * Includes gallery since it's public and shown in search results.
  */
 export class ProfessionalSearchResultDto {
   @ApiProperty()
@@ -214,6 +215,9 @@ export class ProfessionalSearchResultDto {
   @ApiPropertyOptional()
   profileImage: string | null;
 
+  @ApiProperty({ type: [String] })
+  gallery: string[];
+
   @ApiProperty()
   active: boolean;
 
@@ -247,6 +251,7 @@ export class ProfessionalSearchResultDto {
     dto.averageRating = entity.averageRating;
     dto.totalReviews = entity.totalReviews;
     dto.profileImage = entity.profileImage;
+    dto.gallery = entity.gallery;
     dto.active = entity.active;
 
     // Computed property
