@@ -48,7 +48,8 @@ export class RequestService {
 
     const isPublic = createDto.isPublic === true;
 
-    // For direct requests, validate professional
+    // For direct requests, validate professional and get serviceProviderId
+    let providerId: string | null = null;
     if (!isPublic) {
       if (!createDto.professionalId) {
         throw new BadRequestException(
@@ -61,6 +62,7 @@ export class RequestService {
       if (!professional.isActive()) {
         throw new BadRequestException('Professional is not active');
       }
+      providerId = professional.serviceProviderId;
     }
 
     // For public requests, validate trade
@@ -72,7 +74,7 @@ export class RequestService {
       RequestEntity.createPending({
         id: randomUUID(),
         clientId,
-        professionalId: isPublic ? null : createDto.professionalId!,
+        providerId,
         tradeId: createDto.tradeId || null,
         isPublic,
         title: createDto.title,
@@ -89,7 +91,7 @@ export class RequestService {
         requestId: saved.id,
         clientId: saved.clientId,
         isPublic: saved.isPublic,
-        professionalId: saved.professionalId,
+        professionalId: saved.providerId, // For backward compat in events
         tradeId: saved.tradeId,
       }),
     );
@@ -125,30 +127,48 @@ export class RequestService {
   }
 
   /**
-   * Build auth context from userId (resolves professionalId if needed)
+   * Build auth context from userId (resolves serviceProviderId if user has a provider profile)
    */
   async buildAuthContext(
     userId: string,
     isAdmin: boolean = false,
   ): Promise<RequestAuthContext> {
-    let professionalId: string | null = null;
+    let serviceProviderId: string | null = null;
 
     try {
+      // Check if user has a professional profile
       const professional = await this.professionalService.findByUserId(userId);
-      professionalId = professional?.id ?? null;
+      serviceProviderId = professional?.serviceProviderId ?? null;
     } catch {
       // User doesn't have a professional profile
     }
 
-    return { userId, professionalId, isAdmin };
+    // TODO: Also check for company profile when implemented
+    // if (!serviceProviderId) {
+    //   const company = await this.companyService.findByUserId(userId);
+    //   serviceProviderId = company?.serviceProviderId ?? null;
+    // }
+
+    return { userId, serviceProviderId, isAdmin };
   }
 
   async findByClientId(clientId: string): Promise<RequestEntity[]> {
     return this.requestRepository.findByClientId(clientId);
   }
 
+  /**
+   * Find requests by provider ID (ServiceProvider)
+   */
+  async findByProviderId(providerId: string): Promise<RequestEntity[]> {
+    return this.requestRepository.findByProviderId(providerId);
+  }
+
+  /**
+   * Find requests for a professional (by their serviceProviderId)
+   */
   async findByProfessionalId(professionalId: string): Promise<RequestEntity[]> {
-    return this.requestRepository.findByProfessionalId(professionalId);
+    const professional = await this.professionalService.getByIdOrFail(professionalId);
+    return this.requestRepository.findByProviderId(professional.serviceProviderId);
   }
 
   async findPublicRequests(tradeIds?: string[]): Promise<RequestEntity[]> {
@@ -204,7 +224,7 @@ export class RequestService {
           clientName: client
             ? `${client.firstName} ${client.lastName}`
             : 'Cliente',
-          professionalId: saved.professionalId,
+          professionalId: saved.providerId, // For backward compat
           professionalName: prof?.user
             ? `${prof.user.firstName} ${prof.user.lastName}`
             : null,

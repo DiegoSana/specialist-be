@@ -3,7 +3,7 @@ import { RequestEntity } from '../entities/request.entity';
 export interface RequestRepository {
   findById(id: string): Promise<RequestEntity | null>;
   findByClientId(clientId: string): Promise<RequestEntity[]>;
-  findByProfessionalId(professionalId: string): Promise<RequestEntity[]>;
+  findByProviderId(providerId: string): Promise<RequestEntity[]>;
   findPublicRequests(tradeIds?: string[]): Promise<RequestEntity[]>;
   findAvailableForProfessional(
     tradeIds: string[],

@@ -1,13 +1,16 @@
-import { ProfessionalStatus } from '@prisma/client';
+import { ProfessionalStatus, ProviderType as PrismaProviderType } from '@prisma/client';
 import {
   ProfessionalEntity,
   TradeInfo,
 } from '../../domain/entities/professional.entity';
+import { ServiceProviderEntity, ProviderType } from '../../domain/entities/service-provider.entity';
+import { PrismaServiceProviderMapper } from './service-provider.prisma-mapper';
 
 export class PrismaProfessionalMapper {
   static toDomain(professional: {
     id: string;
     userId: string;
+    serviceProviderId: string;
     trades?: Array<{
       isPrimary: boolean;
       trade: {
@@ -25,14 +28,20 @@ export class PrismaProfessionalMapper {
     address: string | null;
     whatsapp: string | null;
     website: string | null;
-    averageRating: number;
-    totalReviews: number;
     profileImage: string | null;
     gallery: string[];
     active: boolean;
     createdAt: Date;
     updatedAt: Date;
     user?: unknown;
+    serviceProvider?: {
+      id: string;
+      type: PrismaProviderType;
+      averageRating: number;
+      totalReviews: number;
+      createdAt: Date;
+      updatedAt: Date;
+    };
   }): ProfessionalEntity {
     const trades: TradeInfo[] = (professional.trades || []).map((pt) => ({
       id: pt.trade.id,
@@ -42,9 +51,15 @@ export class PrismaProfessionalMapper {
       isPrimary: pt.isPrimary,
     }));
 
+    // Map ServiceProvider if included
+    const serviceProvider = professional.serviceProvider
+      ? PrismaServiceProviderMapper.toDomain(professional.serviceProvider)
+      : undefined;
+
     const entity = new ProfessionalEntity(
       professional.id,
       professional.userId,
+      professional.serviceProviderId,
       trades,
       professional.description,
       professional.experienceYears,
@@ -54,13 +69,12 @@ export class PrismaProfessionalMapper {
       professional.address,
       professional.whatsapp,
       professional.website,
-      professional.averageRating,
-      professional.totalReviews,
       professional.profileImage,
       professional.gallery,
       professional.active,
       professional.createdAt,
       professional.updatedAt,
+      serviceProvider,
     );
 
     // Mantener el comportamiento actual: adjuntar datos de user si vienen incluidos.
@@ -73,6 +87,7 @@ export class PrismaProfessionalMapper {
 
   static toPersistenceCreate(input: {
     userId: string;
+    serviceProviderId: string;
     tradeIds: string[];
     description: string | null;
     experienceYears: number | null;
@@ -88,6 +103,7 @@ export class PrismaProfessionalMapper {
   }): Record<string, unknown> {
     return {
       userId: input.userId,
+      serviceProviderId: input.serviceProviderId,
       description: input.description,
       experienceYears: input.experienceYears,
       status: input.status,

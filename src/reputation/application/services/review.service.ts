@@ -50,11 +50,20 @@ export class ReviewService {
   }
 
   /**
-   * Find reviews for a professional (public display).
+   * Find reviews for a service provider (public display).
    * Only returns APPROVED reviews.
    */
+  async findByServiceProviderId(serviceProviderId: string): Promise<ReviewEntity[]> {
+    return this.reviewRepository.findApprovedByServiceProviderId(serviceProviderId);
+  }
+
+  /**
+   * @deprecated Use findByServiceProviderId instead
+   */
   async findByProfessionalId(professionalId: string): Promise<ReviewEntity[]> {
-    return this.reviewRepository.findApprovedByProfessionalId(professionalId);
+    // Get professional's serviceProviderId
+    const professional = await this.professionalService.getByIdOrFail(professionalId);
+    return this.reviewRepository.findApprovedByServiceProviderId(professional.serviceProviderId);
   }
 
   /**
@@ -117,10 +126,7 @@ export class ReviewService {
       throw new BadRequestException('Only clients can create reviews');
     }
 
-    // Validate professional exists
-    await this.professionalService.getByIdOrFail(createDto.professionalId);
-
-    // Validate request if provided (required for reviews)
+    // Validate request (required for reviews)
     if (!createDto.requestId) {
       throw new BadRequestException(
         'Request ID is required to create a review',
@@ -139,6 +145,11 @@ export class ReviewService {
       );
     }
 
+    // The provider being reviewed must be the one assigned to the request
+    if (!request.providerId) {
+      throw new BadRequestException('Request has no provider assigned');
+    }
+
     // Check if this request already has a review (one review per request)
     const existingReview = await this.reviewRepository.findByRequestId(
       createDto.requestId,
@@ -154,15 +165,15 @@ export class ReviewService {
       ReviewEntity.create({
         id: randomUUID(),
         reviewerId,
-        professionalId: createDto.professionalId,
-        requestId: createDto.requestId || null,
+        serviceProviderId: request.providerId, // Use provider from request
+        requestId: createDto.requestId,
         rating: rating.getValue(),
         comment: createDto.comment || null,
       }),
     );
 
     // Note: Rating is NOT updated until review is approved
-    // await this.updateProfessionalRating(createDto.professionalId);
+    // await this.updateServiceProviderRating(request.providerId);
 
     return review;
   }
@@ -185,26 +196,28 @@ export class ReviewService {
     const approvedReview = review.approve(moderatorId);
     const saved = await this.reviewRepository.save(approvedReview);
 
-    // Now update professional rating (only for approved reviews)
-    await this.updateProfessionalRating(review.professionalId);
+    // Now update provider rating (only for approved reviews)
+    await this.updateServiceProviderRating(review.serviceProviderId);
 
-    // Get professional to find their userId
-    const professional = await this.professionalService.getByIdOrFail(
-      review.professionalId,
+    // Get professional to find their userId (for notifications)
+    const professional = await this.professionalService.findByServiceProviderId(
+      review.serviceProviderId,
     );
 
-    // Emit event for notifications
-    await this.eventBus.publish(
-      new ReviewApprovedEvent({
-        reviewId: saved.id,
-        reviewerId: saved.reviewerId,
-        professionalId: saved.professionalId,
-        professionalUserId: professional.userId,
-        rating: saved.rating,
-        comment: saved.comment,
-        moderatorId,
-      }),
-    );
+    // Emit event for notifications (if it's a professional provider)
+    if (professional) {
+      await this.eventBus.publish(
+        new ReviewApprovedEvent({
+          reviewId: saved.id,
+          reviewerId: saved.reviewerId,
+          professionalId: saved.serviceProviderId, // For backward compat
+          professionalUserId: professional.userId,
+          rating: saved.rating,
+          comment: saved.comment,
+          moderatorId,
+        }),
+      );
+    }
 
     return saved;
   }
@@ -285,24 +298,35 @@ export class ReviewService {
       );
     }
 
-    const professionalId = review.professionalId;
+    const serviceProviderId = review.serviceProviderId;
 
     await this.reviewRepository.delete(id);
 
-    // Update professional rating (in case it was approved and we're allowing admin delete)
-    await this.updateProfessionalRating(professionalId);
+    // Update provider rating (in case it was approved and we're allowing admin delete)
+    await this.updateServiceProviderRating(serviceProviderId);
   }
 
-  private async updateProfessionalRating(
-    professionalId: string,
+  /**
+   * Update the rating for a service provider based on approved reviews
+   */
+  private async updateServiceProviderRating(
+    serviceProviderId: string,
   ): Promise<void> {
     // Only count APPROVED reviews for rating calculation
-    const reviews = await this.reviewRepository.findApprovedByProfessionalId(
-      professionalId,
+    const reviews = await this.reviewRepository.findApprovedByServiceProviderId(
+      serviceProviderId,
     );
 
+    // Try to find the professional by serviceProviderId to update their rating
+    const professional = await this.professionalService.findByServiceProviderId(serviceProviderId);
+    
+    if (!professional) {
+      // TODO: Handle company providers when implemented
+      return;
+    }
+
     if (reviews.length === 0) {
-      await this.professionalService.updateRating(professionalId, 0, 0);
+      await this.professionalService.updateRating(professional.id, 0, 0);
       return;
     }
 
@@ -311,7 +335,7 @@ export class ReviewService {
     const totalReviews = reviews.length;
 
     await this.professionalService.updateRating(
-      professionalId,
+      professional.id,
       averageRating,
       totalReviews,
     );

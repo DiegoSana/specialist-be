@@ -19,19 +19,40 @@ export class PrismaRequestRepository implements RequestRepository {
         profilePictureUrl: true,
       },
     },
-    professional: {
+    provider: {
       include: {
-        trades: {
+        professional: {
           include: {
-            trade: true,
+            trades: {
+              include: {
+                trade: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
           },
         },
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+        company: {
+          include: {
+            trades: {
+              include: {
+                trade: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
           },
         },
       },
@@ -64,9 +85,9 @@ export class PrismaRequestRepository implements RequestRepository {
     return requests.map((r) => PrismaRequestMapper.toDomain(r));
   }
 
-  async findByProfessionalId(professionalId: string): Promise<RequestEntity[]> {
+  async findByProviderId(providerId: string): Promise<RequestEntity[]> {
     const requests = await this.prisma.request.findMany({
-      where: { professionalId },
+      where: { providerId },
       include: {
         ...this.fullInclude,
       },
@@ -80,7 +101,7 @@ export class PrismaRequestRepository implements RequestRepository {
     const whereClause: any = {
       isPublic: true,
       status: RequestStatus.PENDING,
-      professionalId: null, // Only show unassigned public requests
+      providerId: null, // Only show unassigned public requests
     };
 
     // Filter by trade if tradeIds are provided
@@ -121,7 +142,7 @@ export class PrismaRequestRepository implements RequestRepository {
       where: {
         isPublic: true,
         status: RequestStatus.PENDING,
-        professionalId: null,
+        providerId: null, // No provider assigned yet
         tradeId: {
           in: tradeIds,
         },
@@ -148,7 +169,7 @@ export class PrismaRequestRepository implements RequestRepository {
     const createData: any = {
       id: request.id,
       clientId: request.clientId,
-      professionalId: request.professionalId,
+      providerId: request.providerId,
       tradeId: request.tradeId,
       isPublic: request.isPublic,
       title: request.title,

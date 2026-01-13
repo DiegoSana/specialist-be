@@ -21,18 +21,37 @@ export class PrismaReviewRepository implements ReviewRepository {
     },
   } as const;
 
-  private readonly includeProfessionalWithUser = {
+  private readonly includeServiceProviderWithUser = {
     ...this.includeReviewer,
-    professional: {
-      select: {
-        id: true,
-        userId: true,
-        user: {
+    serviceProvider: {
+      include: {
+        professional: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+            userId: true,
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+        company: {
+          select: {
+            id: true,
+            userId: true,
+            companyName: true,
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
           },
         },
       },
@@ -42,7 +61,7 @@ export class PrismaReviewRepository implements ReviewRepository {
   async findById(id: string): Promise<ReviewEntity | null> {
     const review = await this.prisma.review.findUnique({
       where: { id },
-      include: this.includeProfessionalWithUser,
+      include: this.includeServiceProviderWithUser,
     });
 
     if (!review) return null;
@@ -50,9 +69,9 @@ export class PrismaReviewRepository implements ReviewRepository {
     return PrismaReviewMapper.toDomain(review);
   }
 
-  async findByProfessionalId(professionalId: string): Promise<ReviewEntity[]> {
+  async findByServiceProviderId(serviceProviderId: string): Promise<ReviewEntity[]> {
     const reviews = await this.prisma.review.findMany({
-      where: { professionalId },
+      where: { serviceProviderId },
       include: this.includeReviewer,
       orderBy: { createdAt: 'desc' },
     });
@@ -60,12 +79,12 @@ export class PrismaReviewRepository implements ReviewRepository {
     return reviews.map((r) => PrismaReviewMapper.toDomain(r));
   }
 
-  async findApprovedByProfessionalId(
-    professionalId: string,
+  async findApprovedByServiceProviderId(
+    serviceProviderId: string,
   ): Promise<ReviewEntity[]> {
     const reviews = await this.prisma.review.findMany({
       where: {
-        professionalId,
+        serviceProviderId,
         status: PrismaReviewStatus.APPROVED,
       },
       include: this.includeReviewer,
@@ -88,7 +107,7 @@ export class PrismaReviewRepository implements ReviewRepository {
   async findByStatus(status: ReviewStatus): Promise<ReviewEntity[]> {
     const reviews = await this.prisma.review.findMany({
       where: { status: status as PrismaReviewStatus },
-      include: this.includeProfessionalWithUser,
+      include: this.includeServiceProviderWithUser,
       orderBy: { createdAt: 'asc' },
     });
 
@@ -99,7 +118,7 @@ export class PrismaReviewRepository implements ReviewRepository {
     const createData: any = {
       id: review.id,
       reviewerId: review.reviewerId,
-      professionalId: review.professionalId,
+      serviceProviderId: review.serviceProviderId,
       requestId: review.requestId,
       rating: review.rating,
       comment: review.comment,
@@ -120,7 +139,7 @@ export class PrismaReviewRepository implements ReviewRepository {
       where: { id: review.id },
       create: createData,
       update: updateData,
-      include: this.includeProfessionalWithUser,
+      include: this.includeServiceProviderWithUser,
     });
 
     return PrismaReviewMapper.toDomain(saved);

@@ -5,6 +5,25 @@ import { ProfessionalEntity } from '../../domain/entities/professional.entity';
 import { ProfessionalStatus } from '@prisma/client';
 import { PrismaProfessionalMapper } from '../mappers/professional.prisma-mapper';
 
+// Standard includes for professional queries
+const standardIncludes = {
+  trades: {
+    include: {
+      trade: true,
+    },
+  },
+  user: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      profilePictureUrl: true,
+    },
+  },
+  serviceProvider: true,
+};
+
 @Injectable()
 export class PrismaProfessionalRepository implements ProfessionalRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -12,22 +31,7 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
   async findById(id: string): Promise<ProfessionalEntity | null> {
     const professional = await this.prisma.professional.findUnique({
       where: { id },
-      include: {
-        trades: {
-          include: {
-            trade: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            profilePictureUrl: true,
-          },
-        },
-      },
+      include: standardIncludes,
     });
 
     if (!professional) return null;
@@ -38,13 +42,7 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
   async findByUserId(userId: string): Promise<ProfessionalEntity | null> {
     const professional = await this.prisma.professional.findUnique({
       where: { userId },
-      include: {
-        trades: {
-          include: {
-            trade: true,
-          },
-        },
-      },
+      include: standardIncludes,
     });
 
     if (!professional) return null;
@@ -61,22 +59,7 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
           },
         },
       },
-      include: {
-        trades: {
-          include: {
-            trade: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            profilePictureUrl: true,
-          },
-        },
-      },
+      include: standardIncludes,
     });
 
     return professionals.map((p) => PrismaProfessionalMapper.toDomain(p));
@@ -143,23 +126,8 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
 
     const professionals = await this.prisma.professional.findMany({
       where,
-      include: {
-        trades: {
-          include: {
-            trade: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            profilePictureUrl: true,
-          },
-        },
-      },
-      orderBy: { averageRating: 'desc' },
+      include: standardIncludes,
+      orderBy: { serviceProvider: { averageRating: 'desc' } },
     });
 
     return professionals.map((p) => PrismaProfessionalMapper.toDomain(p));
@@ -171,14 +139,26 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
     const result = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.professional.findUnique({
         where: { id: professional.id },
-        select: { id: true },
+        select: { id: true, serviceProviderId: true },
       });
 
       if (!existing) {
+        // First, create the ServiceProvider
+        const serviceProvider = await tx.serviceProvider.create({
+          data: {
+            id: professional.serviceProviderId,
+            type: 'PROFESSIONAL',
+            averageRating: 0,
+            totalReviews: 0,
+          },
+        });
+
+        // Then create the Professional
         return tx.professional.create({
           data: {
             id: professional.id,
             userId: professional.userId,
+            serviceProviderId: serviceProvider.id,
             description: professional.description,
             experienceYears: professional.experienceYears,
             status: professional.status,
@@ -187,16 +167,12 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
             address: professional.address,
             whatsapp: professional.whatsapp,
             website: professional.website,
-            averageRating: professional.averageRating,
-            totalReviews: professional.totalReviews,
             profileImage: professional.profileImage,
             gallery: professional.gallery,
             active: professional.active,
             trades: PrismaProfessionalMapper.toPersistenceTrades(tradeIds),
           },
-          include: {
-            trades: { include: { trade: true } },
-          },
+          include: standardIncludes,
         });
       }
 
@@ -212,8 +188,6 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
           address: professional.address,
           whatsapp: professional.whatsapp,
           website: professional.website,
-          averageRating: professional.averageRating,
-          totalReviews: professional.totalReviews,
           profileImage: professional.profileImage,
           gallery: professional.gallery,
           active: professional.active,
@@ -235,26 +209,51 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
 
       return tx.professional.findUniqueOrThrow({
         where: { id: professional.id },
-        include: {
-          trades: { include: { trade: true } },
-        },
+        include: standardIncludes,
       });
     });
 
     return PrismaProfessionalMapper.toDomain(result);
   }
 
+  /**
+   * Update rating on the ServiceProvider associated with this professional
+   */
   async updateRating(
     id: string,
     averageRating: number,
     totalReviews: number,
   ): Promise<void> {
-    await this.prisma.professional.update({
+    // First get the professional to find its serviceProviderId
+    const professional = await this.prisma.professional.findUnique({
       where: { id },
+      select: { serviceProviderId: true },
+    });
+
+    if (!professional) {
+      throw new Error(`Professional not found: ${id}`);
+    }
+
+    await this.prisma.serviceProvider.update({
+      where: { id: professional.serviceProviderId },
       data: {
         averageRating,
         totalReviews,
       },
     });
+  }
+
+  /**
+   * Find a professional by their serviceProviderId
+   */
+  async findByServiceProviderId(serviceProviderId: string): Promise<ProfessionalEntity | null> {
+    const professional = await this.prisma.professional.findUnique({
+      where: { serviceProviderId },
+      include: standardIncludes,
+    });
+
+    if (!professional) return null;
+
+    return PrismaProfessionalMapper.toDomain(professional);
   }
 }

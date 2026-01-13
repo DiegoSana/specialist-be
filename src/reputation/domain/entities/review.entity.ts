@@ -13,8 +13,8 @@ export class ReviewEntity {
   static create(params: {
     id: string;
     reviewerId: string;
-    professionalId: string;
-    requestId: string | null;
+    serviceProviderId: string;
+    requestId: string; // Reviews are always tied to a request
     rating: number;
     comment: string | null;
     status?: ReviewStatus;
@@ -24,7 +24,7 @@ export class ReviewEntity {
     return new ReviewEntity(
       params.id,
       params.reviewerId,
-      params.professionalId,
+      params.serviceProviderId,
       params.requestId,
       params.rating,
       params.comment,
@@ -39,8 +39,8 @@ export class ReviewEntity {
   constructor(
     public readonly id: string,
     public readonly reviewerId: string,
-    public readonly professionalId: string,
-    public readonly requestId: string | null,
+    public readonly serviceProviderId: string, // ServiceProvider being reviewed
+    public readonly requestId: string, // Reviews are always tied to a request
     public readonly rating: number,
     public readonly comment: string | null,
     public readonly status: ReviewStatus,
@@ -49,6 +49,13 @@ export class ReviewEntity {
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
   ) {}
+
+  /**
+   * @deprecated Use serviceProviderId instead. This getter is for backward compatibility.
+   */
+  get professionalId(): string {
+    return this.serviceProviderId;
+  }
 
   isValidRating(): boolean {
     return this.rating >= 1 && this.rating <= 5;
@@ -75,7 +82,7 @@ export class ReviewEntity {
     return new ReviewEntity(
       this.id,
       this.reviewerId,
-      this.professionalId,
+      this.serviceProviderId,
       this.requestId,
       changes.rating !== undefined ? changes.rating : this.rating,
       changes.comment !== undefined ? changes.comment : this.comment,
@@ -92,7 +99,7 @@ export class ReviewEntity {
     return new ReviewEntity(
       this.id,
       this.reviewerId,
-      this.professionalId,
+      this.serviceProviderId,
       this.requestId,
       this.rating,
       this.comment,
@@ -109,7 +116,7 @@ export class ReviewEntity {
     return new ReviewEntity(
       this.id,
       this.reviewerId,
-      this.professionalId,
+      this.serviceProviderId,
       this.requestId,
       this.rating,
       this.comment,
