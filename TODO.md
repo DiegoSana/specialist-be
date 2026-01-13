@@ -204,10 +204,16 @@ Controller → Request DTO → Service → Domain Entity → Response DTO → Cl
   - [x] `rateClient` - Retorna `RequestResponseDto`
   - [x] Swagger decorators actualizados con tipos de respuesta
 
-- [ ] **ProfessionalsController**
-  - [ ] `findAll` - Crear `ProfessionalListResponseDto`
-  - [ ] `findById` - Crear `ProfessionalDetailResponseDto`
-  - [ ] `getMyProfile` - Reutilizar DTO
+- [x] **ProfessionalsController** ✅
+  - [x] Crear `ProfessionalResponseDto` en `presentation/dto/`
+  - [x] Crear `ProfessionalSearchResultDto` (sin campos sensibles como whatsapp/address)
+  - [x] `search` - Retorna `ProfessionalSearchResultDto[]` (campos públicos)
+  - [x] `findById` - Retorna `ProfessionalResponseDto` (datos completos)
+  - [x] `getMyProfile` - Retorna `ProfessionalResponseDto`
+  - [x] `createMyProfile` - Retorna `ProfessionalResponseDto`
+  - [x] `updateMyProfile` - Retorna `ProfessionalResponseDto`
+  - [x] `addGalleryItem` / `removeGalleryItem` - Retorna `ProfessionalResponseDto`
+  - [x] Swagger decorators actualizados con tipos de respuesta
 
 - [ ] **ReviewsController**
   - [ ] `findByProfessional` - Crear `ReviewListResponseDto`
