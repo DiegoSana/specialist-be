@@ -326,7 +326,7 @@ Para desacoplar `Request` y `Review` del tipo de proveedor, introducimos una cap
 
 ---
 
-### ⬜ Fase 1: Migración a ServiceProvider
+### ✅ Fase 1: Migración a ServiceProvider (COMPLETADO)
 
 #### 1.1 Schema Changes
 
@@ -480,27 +480,27 @@ model Company {
 }
 ```
 
-#### 2.2 Domain Layer
+#### 2.2 Domain Layer ✅
 
-- [ ] Crear `CompanyEntity`
+- [x] Crear `CompanyEntity` - `src/profiles/domain/entities/company.entity.ts`
   ```typescript
   class CompanyEntity {
     constructor(
       public readonly id: string,
       public readonly userId: string,
-      public readonly serviceProvider: ServiceProviderEntity,
+      public readonly serviceProviderId: string,
       public readonly companyName: string,
-      public readonly legalName: string | null,
-      // ... más campos
+      // ... campos implementados
     ) {}
     
-    // Métodos de autorización
+    // Métodos de autorización implementados
     canBeViewedBy(ctx: CompanyAuthContext): boolean
     canBeEditedBy(ctx: CompanyAuthContext): boolean
+    // ... más métodos
   }
   ```
 
-- [ ] Crear `CompanyAuthContext` interface
+- [x] Crear `CompanyAuthContext` interface
 
 #### 2.3 Application Layer
 
@@ -554,6 +554,13 @@ model Company {
 
 ### ⬜ Fase 3: Testing
 
+**NOTA**: Hay 31 errores de TypeScript en archivos de tests que necesitan actualizarse
+para el nuevo schema de ServiceProvider. Esto incluye:
+- `request.service.spec.ts` - actualizar a `providerId`
+- `request-interest.service.spec.ts` - actualizar a `serviceProviderId`
+- Otros tests que usan `professionalId` en contextos de Request/Review
+
+- [ ] Actualizar tests existentes para nuevo schema (31 errores)
 - [ ] Tests unitarios para `ServiceProviderEntity`
 - [ ] Tests unitarios para `CompanyEntity`
 - [ ] Tests de integración para migración
