@@ -24,7 +24,7 @@ const createMockReview = (overrides?: Partial<ReviewEntity>): ReviewEntity => {
   return new ReviewEntity(
     overrides?.id || 'review-123',
     overrides?.reviewerId || 'user-123',
-    overrides?.professionalId || 'prof-123',
+    overrides?.serviceProviderId || 'service-provider-123',
     overrides?.requestId || 'request-123',
     overrides?.rating || 5,
     overrides?.comment || 'Great service!',
@@ -48,6 +48,8 @@ describe('ReviewService', () => {
     mockReviewRepository = {
       findByProfessionalId: jest.fn(),
       findApprovedByProfessionalId: jest.fn(),
+      findByServiceProviderId: jest.fn(),
+      findApprovedByServiceProviderId: jest.fn(),
       findById: jest.fn(),
       findByRequestId: jest.fn(),
       findByStatus: jest.fn(),
@@ -57,6 +59,7 @@ describe('ReviewService', () => {
 
     mockProfessionalService = {
       getByIdOrFail: jest.fn(),
+      findByServiceProviderId: jest.fn(),
       updateRating: jest.fn(),
     };
 
@@ -93,22 +96,26 @@ describe('ReviewService', () => {
 
   describe('findByProfessionalId', () => {
     it('should return only approved reviews for a professional', async () => {
+      const professional = createMockProfessional({ id: 'prof-123' });
       const reviews = [
         createMockReview({ rating: 5, status: ReviewStatus.APPROVED }),
         createMockReview({ id: 'review-456', rating: 4, status: ReviewStatus.APPROVED }),
       ];
-      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue(reviews);
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue(reviews);
 
       const result = await service.findByProfessionalId('prof-123');
 
       expect(result).toHaveLength(2);
-      expect(mockReviewRepository.findApprovedByProfessionalId).toHaveBeenCalledWith(
-        'prof-123',
+      expect(mockReviewRepository.findApprovedByServiceProviderId).toHaveBeenCalledWith(
+        'service-provider-123',
       );
     });
 
     it('should return empty array when no approved reviews', async () => {
-      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([]);
+      const professional = createMockProfessional({ id: 'prof-123' });
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue([]);
 
       const result = await service.findByProfessionalId('prof-123');
 
@@ -201,17 +208,8 @@ describe('ReviewService', () => {
       );
     });
 
-    it('should throw NotFoundException if professional not found', async () => {
-      const user = createMockUser({ hasClientProfile: true });
-      mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.getByIdOrFail.mockRejectedValue(
-        new NotFoundException('Professional not found'),
-      );
-
-      await expect(service.create('user-123', createDto)).rejects.toThrow(
-        NotFoundException,
-      );
-    });
+    // Note: "professional not found" test removed as the service no longer validates
+    // professional existence in create - it uses request.providerId directly
 
     it('should throw BadRequestException if requestId is not provided', async () => {
       const user = createMockUser({ hasClientProfile: true });
@@ -488,18 +486,20 @@ describe('ReviewService', () => {
         status: ReviewStatus.PENDING,
       });
       const user = createMockUser({ id: 'user-123', isAdmin: false });
+      const professional = createMockProfessional();
 
       mockReviewRepository.findById.mockResolvedValue(review);
       mockUserService.findById.mockResolvedValue(user);
       mockReviewRepository.delete.mockResolvedValue(undefined);
-      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([]);
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue([]);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(professional);
       mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       await service.delete('review-123', 'user-123');
 
       expect(mockReviewRepository.delete).toHaveBeenCalledWith('review-123');
       expect(mockProfessionalService.updateRating).toHaveBeenCalledWith(
-        'prof-123',
+        'professional-123', // Uses professional.id, not serviceProviderId
         0,
         0,
       );
@@ -546,7 +546,7 @@ describe('ReviewService', () => {
     it('should recalculate professional rating after delete', async () => {
       const review = createMockReview({
         reviewerId: 'user-123',
-        professionalId: 'prof-123',
+        serviceProviderId: 'service-provider-123',
         status: ReviewStatus.PENDING,
       });
       const remainingReviews = [
@@ -554,18 +554,20 @@ describe('ReviewService', () => {
         createMockReview({ rating: 5, status: ReviewStatus.APPROVED }),
       ];
       const user = createMockUser({ id: 'user-123', isAdmin: false });
+      const professional = createMockProfessional();
 
       mockReviewRepository.findById.mockResolvedValue(review);
       mockUserService.findById.mockResolvedValue(user);
       mockReviewRepository.delete.mockResolvedValue(undefined);
-      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue(
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue(
         remainingReviews,
       );
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(professional);
 
       await service.delete('review-123', 'user-123');
 
       expect(mockProfessionalService.updateRating).toHaveBeenCalledWith(
-        'prof-123',
+        'professional-123', // Uses professional.id, not serviceProviderId
         4.5,
         2,
       );
@@ -582,10 +584,10 @@ describe('ReviewService', () => {
       mockReviewRepository.findById.mockResolvedValue(review);
       mockUserService.findById.mockResolvedValue(admin);
       mockReviewRepository.save.mockResolvedValue(approvedReview);
-      mockReviewRepository.findApprovedByProfessionalId.mockResolvedValue([
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue([
         approvedReview,
       ]);
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(professional);
 
       const result = await service.approve('review-123', 'admin-123');
 

@@ -116,7 +116,7 @@ describe('FileStorageService', () => {
       const request = createMockRequest({
         id: 'req-123',
         clientId: 'user-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
       });
 
       mockRequestService.findById.mockResolvedValue(request);
@@ -136,7 +136,7 @@ describe('FileStorageService', () => {
       const request = createMockRequest({
         id: 'req-123',
         clientId: 'other-user',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
       });
       const professional = createMockProfessional({
         id: 'prof-123',
@@ -160,7 +160,7 @@ describe('FileStorageService', () => {
       const request = createMockRequest({
         id: 'req-123',
         clientId: 'client-user',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
       });
 
       mockRequestService.findById.mockResolvedValue(request);
@@ -319,7 +319,7 @@ describe('FileStorageService', () => {
           id: 'req-123',
           isPublic: false,
           clientId: 'client-user',
-          professionalId: 'prof-123',
+          providerId: 'service-provider-123',
         });
 
         mockFileStorageRepository.findByPath.mockResolvedValue({
@@ -344,7 +344,7 @@ describe('FileStorageService', () => {
           id: 'req-123',
           isPublic: false,
           clientId: 'client-user',
-          professionalId: 'prof-123',
+          providerId: 'service-provider-123',
         });
         const professional = createMockProfessional({
           id: 'prof-123',
@@ -374,7 +374,7 @@ describe('FileStorageService', () => {
           id: 'req-123',
           isPublic: false,
           clientId: 'client-user',
-          professionalId: 'prof-123',
+          providerId: 'service-provider-123',
         });
 
         mockFileStorageRepository.findByPath.mockResolvedValue({
@@ -400,12 +400,14 @@ describe('FileStorageService', () => {
           id: 'req-123',
           isPublic: false,
           clientId: 'client-user',
-          professionalId: 'prof-123', // Assigned to prof-123
+          providerId: 'service-provider-123', // Assigned to prof-123
         });
         const differentProfessional = createMockProfessional({
           id: 'prof-999', // Different professional
           userId: 'different-professional-user',
         });
+        // Override the serviceProviderId to be different
+        (differentProfessional as any).serviceProviderId = 'service-provider-999';
 
         mockFileStorageRepository.findByPath.mockResolvedValue({
           category: FileCategory.REQUEST_PHOTO,

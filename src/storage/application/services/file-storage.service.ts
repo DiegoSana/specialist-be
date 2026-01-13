@@ -49,13 +49,13 @@ export class FileStorageService {
       // Check if user is the client who created the request
       const isClient = request.clientId === userId;
 
-      // Check if user is the professional assigned to the request
+      // Check if user is the service provider assigned to the request
       let isProfessional = false;
-      if (request.professionalId) {
+      if (request.providerId) {
         try {
           const professional =
             await this.professionalService.findByUserId(userId);
-          isProfessional = professional.id === request.professionalId;
+          isProfessional = professional.serviceProviderId === request.providerId;
         } catch {
           // User doesn't have a professional profile
           isProfessional = false;
@@ -162,12 +162,13 @@ export class FileStorageService {
           return true;
         }
 
-        // Check if user is the assigned professional
-        if (request.professionalId) {
+        // Check if user is the assigned service provider (professional or company)
+        if (request.providerId) {
           try {
             const professional =
               await this.professionalService.findByUserId(userId);
-            if (professional.id === request.professionalId) {
+            // Compare serviceProviderId with the request's providerId
+            if (professional.serviceProviderId === request.providerId) {
               return true;
             }
           } catch {
