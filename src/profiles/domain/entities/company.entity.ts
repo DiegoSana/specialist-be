@@ -1,8 +1,18 @@
 import { ServiceProviderEntity } from './service-provider.entity';
-import { TradeInfo } from './professional.entity';
 
 /**
- * Company verification status
+ * Trade info for company (same as professional)
+ */
+export interface TradeInfo {
+  id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  isPrimary: boolean;
+}
+
+/**
+ * Company verification status (matches Prisma enum)
  */
 export enum CompanyStatus {
   PENDING_VERIFICATION = 'PENDING_VERIFICATION',
@@ -30,9 +40,10 @@ export class CompanyEntity {
     public readonly companyName: string,
     public readonly legalName: string | null,
     public readonly taxId: string | null,
+    public readonly trades: TradeInfo[],
     public readonly description: string | null,
     public readonly foundedYear: number | null,
-    public readonly employeeCount: string | null,
+    public readonly employeeCount: string | null, // "1-5", "6-20", "21-50", "50+"
     public readonly website: string | null,
     public readonly phone: string | null,
     public readonly email: string | null,
@@ -45,9 +56,10 @@ export class CompanyEntity {
     public readonly active: boolean,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
-    public readonly trades: TradeInfo[],
     // Optional: the full ServiceProvider entity when needed
     public readonly serviceProvider?: ServiceProviderEntity,
+    // Optional: attached user data
+    public readonly user?: any,
   ) {}
 
   // ─────────────────────────────────────────────────────────────
@@ -93,7 +105,15 @@ export class CompanyEntity {
     return this.status === CompanyStatus.PENDING_VERIFICATION;
   }
 
+  isRejected(): boolean {
+    return this.status === CompanyStatus.REJECTED;
+  }
+
   isActive(): boolean {
+    return this.active;
+  }
+
+  isActiveAndVerified(): boolean {
     return this.active && this.isVerified();
   }
 
@@ -164,6 +184,7 @@ export class CompanyEntity {
       this.companyName,
       this.legalName,
       this.taxId,
+      this.trades,
       this.description,
       this.foundedYear,
       this.employeeCount,
@@ -179,9 +200,8 @@ export class CompanyEntity {
       this.active,
       this.createdAt,
       this.updatedAt,
-      this.trades,
       serviceProvider,
+      this.user,
     );
   }
 }
-

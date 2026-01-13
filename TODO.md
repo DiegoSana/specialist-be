@@ -502,36 +502,39 @@ model Company {
 
 - [x] Crear `CompanyAuthContext` interface
 
-#### 2.3 Application Layer
+#### 2.3 Application Layer ✅
 
-- [ ] Crear `CompanyService`
-  - `create(userId, data)` - crea Company + ServiceProvider
-  - `update(id, data, ctx)` - actualiza con permisos
-  - `findById(id)` - perfil público
-  - `findByUserId(userId)` - mi perfil
-  - `search(filters)` - búsqueda con filtros
+- [x] Crear `CompanyService`
+  - `createProfile(userId, data)` - crea Company + ServiceProvider
+  - `updateProfile(user, id, data)` - actualiza con permisos
+  - `search(params)` - búsqueda pública
+  - `findById(id)` - acceso público sanitizado
+  - `findByUserId(userId)` - acceso dueño
+  - `addGalleryItem(user, url)` / `removeGalleryItem(user, url)`
+  - `verifyCompany(user, id)` - solo admin
 
-- [ ] Crear DTOs:
+- [x] Crear DTOs:
   - `CreateCompanyDto`
   - `UpdateCompanyDto`
+  - `SearchCompaniesDto`
   - `CompanyResponseDto`
-  - `CompanyListResponseDto`
+  - `CompanySearchResultDto` (sin datos sensibles)
 
-#### 2.4 Presentation Layer
+#### 2.4 Presentation Layer ✅
 
-- [ ] Crear `CompaniesController`
+- [x] Crear `CompaniesController` - endpoints implementados:
   ```
-  POST   /companies        - crear perfil
-  PATCH  /companies/:id    - actualizar
-  GET    /companies/:id    - ver perfil público
-  GET    /companies/me     - mi perfil
-  GET    /companies        - buscar empresas
-  DELETE /companies/:id    - eliminar (soft delete?)
+  GET    /companies           - buscar empresas (público)
+  GET    /companies/:id       - ver perfil público
+  POST   /companies/me        - crear mi perfil
+  PATCH  /companies/me        - actualizar mi perfil
+  POST   /companies/me/gallery - agregar foto galería
+  DELETE /companies/me/gallery - eliminar foto galería
   ```
 
-#### 2.5 Identity Integration
+#### 2.5 Identity Integration ✅
 
-- [ ] Agregar a `User`:
+- [x] Agregar a `User`:
   ```prisma
   model User {
     // existente
@@ -539,11 +542,11 @@ model Company {
   }
   ```
 
-- [ ] Actualizar `UserEntity`:
+- [x] Actualizar `UserEntity`:
   - Agregar `hasCompanyProfile: boolean`
-  - Agregar `companyId: string | null`
+  - Métodos: `isCompany()`, `isServiceProvider()`, `hasAnyProviderProfile()`, `canCreateCompanyProfile()`
 
-- [ ] Actualizar `/auth/me` response
+- [x] Actualizar `/users/me` response con `hasCompanyProfile`
 
 #### 2.6 Notifications
 
