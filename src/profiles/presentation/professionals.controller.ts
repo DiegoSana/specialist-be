@@ -95,11 +95,7 @@ export class ProfessionalsController {
     @Body() updateDto: UpdateProfessionalDto,
   ) {
     const professional = await this.professionalService.findByUserId(user.id);
-    return this.professionalService.updateProfile(
-      user.id,
-      professional.id,
-      updateDto,
-    );
+    return this.professionalService.updateProfile(user, professional.id, updateDto);
   }
 
   @Post('me/gallery')
@@ -112,7 +108,7 @@ export class ProfessionalsController {
     @CurrentUser() user: UserEntity,
     @Body() body: { url: string },
   ) {
-    return this.professionalService.addGalleryItem(user.id, body.url);
+    return this.professionalService.addGalleryItem(user, body.url);
   }
 
   @Delete('me/gallery')
@@ -128,6 +124,6 @@ export class ProfessionalsController {
     @CurrentUser() user: UserEntity,
     @Body() body: { url: string },
   ) {
-    return this.professionalService.removeGalleryItem(user.id, body.url);
+    return this.professionalService.removeGalleryItem(user, body.url);
   }
 }
