@@ -15,7 +15,6 @@ import {
 import { RequestStatus } from '@prisma/client';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
 import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
-import { RequestAuthContext } from '../../domain/entities/request.entity';
 
 const createMockInterest = (
   overrides?: Partial<RequestInterestEntity>,
@@ -29,13 +28,23 @@ const createMockInterest = (
   );
 };
 
+// Extended context that includes both serviceProviderId and professionalId
+interface InterestAuthContext {
+  userId: string;
+  serviceProviderId?: string | null;
+  professionalId?: string | null;
+  isAdmin?: boolean;
+}
+
 // Helper to create auth context
 const createAuthContext = (
   userId: string,
+  serviceProviderId?: string | null,
   professionalId?: string | null,
   isAdmin = false,
-): RequestAuthContext => ({
+): InterestAuthContext => ({
   userId,
+  serviceProviderId: serviceProviderId ?? null,
   professionalId: professionalId ?? null,
   isAdmin,
 });
@@ -99,6 +108,7 @@ describe('RequestInterestService', () => {
 
       expect(ctx).toEqual({
         userId: 'user-123',
+        serviceProviderId: 'service-provider-123',
         professionalId: 'prof-123',
         isAdmin: false,
       });
@@ -113,6 +123,7 @@ describe('RequestInterestService', () => {
 
       expect(ctx).toEqual({
         userId: 'user-123',
+        serviceProviderId: null,
         professionalId: null,
         isAdmin: false,
       });
@@ -145,7 +156,7 @@ describe('RequestInterestService', () => {
         isPublic: true,
         status: RequestStatus.PENDING,
         tradeId: 'trade-1',
-        professionalId: null,
+        providerId: null,
       });
       const interest = createMockInterest();
 
@@ -156,7 +167,7 @@ describe('RequestInterestService', () => {
       mockProfessionalService.findByUserId.mockResolvedValue(professionalWithUser);
       mockRequestInterestRepository.add.mockResolvedValue(interest);
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       const result = await service.expressInterest('request-123', ctx, dto);
 
       expect(result).toEqual(interest);
@@ -178,7 +189,7 @@ describe('RequestInterestService', () => {
     });
 
     it('should throw ForbiddenException if user is not a professional', async () => {
-      const ctx = createAuthContext('user-123', null);
+      const ctx = createAuthContext('user-123', null, null);
 
       await expect(
         service.expressInterest('request-123', ctx, dto),
@@ -188,7 +199,7 @@ describe('RequestInterestService', () => {
     it('should throw NotFoundException if request not found', async () => {
       mockRequestRepository.findById.mockResolvedValue(null);
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       await expect(
         service.expressInterest('request-123', ctx, dto),
       ).rejects.toThrow(NotFoundException);
@@ -202,7 +213,7 @@ describe('RequestInterestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       await expect(
         service.expressInterest('request-123', ctx, dto),
       ).rejects.toThrow(BadRequestException);
@@ -212,12 +223,12 @@ describe('RequestInterestService', () => {
       const request = createMockRequest({
         isPublic: true,
         status: RequestStatus.ACCEPTED,
-        professionalId: null,
+        providerId: null,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       await expect(
         service.expressInterest('request-123', ctx, dto),
       ).rejects.toThrow(BadRequestException);
@@ -227,7 +238,7 @@ describe('RequestInterestService', () => {
       const request = createMockRequest({
         isPublic: true,
         status: RequestStatus.PENDING,
-        professionalId: null,
+        providerId: null,
       });
       const existingInterest = createMockInterest();
 
@@ -236,7 +247,7 @@ describe('RequestInterestService', () => {
         existingInterest,
       );
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       await expect(
         service.expressInterest('request-123', ctx, dto),
       ).rejects.toThrow(BadRequestException);
@@ -259,7 +270,7 @@ describe('RequestInterestService', () => {
         isPublic: true,
         status: RequestStatus.PENDING,
         tradeId: 'trade-1',
-        professionalId: null,
+        providerId: null,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
@@ -268,7 +279,7 @@ describe('RequestInterestService', () => {
       );
       mockProfessionalService.findByUserId.mockResolvedValue(professional);
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       await expect(
         service.expressInterest('request-123', ctx, dto),
       ).rejects.toThrow(BadRequestException);
@@ -287,7 +298,7 @@ describe('RequestInterestService', () => {
         isPublic: true,
         status: RequestStatus.PENDING,
         tradeId: null,
-        professionalId: null,
+        providerId: null,
       });
       const interest = createMockInterest();
 
@@ -298,7 +309,7 @@ describe('RequestInterestService', () => {
       mockProfessionalService.findByUserId.mockResolvedValue(professionalWithUser);
       mockRequestInterestRepository.add.mockResolvedValue(interest);
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       const result = await service.expressInterest('request-123', ctx, dto);
       expect(result).toEqual(interest);
     });
@@ -313,7 +324,7 @@ describe('RequestInterestService', () => {
       );
       mockRequestInterestRepository.remove.mockResolvedValue(undefined);
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       await service.removeInterest('request-123', ctx);
 
       expect(mockRequestInterestRepository.remove).toHaveBeenCalledWith(
@@ -323,7 +334,7 @@ describe('RequestInterestService', () => {
     });
 
     it('should throw ForbiddenException if user is not a professional', async () => {
-      const ctx = createAuthContext('user-123', null);
+      const ctx = createAuthContext('user-123', null, null);
 
       await expect(service.removeInterest('request-123', ctx)).rejects.toThrow(
         ForbiddenException,
@@ -335,7 +346,7 @@ describe('RequestInterestService', () => {
         null,
       );
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       await expect(service.removeInterest('request-123', ctx)).rejects.toThrow(
         NotFoundException,
       );
@@ -355,7 +366,7 @@ describe('RequestInterestService', () => {
         interests,
       );
 
-      const ctx = createAuthContext('user-123');
+      const ctx = createAuthContext('user-123', null, null);
       const result = await service.getInterestedProfessionals(
         'request-123',
         ctx,
@@ -373,7 +384,7 @@ describe('RequestInterestService', () => {
         interests,
       );
 
-      const ctx = createAuthContext('admin-user', null, true);
+      const ctx = createAuthContext('admin-user', null, null, true);
       const result = await service.getInterestedProfessionals(
         'request-123',
         ctx,
@@ -385,7 +396,7 @@ describe('RequestInterestService', () => {
     it('should throw NotFoundException if request not found', async () => {
       mockRequestRepository.findById.mockResolvedValue(null);
 
-      const ctx = createAuthContext('user-123');
+      const ctx = createAuthContext('user-123', null, null);
       await expect(
         service.getInterestedProfessionals('request-123', ctx),
       ).rejects.toThrow(NotFoundException);
@@ -396,7 +407,7 @@ describe('RequestInterestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('user-123');
+      const ctx = createAuthContext('user-123', null, null);
       await expect(
         service.getInterestedProfessionals('request-123', ctx),
       ).rejects.toThrow(ForbiddenException);
@@ -411,7 +422,7 @@ describe('RequestInterestService', () => {
         interest,
       );
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       const result = await service.hasExpressedInterest('request-123', ctx);
 
       expect(result).toBe(true);
@@ -422,14 +433,14 @@ describe('RequestInterestService', () => {
         null,
       );
 
-      const ctx = createAuthContext('user-123', 'prof-123');
+      const ctx = createAuthContext('user-123', 'service-provider-123', 'prof-123');
       const result = await service.hasExpressedInterest('request-123', ctx);
 
       expect(result).toBe(false);
     });
 
     it('should return false if user is not a professional', async () => {
-      const ctx = createAuthContext('user-123', null);
+      const ctx = createAuthContext('user-123', null, null);
       const result = await service.hasExpressedInterest('request-123', ctx);
 
       expect(result).toBe(false);
@@ -443,10 +454,11 @@ describe('RequestInterestService', () => {
         isPublic: true,
         status: RequestStatus.PENDING,
       });
+      const professional = createMockProfessional({ id: 'prof-123' });
       const interest = createMockInterest();
       const updatedRequest = createMockRequest({
         clientId: 'user-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.ACCEPTED,
         isPublic: false,
       });
@@ -455,19 +467,20 @@ describe('RequestInterestService', () => {
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         interest,
       );
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestRepository.save.mockResolvedValue(updatedRequest);
       mockRequestInterestRepository.removeAllByRequestId.mockResolvedValue(
         undefined,
       );
 
-      const ctx = createAuthContext('user-123');
+      const ctx = createAuthContext('user-123', null, null);
       const result = await service.assignProfessional(
         'request-123',
         ctx,
         'prof-123',
       );
 
-      expect(result.professionalId).toBe('prof-123');
+      expect(result.providerId).toBe('service-provider-123');
       expect(result.status).toBe(RequestStatus.ACCEPTED);
       expect(
         mockRequestInterestRepository.removeAllByRequestId,
@@ -490,9 +503,10 @@ describe('RequestInterestService', () => {
         isPublic: true,
         status: RequestStatus.PENDING,
       });
+      const professional = createMockProfessional({ id: 'prof-123' });
       const interest = createMockInterest();
       const updatedRequest = createMockRequest({
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.ACCEPTED,
       });
 
@@ -500,25 +514,26 @@ describe('RequestInterestService', () => {
       mockRequestInterestRepository.findByRequestAndProfessional.mockResolvedValue(
         interest,
       );
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestRepository.save.mockResolvedValue(updatedRequest);
       mockRequestInterestRepository.removeAllByRequestId.mockResolvedValue(
         undefined,
       );
 
-      const ctx = createAuthContext('admin-user', null, true);
+      const ctx = createAuthContext('admin-user', null, null, true);
       const result = await service.assignProfessional(
         'request-123',
         ctx,
         'prof-123',
       );
 
-      expect(result.professionalId).toBe('prof-123');
+      expect(result.providerId).toBe('service-provider-123');
     });
 
     it('should throw NotFoundException if request not found', async () => {
       mockRequestRepository.findById.mockResolvedValue(null);
 
-      const ctx = createAuthContext('user-123');
+      const ctx = createAuthContext('user-123', null, null);
       await expect(
         service.assignProfessional('request-123', ctx, 'prof-123'),
       ).rejects.toThrow(NotFoundException);
@@ -529,7 +544,7 @@ describe('RequestInterestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('user-123');
+      const ctx = createAuthContext('user-123', null, null);
       await expect(
         service.assignProfessional('request-123', ctx, 'prof-123'),
       ).rejects.toThrow(ForbiddenException);
@@ -543,7 +558,7 @@ describe('RequestInterestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('user-123');
+      const ctx = createAuthContext('user-123', null, null);
       await expect(
         service.assignProfessional('request-123', ctx, 'prof-123'),
       ).rejects.toThrow(BadRequestException);
@@ -558,7 +573,7 @@ describe('RequestInterestService', () => {
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('user-123');
+      const ctx = createAuthContext('user-123', null, null);
       await expect(
         service.assignProfessional('request-123', ctx, 'prof-123'),
       ).rejects.toThrow(BadRequestException);
@@ -576,7 +591,7 @@ describe('RequestInterestService', () => {
         null,
       );
 
-      const ctx = createAuthContext('user-123');
+      const ctx = createAuthContext('user-123', null, null);
       await expect(
         service.assignProfessional('request-123', ctx, 'prof-123'),
       ).rejects.toThrow(BadRequestException);

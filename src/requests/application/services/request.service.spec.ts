@@ -27,11 +27,11 @@ describe('RequestService', () => {
   // Helper to create auth context
   const createAuthContext = (
     userId: string,
-    professionalId?: string | null,
+    serviceProviderId?: string | null,
     isAdmin = false,
   ): RequestAuthContext => ({
     userId,
-    professionalId: professionalId ?? null,
+    serviceProviderId: serviceProviderId ?? null,
     isAdmin,
   });
 
@@ -40,7 +40,7 @@ describe('RequestService', () => {
       save: jest.fn(),
       findById: jest.fn(),
       findByClientId: jest.fn(),
-      findByProfessionalId: jest.fn(),
+      findByProviderId: jest.fn(),
       findPublicRequests: jest.fn(),
       findAvailableForProfessional: jest.fn(),
     };
@@ -79,7 +79,7 @@ describe('RequestService', () => {
     describe('direct requests', () => {
       const directRequestDto = {
         isPublic: false,
-        professionalId: 'prof-123',
+        professionalId: 'prof-123', // DTO uses professionalId, service looks up ServiceProvider
         title: 'Electrical work needed',
         description: 'Need help with electrical work',
         address: 'Test Address 123',
@@ -98,7 +98,7 @@ describe('RequestService', () => {
         const newRequest = createMockRequest({
           clientId: 'client-123',
           isPublic: false,
-          professionalId: 'prof-123',
+          providerId: 'service-provider-123',
           tradeId: null,
         });
 
@@ -113,7 +113,7 @@ describe('RequestService', () => {
           expect.objectContaining({
             clientId: 'client-123',
             isPublic: false,
-            professionalId: 'prof-123',
+            providerId: 'service-provider-123',
             status: RequestStatus.PENDING,
           }),
         );
@@ -123,7 +123,7 @@ describe('RequestService', () => {
             payload: expect.objectContaining({
               clientId: 'client-123',
               isPublic: false,
-              professionalId: 'prof-123',
+              professionalId: 'service-provider-123', // Event uses professionalId for backward compat
             }),
           }),
         );
@@ -193,7 +193,7 @@ describe('RequestService', () => {
         const newRequest = createMockRequest({
           clientId: 'client-123',
           isPublic: true,
-          professionalId: null,
+          providerId: null,
           tradeId: 'trade-123',
         });
 
@@ -206,7 +206,7 @@ describe('RequestService', () => {
         expect(mockRequestRepository.save).toHaveBeenCalledWith(
           expect.objectContaining({
             isPublic: true,
-            professionalId: null,
+            providerId: null,
             tradeId: 'trade-123',
             status: RequestStatus.PENDING,
           }),
@@ -217,7 +217,7 @@ describe('RequestService', () => {
             payload: expect.objectContaining({
               clientId: 'client-123',
               isPublic: true,
-              professionalId: null,
+              professionalId: null, // Event uses professionalId for backward compat
               tradeId: 'trade-123',
             }),
           }),
@@ -272,11 +272,11 @@ describe('RequestService', () => {
     it('should allow assigned professional to view request', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
       });
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('prof-user', 'prof-123');
+      const ctx = createAuthContext('prof-user', 'service-provider-123');
       const result = await service.findByIdForUser('req-123', ctx);
 
       expect(result).toEqual(request);
@@ -295,7 +295,7 @@ describe('RequestService', () => {
     it('should throw ForbiddenException for unauthorized user', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
       });
       mockRequestRepository.findById.mockResolvedValue(request);
 
@@ -309,18 +309,18 @@ describe('RequestService', () => {
   describe('updateStatus', () => {
     it('should allow assigned professional to update ACCEPTED to IN_PROGRESS', async () => {
       const request = createMockRequest({
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.ACCEPTED,
       });
       const updatedRequest = createMockRequest({
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.IN_PROGRESS,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
       mockRequestRepository.save.mockResolvedValue(updatedRequest);
 
-      const ctx = createAuthContext('prof-user', 'prof-123');
+      const ctx = createAuthContext('prof-user', 'service-provider-123');
       const result = await service.updateStatus('req-123', ctx, {
         status: RequestStatus.IN_PROGRESS,
       });
@@ -361,7 +361,7 @@ describe('RequestService', () => {
     it('should throw NotFoundException if request not found', async () => {
       mockRequestRepository.findById.mockResolvedValue(null);
 
-      const ctx = createAuthContext('prof-user', 'prof-123');
+      const ctx = createAuthContext('prof-user', 'service-provider-123');
       await expect(
         service.updateStatus('non-existent', ctx, {
           status: RequestStatus.IN_PROGRESS,
@@ -372,7 +372,7 @@ describe('RequestService', () => {
     it('should throw ForbiddenException if user is not authorized', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.ACCEPTED,
       });
 
@@ -450,7 +450,7 @@ describe('RequestService', () => {
     it('should allow assigned professional to add photo', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         photos: [],
         status: RequestStatus.IN_PROGRESS,
       });
@@ -458,7 +458,7 @@ describe('RequestService', () => {
       mockRequestRepository.findById.mockResolvedValue(request);
       mockRequestRepository.save.mockResolvedValue(request);
 
-      const ctx = createAuthContext('prof-user', 'prof-123');
+      const ctx = createAuthContext('prof-user', 'service-provider-123');
       await service.addRequestPhoto(
         'req-123',
         ctx,
@@ -471,7 +471,7 @@ describe('RequestService', () => {
     it('should throw ForbiddenException for unauthorized user', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.PENDING,
       });
 
@@ -549,7 +549,7 @@ describe('RequestService', () => {
     it('should throw ForbiddenException for unauthorized user', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.PENDING,
       });
 
@@ -566,7 +566,7 @@ describe('RequestService', () => {
     it('should allow assigned professional to rate client after completion', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.DONE,
         clientRating: null,
       });
@@ -578,7 +578,7 @@ describe('RequestService', () => {
       mockRequestRepository.findById.mockResolvedValue(request);
       mockRequestRepository.save.mockResolvedValue(ratedRequest);
 
-      const ctx = createAuthContext('prof-user', 'prof-123');
+      const ctx = createAuthContext('prof-user', 'service-provider-123');
       const result = await service.rateClient('req-123', ctx, 5, 'Great client!');
 
       expect(result.clientRating).toBe(5);
@@ -587,13 +587,13 @@ describe('RequestService', () => {
     it('should throw BadRequestException if request is not done', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.IN_PROGRESS,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('prof-user', 'prof-123');
+      const ctx = createAuthContext('prof-user', 'service-provider-123');
       await expect(service.rateClient('req-123', ctx, 5)).rejects.toThrow(
         BadRequestException,
       );
@@ -602,14 +602,14 @@ describe('RequestService', () => {
     it('should throw BadRequestException if already rated', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.DONE,
         clientRating: 4,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('prof-user', 'prof-123');
+      const ctx = createAuthContext('prof-user', 'service-provider-123');
       await expect(service.rateClient('req-123', ctx, 5)).rejects.toThrow(
         BadRequestException,
       );
@@ -618,7 +618,7 @@ describe('RequestService', () => {
     it('should throw ForbiddenException if not assigned professional', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.DONE,
         clientRating: null,
       });
@@ -634,14 +634,14 @@ describe('RequestService', () => {
     it('should throw BadRequestException for invalid rating', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        professionalId: 'prof-123',
+        providerId: 'service-provider-123',
         status: RequestStatus.DONE,
         clientRating: null,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      const ctx = createAuthContext('prof-user', 'prof-123');
+      const ctx = createAuthContext('prof-user', 'service-provider-123');
       await expect(service.rateClient('req-123', ctx, 6)).rejects.toThrow(
         BadRequestException,
       );
@@ -657,7 +657,7 @@ describe('RequestService', () => {
 
       expect(ctx).toEqual({
         userId: 'user-123',
-        professionalId: 'prof-123',
+        serviceProviderId: 'service-provider-123',
         isAdmin: false,
       });
     });
@@ -671,7 +671,7 @@ describe('RequestService', () => {
 
       expect(ctx).toEqual({
         userId: 'user-123',
-        professionalId: null,
+        serviceProviderId: null,
         isAdmin: false,
       });
     });
@@ -683,7 +683,7 @@ describe('RequestService', () => {
 
       expect(ctx).toEqual({
         userId: 'admin-123',
-        professionalId: null,
+        serviceProviderId: null,
         isAdmin: true,
       });
     });
@@ -705,14 +705,18 @@ describe('RequestService', () => {
 
   describe('findByProfessionalId', () => {
     it('should return all requests for a professional', async () => {
+      const professional = createMockProfessional({ id: 'prof-123' });
       const requests = [createMockRequest()];
-      mockRequestRepository.findByProfessionalId.mockResolvedValue(requests);
+
+      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
+      mockRequestRepository.findByProviderId.mockResolvedValue(requests);
 
       const result = await service.findByProfessionalId('prof-123');
 
       expect(result).toHaveLength(1);
-      expect(mockRequestRepository.findByProfessionalId).toHaveBeenCalledWith(
-        'prof-123',
+      expect(mockProfessionalService.getByIdOrFail).toHaveBeenCalledWith('prof-123');
+      expect(mockRequestRepository.findByProviderId).toHaveBeenCalledWith(
+        'service-provider-123',
       );
     });
   });
