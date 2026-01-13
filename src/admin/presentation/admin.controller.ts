@@ -50,8 +50,11 @@ export class AdminController {
   @Get('users/:id')
   @ApiOperation({ summary: 'Get user by ID (Admin only)' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
-  async getUserById(@Param('id') id: string) {
-    return this.adminService.getUserById(id);
+  async getUserById(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.adminService.getUserById(id, user);
   }
 
   @Put('users/:id/status')
@@ -61,8 +64,9 @@ export class AdminController {
   async updateUserStatus(
     @Param('id') id: string,
     @Body() updateDto: UpdateUserStatusDto,
+    @CurrentUser() user: UserEntity,
   ) {
-    return this.adminService.updateUserStatus(id, updateDto);
+    return this.adminService.updateUserStatus(id, updateDto, user);
   }
 
   @Get('professionals')
