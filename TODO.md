@@ -189,12 +189,20 @@ Controller → Request DTO → Service → Domain Entity → Response DTO → Cl
 
 ### ⬜ Controladores a Revisar
 
-- [ ] **RequestsController**
-  - [ ] `findById` - Crear `RequestResponseDto`
-  - [ ] `findMyRequests` - Crear `RequestListResponseDto`
-  - [ ] `create` - Verificar que retorna DTO
-  - [ ] `update` - Verificar que retorna DTO
-  - [ ] `getInterestedProfessionals` - Crear `InterestedProfessionalsResponseDto`
+- [x] **RequestsController** ✅
+  - [x] Crear `RequestResponseDto` en `presentation/dto/`
+  - [x] Crear `InterestedProfessionalResponseDto` en `presentation/dto/`
+  - [x] `findById` - Retorna `RequestResponseDto`
+  - [x] `findMyRequests` - Retorna `RequestResponseDto[]`
+  - [x] `findAvailable` - Retorna `RequestResponseDto[]`
+  - [x] `create` - Retorna `RequestResponseDto`
+  - [x] `update` - Retorna `RequestResponseDto`
+  - [x] `addPhoto` / `removePhoto` - Retorna `RequestResponseDto`
+  - [x] `expressInterest` - Retorna `InterestedProfessionalResponseDto`
+  - [x] `getInterestedProfessionals` - Retorna `InterestedProfessionalResponseDto[]`
+  - [x] `assignProfessional` - Retorna `RequestResponseDto`
+  - [x] `rateClient` - Retorna `RequestResponseDto`
+  - [x] Swagger decorators actualizados con tipos de respuesta
 
 - [ ] **ProfessionalsController**
   - [ ] `findAll` - Crear `ProfessionalListResponseDto`
