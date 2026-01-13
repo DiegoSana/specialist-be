@@ -39,7 +39,7 @@ export class UsersController {
     @CurrentUser() user: UserEntity,
   ): Promise<UserProfileResponseDto> {
     const profile = await this.clientService.getProfile(user.id);
-    return this.toResponseDto(profile);
+    return UserProfileResponseDto.fromEntity(profile);
   }
 
   @Patch('me')
@@ -58,7 +58,7 @@ export class UsersController {
       user.id,
       updateDto,
     );
-    return this.toResponseDto(updatedProfile);
+    return UserProfileResponseDto.fromEntity(updatedProfile);
   }
 
   @Post('me/client-profile')
@@ -76,23 +76,6 @@ export class UsersController {
     const updatedProfile = await this.clientService.activateClientProfile(
       user.id,
     );
-    return this.toResponseDto(updatedProfile);
-  }
-
-  private toResponseDto(user: UserEntity): UserProfileResponseDto {
-    return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      profilePictureUrl: user.profilePictureUrl,
-      isAdmin: user.isAdmin,
-      status: user.status,
-      hasClientProfile: user.hasClientProfile,
-      hasProfessionalProfile: user.hasProfessionalProfile,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
+    return UserProfileResponseDto.fromEntity(updatedProfile);
   }
 }

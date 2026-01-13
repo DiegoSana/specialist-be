@@ -230,11 +230,19 @@ Controller → Request DTO → Service → Domain Entity → Response DTO → Cl
 
 - [x] **NotificationsController** ✅ (ya tenía DTOs implementados)
 
-- [ ] **ClientsController**
-  - [ ] Revisar respuestas
+- [x] **ClientsController** ✅
+  - [x] `createClientProfile` - Retorna `UserProfileResponseDto`
+  - [x] Swagger decorators actualizados
 
-- [ ] **Identity/AuthController**
-  - [ ] Revisar respuestas de login/register
+- [x] **Identity/AuthController** ✅ (ya tenía DTOs implementados)
+  - [x] `register` / `login` - Ya usan `AuthResponseDto`
+  - [x] OAuth callbacks - Redireccionan con token
+
+- [x] **UsersController** ✅ (refactorizado)
+  - [x] `getMyProfile` - Usa `UserProfileResponseDto.fromEntity()`
+  - [x] `updateMyProfile` - Usa `UserProfileResponseDto.fromEntity()`
+  - [x] `activateClientProfile` - Usa `UserProfileResponseDto.fromEntity()`
+  - [x] Eliminado método privado `toResponseDto()` duplicado
 
 ### Consideraciones
 
