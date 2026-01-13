@@ -56,12 +56,20 @@ export class AdminService {
     };
   }
 
-  async getUserById(userId: string) {
-    return this.userService.findByIdOrFail(userId);
+  async getUserById(userId: string, actingUser: UserEntity) {
+    return this.userService.findByIdForUser(userId, actingUser);
   }
 
-  async updateUserStatus(userId: string, updateDto: UpdateUserStatusDto) {
-    return this.userService.update(userId, { status: updateDto.status });
+  async updateUserStatus(
+    userId: string,
+    updateDto: UpdateUserStatusDto,
+    actingUser: UserEntity,
+  ) {
+    return this.userService.updateStatusForUser(
+      userId,
+      actingUser,
+      updateDto.status,
+    );
   }
 
   async getAllProfessionals(page: number = 1, limit: number = 10) {

@@ -1,5 +1,13 @@
 import { UserStatus, AuthProvider } from '@prisma/client';
 
+/**
+ * Authorization context for user operations.
+ */
+export interface UserAuthContext {
+  userId: string;
+  isAdmin: boolean;
+}
+
 export class UserEntity {
   static createLocal(params: {
     id: string;
@@ -214,5 +222,63 @@ export class UserEntity {
       facebookId,
       this.authProvider,
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Authorization Methods
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Check if this user is the same as the one in the context.
+   */
+  isSelf(ctx: UserAuthContext): boolean {
+    return this.id === ctx.userId;
+  }
+
+  /**
+   * Check if user can view this user's full profile.
+   * - Self can always view own profile
+   * - Admin can view any user's profile
+   */
+  canBeViewedBy(ctx: UserAuthContext): boolean {
+    if (ctx.isAdmin) return true;
+    return this.isSelf(ctx);
+  }
+
+  /**
+   * Check if user can edit this user's profile (name, phone, picture).
+   * - Self can edit own profile
+   * - Admin can edit any user's profile
+   */
+  canBeEditedBy(ctx: UserAuthContext): boolean {
+    if (ctx.isAdmin) return true;
+    return this.isSelf(ctx);
+  }
+
+  /**
+   * Check if user can change this user's status (ACTIVE, SUSPENDED, etc).
+   * - Only admins can change user status
+   * - Users cannot change their own status
+   */
+  canChangeStatusBy(ctx: UserAuthContext): boolean {
+    return ctx.isAdmin;
+  }
+
+  /**
+   * Check if user can delete/deactivate this account.
+   * - Self can delete own account
+   * - Admin can delete any account
+   */
+  canBeDeletedBy(ctx: UserAuthContext): boolean {
+    if (ctx.isAdmin) return true;
+    return this.isSelf(ctx);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Helper: Build AuthContext
+  // ─────────────────────────────────────────────────────────────
+
+  static buildAuthContext(userId: string, isAdmin: boolean): UserAuthContext {
+    return { userId, isAdmin };
   }
 }

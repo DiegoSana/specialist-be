@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Inject,
+} from '@nestjs/common';
 import {
   UserRepository,
   USER_REPOSITORY,
 } from '../../domain/repositories/user.repository';
-import { UserEntity } from '../../domain/entities/user.entity';
+import { UserEntity, UserAuthContext } from '../../domain/entities/user.entity';
 
 /**
  * UserService exposes user operations to other bounded contexts.
@@ -15,6 +20,14 @@ export class UserService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
   ) {}
+
+  // ─────────────────────────────────────────────────────────────
+  // Auth Context Helper
+  // ─────────────────────────────────────────────────────────────
+
+  private buildAuthContext(actingUser: UserEntity): UserAuthContext {
+    return UserEntity.buildAuthContext(actingUser.id, actingUser.isAdminUser());
+  }
 
   /**
    * Find user by ID
@@ -107,5 +120,109 @@ export class UserService {
   async exists(userId: string): Promise<boolean> {
     const user = await this.userRepository.findById(userId);
     return !!user;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Permission-aware methods
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Find user by ID with permission check.
+   * @param targetUserId - User ID to find
+   * @param actingUser - User performing the action
+   * @returns User entity
+   * @throws ForbiddenException if not authorized
+   */
+  async findByIdForUser(
+    targetUserId: string,
+    actingUser: UserEntity,
+  ): Promise<UserEntity> {
+    const ctx = this.buildAuthContext(actingUser);
+    const targetUser = await this.userRepository.findById(targetUserId, true);
+
+    if (!targetUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!targetUser.canBeViewedBy(ctx)) {
+      throw new ForbiddenException('Cannot view this user');
+    }
+
+    return targetUser;
+  }
+
+  /**
+   * Update user profile with permission check.
+   * @param targetUserId - User ID to update
+   * @param actingUser - User performing the action
+   * @param data - Data to update
+   * @returns Updated user entity
+   * @throws ForbiddenException if not authorized
+   */
+  async updateForUser(
+    targetUserId: string,
+    actingUser: UserEntity,
+    data: Partial<UserEntity>,
+  ): Promise<UserEntity> {
+    const ctx = this.buildAuthContext(actingUser);
+    const targetUser = await this.userRepository.findById(targetUserId, true);
+
+    if (!targetUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!targetUser.canBeEditedBy(ctx)) {
+      throw new ForbiddenException('Cannot edit this user');
+    }
+
+    // Apply supported mutations via domain methods (immutability)
+    let next = targetUser;
+
+    const hasProfileUpdate =
+      data.firstName !== undefined ||
+      data.lastName !== undefined ||
+      data.phone !== undefined ||
+      (data as any).profilePictureUrl !== undefined;
+
+    if (hasProfileUpdate) {
+      next = next.withUpdatedProfile({
+        firstName: data.firstName ?? targetUser.firstName,
+        lastName: data.lastName ?? targetUser.lastName,
+        phone: data.phone ?? targetUser.phone,
+        profilePictureUrl:
+          (data as any).profilePictureUrl ?? targetUser.profilePictureUrl,
+        now: new Date(),
+      });
+    }
+
+    return this.userRepository.save(next);
+  }
+
+  /**
+   * Update user status with permission check.
+   * @param targetUserId - User ID to update
+   * @param actingUser - User performing the action
+   * @param status - New status
+   * @returns Updated user entity
+   * @throws ForbiddenException if not authorized (only admins)
+   */
+  async updateStatusForUser(
+    targetUserId: string,
+    actingUser: UserEntity,
+    status: any,
+  ): Promise<UserEntity> {
+    const ctx = this.buildAuthContext(actingUser);
+    const targetUser = await this.userRepository.findById(targetUserId, true);
+
+    if (!targetUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!targetUser.canChangeStatusBy(ctx)) {
+      throw new ForbiddenException('Only admins can change user status');
+    }
+
+    const next = targetUser.withStatus(status);
+    return this.userRepository.save(next);
   }
 }

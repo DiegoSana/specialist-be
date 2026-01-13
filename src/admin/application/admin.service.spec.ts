@@ -21,6 +21,8 @@ describe('AdminService', () => {
       findById: jest.fn(),
       findByIdOrFail: jest.fn(),
       update: jest.fn(),
+      findByIdForUser: jest.fn(),
+      updateStatusForUser: jest.fn(),
     };
 
     mockProfessionalService = {
@@ -133,51 +135,64 @@ describe('AdminService', () => {
   });
 
   describe('getUserById', () => {
+    const adminUser = createMockUser({ id: 'admin-123', isAdmin: true });
+
     it('should return user when found', async () => {
       const user = createMockUser();
-      mockUserService.findByIdOrFail.mockResolvedValue(user);
+      mockUserService.findByIdForUser.mockResolvedValue(user);
 
-      const result = await service.getUserById('user-123');
+      const result = await service.getUserById('user-123', adminUser);
 
       expect(result).toEqual(user);
-      expect(mockUserService.findByIdOrFail).toHaveBeenCalledWith('user-123');
+      expect(mockUserService.findByIdForUser).toHaveBeenCalledWith(
+        'user-123',
+        adminUser,
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockUserService.findByIdOrFail.mockRejectedValue(
-        new NotFoundException('User not found'),
-      );
-
-      await expect(service.getUserById('non-existent')).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-  });
-
-  describe('updateUserStatus', () => {
-    it('should update user status successfully', async () => {
-      const updatedUser = createMockUser({ status: UserStatus.SUSPENDED });
-      mockUserService.update.mockResolvedValue(updatedUser);
-
-      const result = await service.updateUserStatus('user-123', {
-        status: UserStatus.SUSPENDED,
-      });
-
-      expect(result.status).toBe(UserStatus.SUSPENDED);
-      expect(mockUserService.update).toHaveBeenCalledWith('user-123', {
-        status: UserStatus.SUSPENDED,
-      });
-    });
-
-    it('should throw NotFoundException when user not found', async () => {
-      mockUserService.update.mockRejectedValue(
+      mockUserService.findByIdForUser.mockRejectedValue(
         new NotFoundException('User not found'),
       );
 
       await expect(
-        service.updateUserStatus('non-existent', {
-          status: UserStatus.SUSPENDED,
-        }),
+        service.getUserById('non-existent', adminUser),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateUserStatus', () => {
+    const adminUser = createMockUser({ id: 'admin-123', isAdmin: true });
+
+    it('should update user status successfully', async () => {
+      const updatedUser = createMockUser({ status: UserStatus.SUSPENDED });
+      mockUserService.updateStatusForUser.mockResolvedValue(updatedUser);
+
+      const result = await service.updateUserStatus(
+        'user-123',
+        { status: UserStatus.SUSPENDED },
+        adminUser,
+      );
+
+      expect(result.status).toBe(UserStatus.SUSPENDED);
+      expect(mockUserService.updateStatusForUser).toHaveBeenCalledWith(
+        'user-123',
+        adminUser,
+        UserStatus.SUSPENDED,
+      );
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockUserService.updateStatusForUser.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
+
+      await expect(
+        service.updateUserStatus(
+          'non-existent',
+          { status: UserStatus.SUSPENDED },
+          adminUser,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });

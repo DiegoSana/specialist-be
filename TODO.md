@@ -13,7 +13,7 @@
 | Reviews | ✅ | ✅ | ⬜ |
 | Notifications | ✅ | ✅ | ⬜ |
 | Profiles | ✅ | ✅ | ⬜ |
-| Identity | ⬜ | ✅ | ⬜ |
+| Identity | ✅ | ✅ | ⬜ |
 | **Companies** | ⬜ | ⬜ | ⬜ |
 
 ---
@@ -90,11 +90,26 @@
   - [x] Actualizar tests (222 tests pasando)
   - [x] `ClientService` no requiere refactor (solo activa perfil propio)
 
-### ⬜ Pendiente
+- [x] **Identity Module**
+  - [x] Crear `UserAuthContext` interface en dominio
+  - [x] Agregar métodos de autorización a `UserEntity`:
+    - `isSelf(ctx)` - helper para verificar si es el mismo usuario
+    - `canBeViewedBy(ctx)` - self o admin
+    - `canBeEditedBy(ctx)` - self o admin
+    - `canChangeStatusBy(ctx)` - solo admin
+    - `canBeDeletedBy(ctx)` - self o admin
+  - [x] Agregar `buildAuthContext()` static helper
+  - [x] Agregar métodos permission-aware a `UserService`:
+    - `findByIdForUser()` - con validación de permisos
+    - `updateForUser()` - con validación de permisos
+    - `updateStatusForUser()` - solo admin
+  - [x] Actualizar `AdminService`:
+    - `getUserById()` usa `findByIdForUser()`
+    - `updateUserStatus()` usa `updateStatusForUser()`
+  - [x] Actualizar `AdminController` para pasar `@CurrentUser()`
+  - [x] Actualizar tests (222 tests pasando)
 
-- [ ] **Identity Module**
-  - [ ] Revisar permisos de admin para gestión de usuarios
-  - [ ] Verificar endpoints de cambio de estado de usuario
+### ⬜ Pendiente
 
 ---
 
@@ -570,8 +585,8 @@ model Company {
 ### Próxima Semana
 1. ~~Refactorizar Notifications module~~ ✅
 2. ~~Revisar Profiles module~~ ✅
-3. Revisar DTOs en controladores principales
-4. Revisar Identity module
+3. ~~Revisar Identity module~~ ✅
+4. Revisar DTOs en controladores principales
 
 ### Mes
 1. DTOs completos en todos los controladores
