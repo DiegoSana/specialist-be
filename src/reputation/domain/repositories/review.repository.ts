@@ -3,8 +3,8 @@ import { ReviewStatus } from '../value-objects/review-status';
 
 export interface ReviewRepository {
   findById(id: string): Promise<ReviewEntity | null>;
-  findByProfessionalId(professionalId: string): Promise<ReviewEntity[]>;
-  findApprovedByProfessionalId(professionalId: string): Promise<ReviewEntity[]>;
+  findByServiceProviderId(serviceProviderId: string): Promise<ReviewEntity[]>;
+  findApprovedByServiceProviderId(serviceProviderId: string): Promise<ReviewEntity[]>;
   findByRequestId(requestId: string): Promise<ReviewEntity | null>;
   findByStatus(status: ReviewStatus): Promise<ReviewEntity[]>;
 

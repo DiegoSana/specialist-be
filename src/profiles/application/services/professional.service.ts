@@ -51,7 +51,7 @@ export class ProfessionalService {
 
   async search(
     searchDto: SearchProfessionalsDto,
-  ): Promise<Partial<ProfessionalEntity>[]> {
+  ): Promise<ProfessionalEntity[]> {
     const professionals = await this.professionalRepository.search({
       search: searchDto.search,
       tradeId: searchDto.tradeId,
@@ -61,18 +61,18 @@ export class ProfessionalService {
     // For public search, sanitize contact info and only return public gallery
     // Contact info (whatsapp, website, address) requires an active request
     return professionals.map((professional) =>
-      this.sanitizeForPublic(professional),
+      this.sanitizeForPublic(professional) as ProfessionalEntity,
     );
   }
 
-  async findById(id: string): Promise<Partial<ProfessionalEntity>> {
+  async findById(id: string): Promise<ProfessionalEntity> {
     const professional = await this.professionalRepository.findById(id);
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }
 
     // For public access, sanitize contact info
-    return this.sanitizeForPublic(professional);
+    return this.sanitizeForPublic(professional) as ProfessionalEntity;
   }
 
   /**
@@ -107,6 +107,7 @@ export class ProfessionalService {
       new ProfessionalEntity(
         professional.id,
         professional.userId,
+        professional.serviceProviderId,
         professional.trades,
         professional.description,
         professional.experienceYears,
@@ -116,13 +117,12 @@ export class ProfessionalService {
         professional.address,
         professional.whatsapp,
         professional.website,
-        professional.averageRating,
-        professional.totalReviews,
         professional.profileImage,
         professional.gallery,
         professional.active,
         professional.createdAt,
         now,
+        professional.serviceProvider,
       ),
     );
   }
@@ -237,6 +237,14 @@ export class ProfessionalService {
     return professional;
   }
 
+  /**
+   * Find professional by their service provider ID.
+   * Returns null if not found (unlike getByIdOrFail).
+   */
+  async findByServiceProviderId(serviceProviderId: string): Promise<ProfessionalEntity | null> {
+    return this.professionalRepository.findByServiceProviderId(serviceProviderId);
+  }
+
   async createProfile(
     userId: string,
     createDto: CreateProfessionalDto,
@@ -274,10 +282,14 @@ export class ProfessionalService {
     }
 
     const now = new Date();
+    const professionalId = randomUUID();
+    const serviceProviderId = randomUUID(); // ServiceProvider is created by repository
+
     const professional = await this.professionalRepository.save(
       new ProfessionalEntity(
-        randomUUID(),
+        professionalId,
         userId,
+        serviceProviderId,
         trades.map((t, index) => ({
           ...t,
           isPrimary: index === 0,
@@ -290,8 +302,6 @@ export class ProfessionalService {
         createDto.address || null,
         createDto.whatsapp || null,
         createDto.website || null,
-        0,
-        0,
         createDto.profileImage || null,
         createDto.gallery || [],
         true,
@@ -368,6 +378,7 @@ export class ProfessionalService {
       new ProfessionalEntity(
         professional.id,
         professional.userId,
+        professional.serviceProviderId,
         nextTrades,
         updateDto.description !== undefined
           ? updateDto.description
@@ -387,8 +398,6 @@ export class ProfessionalService {
         updateDto.website !== undefined
           ? updateDto.website
           : professional.website,
-        professional.averageRating,
-        professional.totalReviews,
         updateDto.profileImage !== undefined
           ? updateDto.profileImage
           : professional.profileImage,
@@ -398,6 +407,7 @@ export class ProfessionalService {
         professional.active,
         professional.createdAt,
         now,
+        professional.serviceProvider,
       ),
     );
   }
@@ -428,6 +438,7 @@ export class ProfessionalService {
       new ProfessionalEntity(
         professional.id,
         professional.userId,
+        professional.serviceProviderId,
         professional.trades,
         professional.description,
         professional.experienceYears,
@@ -437,13 +448,12 @@ export class ProfessionalService {
         professional.address,
         professional.whatsapp,
         professional.website,
-        professional.averageRating,
-        professional.totalReviews,
         professional.profileImage,
         updatedGallery,
         professional.active,
         professional.createdAt,
         new Date(),
+        professional.serviceProvider,
       ),
     );
   }
@@ -470,6 +480,7 @@ export class ProfessionalService {
       new ProfessionalEntity(
         professional.id,
         professional.userId,
+        professional.serviceProviderId,
         professional.trades,
         professional.description,
         professional.experienceYears,
@@ -479,13 +490,12 @@ export class ProfessionalService {
         professional.address,
         professional.whatsapp,
         professional.website,
-        professional.averageRating,
-        professional.totalReviews,
         professional.profileImage,
         updatedGallery,
         professional.active,
         professional.createdAt,
         new Date(),
+        professional.serviceProvider,
       ),
     );
   }

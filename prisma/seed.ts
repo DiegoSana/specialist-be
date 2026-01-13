@@ -1,4 +1,4 @@
-import { PrismaClient, UserStatus, ProfessionalStatus, RequestStatus, AuthProvider } from '@prisma/client';
+import { PrismaClient, UserStatus, ProfessionalStatus, RequestStatus, AuthProvider, ReviewStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -6,18 +6,26 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting seed...');
 
-  // Clear existing data
+  // Clear existing data in correct order
   console.log('🧹 Clearing existing data...');
+  await prisma.notificationDelivery.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.notificationPreferences.deleteMany();
+  await prisma.inAppNotification.deleteMany();
   await prisma.review.deleteMany();
+  await prisma.requestInterest.deleteMany();
   await prisma.request.deleteMany();
   await prisma.contact.deleteMany();
   await prisma.professionalTrade.deleteMany();
+  await prisma.companyTrade.deleteMany();
   await prisma.professional.deleteMany();
+  await prisma.company.deleteMany();
+  await prisma.serviceProvider.deleteMany();
   await prisma.client.deleteMany();
   await prisma.trade.deleteMany();
   await prisma.user.deleteMany();
 
-  // Create trades one by one
+  // Create trades
   console.log('🔧 Creating trades...');
   const tradeElectricista = await prisma.trade.create({
     data: { name: 'Electricista', category: 'Instalaciones', description: 'Instalaciones eléctricas, reparaciones y mantenimiento' },
@@ -50,31 +58,32 @@ async function main() {
     data: { name: 'Vidriero', category: 'Construcción', description: 'Instalación y reparación de vidrios, espejos y mamparas' },
   });
 
-  const hashedPassword = await bcrypt.hash('123456', 10);
+  // Hash password
+  const hashedPassword = await bcrypt.hash('Test1234!', 10);
 
   // Create Admin User
-  console.log('👑 Creating admin user...');
+  console.log('👤 Creating admin user...');
   await prisma.user.create({
     data: {
       email: 'admin@specialist.com',
       password: hashedPassword,
       firstName: 'Admin',
-      lastName: 'Specialist',
+      lastName: 'User',
       phone: '+5492944000000',
       status: UserStatus.ACTIVE,
-      isAdmin: true,
       authProvider: AuthProvider.LOCAL,
+      isAdmin: true,
     },
   });
 
   // Create Client Users
-  console.log('👤 Creating client users...');
+  console.log('👥 Creating client users...');
   const cliente1 = await prisma.user.create({
     data: {
       email: 'cliente1@test.com',
       password: hashedPassword,
-      firstName: 'María',
-      lastName: 'García',
+      firstName: 'Juan',
+      lastName: 'Pérez',
       phone: '+5492944111111',
       status: UserStatus.ACTIVE,
       authProvider: AuthProvider.LOCAL,
@@ -85,8 +94,8 @@ async function main() {
     data: {
       email: 'cliente2@test.com',
       password: hashedPassword,
-      firstName: 'Juan',
-      lastName: 'Pérez',
+      firstName: 'María',
+      lastName: 'García',
       phone: '+5492944222222',
       status: UserStatus.ACTIVE,
       authProvider: AuthProvider.LOCAL,
@@ -118,162 +127,177 @@ async function main() {
     },
   });
 
+  // Helper function to create a professional with their ServiceProvider
+  async function createProfessionalWithProvider(data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    professional: {
+      description: string;
+      experienceYears: number;
+      status: ProfessionalStatus;
+      zone: string;
+      city: string;
+      address: string;
+      whatsapp: string;
+    };
+    averageRating?: number;
+    totalReviews?: number;
+  }) {
+    // First create the ServiceProvider
+    const serviceProvider = await prisma.serviceProvider.create({
+      data: {
+        type: 'PROFESSIONAL',
+        averageRating: data.averageRating ?? 0,
+        totalReviews: data.totalReviews ?? 0,
+      },
+    });
+
+    // Then create the user with professional linked to the ServiceProvider
+    return prisma.user.create({
+      data: {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        status: UserStatus.ACTIVE,
+        authProvider: AuthProvider.LOCAL,
+        professional: {
+          create: {
+            serviceProviderId: serviceProvider.id,
+            description: data.professional.description,
+            experienceYears: data.professional.experienceYears,
+            status: data.professional.status,
+            zone: data.professional.zone,
+            city: data.professional.city,
+            address: data.professional.address,
+            whatsapp: data.professional.whatsapp,
+          },
+        },
+      },
+      include: { 
+        professional: {
+          include: { serviceProvider: true }
+        }
+      },
+    });
+  }
+
   // Create Professional Users
   console.log('🔨 Creating professional users...');
-  const electricista = await prisma.user.create({
-    data: {
-      email: 'electricista@test.com',
-      password: hashedPassword,
-      firstName: 'Roberto',
-      lastName: 'Sánchez',
-      phone: '+5492944500001',
-      status: UserStatus.ACTIVE,
-      authProvider: AuthProvider.LOCAL,
-      professional: {
-        create: {
-          description: 'Electricista matriculado con 15 años de experiencia.',
-          experienceYears: 15,
-          status: ProfessionalStatus.VERIFIED,
-          zone: 'Centro',
-          city: 'Bariloche',
-          address: 'Av. San Martín 500',
-          whatsapp: '+5492944500001',
-          averageRating: 4.8,
-          totalReviews: 25,
-        },
-      },
+  const electricista = await createProfessionalWithProvider({
+    email: 'electricista@test.com',
+    password: hashedPassword,
+    firstName: 'Roberto',
+    lastName: 'Sánchez',
+    phone: '+5492944500001',
+    professional: {
+      description: 'Electricista matriculado con 15 años de experiencia.',
+      experienceYears: 15,
+      status: ProfessionalStatus.VERIFIED,
+      zone: 'Centro',
+      city: 'Bariloche',
+      address: 'Av. San Martín 500',
+      whatsapp: '+5492944500001',
     },
-    include: { professional: true },
+    averageRating: 4.8,
+    totalReviews: 25,
   });
 
-  const plomero = await prisma.user.create({
-    data: {
-      email: 'plomero@test.com',
-      password: hashedPassword,
-      firstName: 'Miguel',
-      lastName: 'Torres',
-      phone: '+5492944500002',
-      status: UserStatus.ACTIVE,
-      authProvider: AuthProvider.LOCAL,
-      professional: {
-        create: {
-          description: 'Plomero con experiencia en instalaciones sanitarias.',
-          experienceYears: 10,
-          status: ProfessionalStatus.VERIFIED,
-          zone: 'Melipal',
-          city: 'Bariloche',
-          address: 'Rolando 123',
-          whatsapp: '+5492944500002',
-          averageRating: 4.5,
-          totalReviews: 18,
-        },
-      },
+  const plomero = await createProfessionalWithProvider({
+    email: 'plomero@test.com',
+    password: hashedPassword,
+    firstName: 'Miguel',
+    lastName: 'Torres',
+    phone: '+5492944500002',
+    professional: {
+      description: 'Plomero con experiencia en instalaciones sanitarias.',
+      experienceYears: 10,
+      status: ProfessionalStatus.VERIFIED,
+      zone: 'Melipal',
+      city: 'Bariloche',
+      address: 'Rolando 123',
+      whatsapp: '+5492944500002',
     },
-    include: { professional: true },
+    averageRating: 4.5,
+    totalReviews: 18,
   });
 
-  const gasista = await prisma.user.create({
-    data: {
-      email: 'gasista@test.com',
-      password: hashedPassword,
-      firstName: 'Pedro',
-      lastName: 'Fernández',
-      phone: '+5492944500003',
-      status: UserStatus.ACTIVE,
-      authProvider: AuthProvider.LOCAL,
-      professional: {
-        create: {
-          description: 'Gasista matriculado. Emergencias 24hs.',
-          experienceYears: 12,
-          status: ProfessionalStatus.VERIFIED,
-          zone: 'Las Victorias',
-          city: 'Bariloche',
-          address: 'Gallardo 456',
-          whatsapp: '+5492944500003',
-          averageRating: 4.9,
-          totalReviews: 32,
-        },
-      },
+  const gasista = await createProfessionalWithProvider({
+    email: 'gasista@test.com',
+    password: hashedPassword,
+    firstName: 'Pedro',
+    lastName: 'Fernández',
+    phone: '+5492944500003',
+    professional: {
+      description: 'Gasista matriculado. Emergencias 24hs.',
+      experienceYears: 12,
+      status: ProfessionalStatus.VERIFIED,
+      zone: 'Las Victorias',
+      city: 'Bariloche',
+      address: 'Gallardo 456',
+      whatsapp: '+5492944500003',
     },
-    include: { professional: true },
+    averageRating: 4.9,
+    totalReviews: 32,
   });
 
-  const carpintero = await prisma.user.create({
-    data: {
-      email: 'carpintero@test.com',
-      password: hashedPassword,
-      firstName: 'Diego',
-      lastName: 'Ruiz',
-      phone: '+5492944500004',
-      status: UserStatus.ACTIVE,
-      authProvider: AuthProvider.LOCAL,
-      professional: {
-        create: {
-          description: 'Carpintero especializado en muebles a medida.',
-          experienceYears: 20,
-          status: ProfessionalStatus.VERIFIED,
-          zone: 'Km 5',
-          city: 'Bariloche',
-          address: 'Km 5.5 Av. Bustillo',
-          whatsapp: '+5492944500004',
-          averageRating: 5.0,
-          totalReviews: 12,
-        },
-      },
+  const carpintero = await createProfessionalWithProvider({
+    email: 'carpintero@test.com',
+    password: hashedPassword,
+    firstName: 'Diego',
+    lastName: 'Ruiz',
+    phone: '+5492944500004',
+    professional: {
+      description: 'Carpintero especializado en muebles a medida.',
+      experienceYears: 20,
+      status: ProfessionalStatus.VERIFIED,
+      zone: 'Km 5',
+      city: 'Bariloche',
+      address: 'Km 5.5 Av. Bustillo',
+      whatsapp: '+5492944500004',
     },
-    include: { professional: true },
+    averageRating: 5.0,
+    totalReviews: 12,
   });
 
-  const pintor = await prisma.user.create({
-    data: {
-      email: 'pintor@test.com',
-      password: hashedPassword,
-      firstName: 'Lucas',
-      lastName: 'Moreno',
-      phone: '+5492944500005',
-      status: UserStatus.ACTIVE,
-      authProvider: AuthProvider.LOCAL,
-      professional: {
-        create: {
-          description: 'Pintor profesional. Interiores y exteriores.',
-          experienceYears: 8,
-          status: ProfessionalStatus.PENDING_VERIFICATION,
-          zone: 'Centro',
-          city: 'Bariloche',
-          address: 'Onelli 789',
-          whatsapp: '+5492944500005',
-          averageRating: 0,
-          totalReviews: 0,
-        },
-      },
+  const pintor = await createProfessionalWithProvider({
+    email: 'pintor@test.com',
+    password: hashedPassword,
+    firstName: 'Lucas',
+    lastName: 'Moreno',
+    phone: '+5492944500005',
+    professional: {
+      description: 'Pintor profesional. Interiores y exteriores.',
+      experienceYears: 8,
+      status: ProfessionalStatus.PENDING_VERIFICATION,
+      zone: 'Centro',
+      city: 'Bariloche',
+      address: 'Onelli 789',
+      whatsapp: '+5492944500005',
     },
-    include: { professional: true },
   });
 
-  const multioficio = await prisma.user.create({
-    data: {
-      email: 'multioficio@test.com',
-      password: hashedPassword,
-      firstName: 'Fernando',
-      lastName: 'Gómez',
-      phone: '+5492944500006',
-      status: UserStatus.ACTIVE,
-      authProvider: AuthProvider.LOCAL,
-      professional: {
-        create: {
-          description: 'Electricista y plomero con amplia experiencia.',
-          experienceYears: 18,
-          status: ProfessionalStatus.VERIFIED,
-          zone: 'Alto',
-          city: 'Bariloche',
-          address: 'Brown 321',
-          whatsapp: '+5492944500006',
-          averageRating: 4.7,
-          totalReviews: 45,
-        },
-      },
+  const multioficio = await createProfessionalWithProvider({
+    email: 'multioficio@test.com',
+    password: hashedPassword,
+    firstName: 'Fernando',
+    lastName: 'Gómez',
+    phone: '+5492944500006',
+    professional: {
+      description: 'Electricista y plomero con amplia experiencia.',
+      experienceYears: 18,
+      status: ProfessionalStatus.VERIFIED,
+      zone: 'Alto',
+      city: 'Bariloche',
+      address: 'Brown 321',
+      whatsapp: '+5492944500006',
     },
-    include: { professional: true },
+    averageRating: 4.7,
+    totalReviews: 45,
   });
 
   // Create professional trades
@@ -286,13 +310,14 @@ async function main() {
   await prisma.professionalTrade.create({ data: { professionalId: multioficio.professional!.id, tradeId: tradeElectricista.id, isPrimary: true } });
   await prisma.professionalTrade.create({ data: { professionalId: multioficio.professional!.id, tradeId: tradePlomero.id, isPrimary: false } });
 
-  // Create Direct Requests
+  // Create Direct Requests (using providerId from ServiceProvider)
   console.log('📋 Creating direct requests...');
-  await prisma.request.create({
+  const request1 = await prisma.request.create({
     data: {
       clientId: cliente1.id,
-      professionalId: electricista.professional!.id,
+      providerId: electricista.professional!.serviceProviderId,
       isPublic: false,
+      title: 'Instalación de aire acondicionado',
       description: 'Necesito instalar un aire acondicionado en el living.',
       address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'Lunes a viernes de 9 a 18hs',
@@ -300,96 +325,82 @@ async function main() {
     },
   });
 
-  await prisma.request.create({
+  const request2 = await prisma.request.create({
     data: {
       clientId: cliente2.id,
-      professionalId: plomero.professional!.id,
+      providerId: plomero.professional!.serviceProviderId,
       isPublic: false,
-      description: 'Pérdida de agua en el baño principal.',
-      address: 'Onelli 456, Bariloche',
-      availability: 'Urgente',
-      status: RequestStatus.PENDING,
-      quoteAmount: 15000,
-      quoteNotes: 'Incluye cambio de flotante.',
-    },
-  });
-
-  await prisma.request.create({
-    data: {
-      clientId: cliente3.id,
-      professionalId: gasista.professional!.id,
-      isPublic: false,
-      description: 'Revisar conexión del calefactor Eskabe.',
-      address: 'Palacios 789, Bariloche',
-      availability: 'Por la mañana',
+      title: 'Pérdida de agua en baño',
+      description: 'Hay una pérdida de agua debajo del lavatorio del baño.',
+      address: 'Moreno 456, Centro, Bariloche',
+      availability: 'Cualquier día por la mañana',
       status: RequestStatus.ACCEPTED,
-      quoteAmount: 8000,
-      quoteNotes: 'Revisión completa.',
     },
   });
 
-  await prisma.request.create({
+  const request3 = await prisma.request.create({
     data: {
       clientId: cliente1.id,
-      professionalId: carpintero.professional!.id,
+      providerId: gasista.professional!.serviceProviderId,
       isPublic: false,
-      description: 'Mueble bajo mesada a medida.',
-      address: 'Av. San Martín 1200, Bariloche',
+      title: 'Revisión de calefactor',
+      description: 'Necesito revisión anual de calefactor a gas.',
+      address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'Fines de semana',
       status: RequestStatus.IN_PROGRESS,
-      quoteAmount: 180000,
-      quoteNotes: 'Mueble en melamina blanca.',
     },
   });
 
-  const requestDone = await prisma.request.create({
+  const request4 = await prisma.request.create({
+    data: {
+      clientId: cliente3.id,
+      providerId: carpintero.professional!.serviceProviderId,
+      isPublic: false,
+      title: 'Mueble a medida para cocina',
+      description: 'Quisiera cotizar un mueble bajo mesada a medida.',
+      address: 'Los Ñires 123, Melipal, Bariloche',
+      availability: 'Cualquier día',
+      status: RequestStatus.DONE,
+    },
+  });
+
+  const request5 = await prisma.request.create({
     data: {
       clientId: cliente4.id,
-      professionalId: electricista.professional!.id,
+      providerId: electricista.professional!.serviceProviderId,
       isPublic: false,
-      description: 'Cambiar tablero eléctrico.',
-      address: 'Moreno 567, Bariloche',
-      availability: 'Lunes y martes',
+      title: 'Revisión de conexiones eléctricas',
+      description: 'Se corta la luz cuando enciendo varios electrodomésticos.',
+      address: 'Palacios 789, Alto, Bariloche',
+      availability: 'Urgente - cualquier momento',
       status: RequestStatus.DONE,
-      quoteAmount: 45000,
-      quoteNotes: 'Tablero nuevo con termomagnéticas.',
     },
   });
 
-  await prisma.request.create({
+  const request6 = await prisma.request.create({
     data: {
       clientId: cliente2.id,
-      professionalId: carpintero.professional!.id,
+      providerId: multioficio.professional!.serviceProviderId,
       isPublic: false,
-      description: 'Biblioteca empotrada (cancelado).',
-      address: 'Elflein 234, Bariloche',
-      availability: 'Cualquier día',
+      title: 'Trabajo eléctrico y plomería',
+      description: 'Necesito arreglar la luz del baño y una pérdida en la ducha.',
+      address: 'Moreno 456, Centro, Bariloche',
+      availability: 'Esta semana',
       status: RequestStatus.CANCELLED,
     },
   });
 
-  // Create Public Requests (Bolsa de Trabajo)
+  // Create Public Requests (no provider assigned)
   console.log('📢 Creating public requests...');
   await prisma.request.create({
     data: {
       clientId: cliente1.id,
-      tradeId: tradeElectricista.id,
+      tradeId: tradePintor.id,
       isPublic: true,
-      description: 'Busco electricista para revisar instalación de casa antigua.',
-      address: 'Beschtedt 890, Bariloche',
-      availability: 'Lunes a viernes',
-      status: RequestStatus.PENDING,
-    },
-  });
-
-  await prisma.request.create({
-    data: {
-      clientId: cliente2.id,
-      tradeId: tradePlomero.id,
-      isPublic: true,
-      description: 'Instalación de tanque de agua de 1000 litros.',
-      address: 'Km 8 Av. Bustillo, Bariloche',
-      availability: 'Urgente',
+      title: 'Pintar departamento completo',
+      description: 'Necesito pintar un departamento de 3 ambientes.',
+      address: 'Av. Bustillo Km 3.5, Bariloche',
+      availability: 'A partir del próximo mes',
       status: RequestStatus.PENDING,
     },
   });
@@ -397,11 +408,12 @@ async function main() {
   await prisma.request.create({
     data: {
       clientId: cliente3.id,
-      tradeId: tradePintor.id,
+      tradeId: tradeAlbañil.id,
       isPublic: true,
-      description: 'Pintar interior de departamento de 3 ambientes.',
-      address: 'Mitre 456, Bariloche',
-      availability: 'Marzo 2025',
+      title: 'Reparación de pared húmeda',
+      description: 'Tengo humedad en una pared que necesita reparación.',
+      address: 'Los Ñires 123, Melipal, Bariloche',
+      availability: 'Lo antes posible',
       status: RequestStatus.PENDING,
     },
   });
@@ -409,77 +421,65 @@ async function main() {
   await prisma.request.create({
     data: {
       clientId: cliente4.id,
-      tradeId: tradeAlbañil.id,
-      isPublic: true,
-      description: 'Construcción de parrilla en jardín.',
-      address: 'Los Coihues 234, Bariloche',
-      availability: 'Flexible',
-      status: RequestStatus.PENDING,
-    },
-  });
-
-  await prisma.request.create({
-    data: {
-      clientId: cliente1.id,
       tradeId: tradeJardinero.id,
       isPublic: true,
-      description: 'Mantenimiento mensual de jardín de 500m2.',
-      address: 'Circuito Chico Km 18, Bariloche',
-      availability: 'Contrato anual',
+      title: 'Mantenimiento de jardín',
+      description: 'Busco jardinero para mantenimiento mensual.',
+      address: 'Palacios 789, Alto, Bariloche',
+      availability: 'Fines de semana preferentemente',
       status: RequestStatus.PENDING,
     },
   });
 
-  // Create Reviews
+  // Create Reviews (using serviceProviderId)
   console.log('⭐ Creating reviews...');
   await prisma.review.create({
     data: {
       reviewerId: cliente4.id,
-      professionalId: electricista.professional!.id,
-      requestId: requestDone.id,
+      serviceProviderId: electricista.professional!.serviceProviderId,
+      requestId: request5.id,
       rating: 5,
-      comment: 'Excelente trabajo. Muy profesional.',
-    },
-  });
-
-  await prisma.review.create({
-    data: {
-      reviewerId: cliente1.id,
-      professionalId: electricista.professional!.id,
-      rating: 5,
-      comment: 'Resolvió el problema rápidamente.',
-    },
-  });
-
-  await prisma.review.create({
-    data: {
-      reviewerId: cliente2.id,
-      professionalId: plomero.professional!.id,
-      rating: 4,
-      comment: 'Buen trabajo.',
+      comment: 'Excelente trabajo, muy profesional y puntual.',
+      status: ReviewStatus.APPROVED,
     },
   });
 
   await prisma.review.create({
     data: {
       reviewerId: cliente3.id,
-      professionalId: gasista.professional!.id,
+      serviceProviderId: carpintero.professional!.serviceProviderId,
+      requestId: request4.id,
       rating: 5,
-      comment: 'Excelente gasista. Muy detallista.',
+      comment: 'El mueble quedó perfecto, tal como lo pedí.',
+      status: ReviewStatus.APPROVED,
     },
   });
 
-  console.log('✅ Seed completed!');
+  // Create some contacts
+  console.log('📞 Creating contacts...');
+  await prisma.contact.createMany({
+    data: [
+      { fromUserId: cliente1.id, toUserId: electricista.id, contactType: 'whatsapp', message: 'Hola, me gustaría consultar disponibilidad' },
+      { fromUserId: cliente2.id, toUserId: plomero.id, contactType: 'whatsapp' },
+      { fromUserId: cliente3.id, toUserId: carpintero.id, contactType: 'phone', message: 'Llamé para pedir presupuesto' },
+    ],
+  });
+
+  console.log('✅ Seed completed successfully!');
   console.log('');
-  console.log('📧 Cuentas de prueba (contraseña: 123456):');
-  console.log('   Admin:        admin@specialist.com');
-  console.log('   Clientes:     cliente1@test.com, cliente2@test.com');
-  console.log('   Electricista: electricista@test.com (verificado)');
-  console.log('   Plomero:      plomero@test.com (verificado)');
-  console.log('   Gasista:      gasista@test.com (verificado)');
-  console.log('   Carpintero:   carpintero@test.com (verificado)');
-  console.log('   Pintor:       pintor@test.com (pendiente)');
-  console.log('   Multi-oficio: multioficio@test.com (verificado)');
+  console.log('📋 Summary:');
+  console.log(`   - ${10} trades created`);
+  console.log(`   - 1 admin user`);
+  console.log(`   - 4 client users`);
+  console.log(`   - 6 professional users (with ServiceProvider)`);
+  console.log(`   - 9 requests (6 direct, 3 public)`);
+  console.log(`   - 2 reviews`);
+  console.log(`   - 3 contacts`);
+  console.log('');
+  console.log('🔑 Test credentials:');
+  console.log('   Admin: admin@specialist.com / Test1234!');
+  console.log('   Client: cliente1@test.com / Test1234!');
+  console.log('   Professional: electricista@test.com / Test1234!');
 }
 
 main()

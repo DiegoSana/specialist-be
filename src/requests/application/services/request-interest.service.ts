@@ -28,6 +28,14 @@ import { RequestStatusChangedEvent } from '../../domain/events/request-status-ch
 // Cross-context dependency - using Service instead of Repository (DDD)
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 
+/**
+ * Extended context that includes both serviceProviderId (for Request auth) 
+ * and professionalId (for RequestInterest operations)
+ */
+interface InterestAuthContext extends RequestAuthContext {
+  professionalId?: string | null;
+}
+
 @Injectable()
 export class RequestInterestService {
   constructor(
@@ -42,22 +50,27 @@ export class RequestInterestService {
   ) {}
 
   /**
-   * Build auth context from userId
+   * Build auth context from userId.
+   * Returns both serviceProviderId (for Request auth) and professionalId (for RequestInterest).
    */
   async buildAuthContext(
     userId: string,
     isAdmin: boolean = false,
-  ): Promise<RequestAuthContext> {
+  ): Promise<InterestAuthContext> {
+    let serviceProviderId: string | null = null;
     let professionalId: string | null = null;
 
     try {
       const professional = await this.professionalService.findByUserId(userId);
-      professionalId = professional?.id ?? null;
+      if (professional) {
+        professionalId = professional.id;
+        serviceProviderId = professional.serviceProviderId;
+      }
     } catch {
       // User doesn't have a professional profile
     }
 
-    return { userId, professionalId, isAdmin };
+    return { userId, serviceProviderId, professionalId, isAdmin };
   }
 
   /**
@@ -66,10 +79,10 @@ export class RequestInterestService {
    */
   async expressInterest(
     requestId: string,
-    ctx: RequestAuthContext,
+    ctx: InterestAuthContext,
     dto: ExpressInterestDto,
   ): Promise<RequestInterestEntity> {
-    // Must have a professional profile
+    // Must have a professional profile (only professionals can express interest)
     if (!ctx.professionalId) {
       throw new ForbiddenException('Only specialists can express interest');
     }
@@ -146,7 +159,7 @@ export class RequestInterestService {
    */
   async removeInterest(
     requestId: string,
-    ctx: RequestAuthContext,
+    ctx: InterestAuthContext,
   ): Promise<void> {
     if (!ctx.professionalId) {
       throw new ForbiddenException('Only specialists can remove interest');
@@ -170,7 +183,7 @@ export class RequestInterestService {
    */
   async getInterestedProfessionals(
     requestId: string,
-    ctx: RequestAuthContext,
+    ctx: InterestAuthContext,
   ): Promise<RequestInterestEntity[]> {
     const request = await this.requestRepository.findById(requestId);
     if (!request) {
@@ -193,7 +206,7 @@ export class RequestInterestService {
    */
   async hasExpressedInterest(
     requestId: string,
-    ctx: RequestAuthContext,
+    ctx: InterestAuthContext,
   ): Promise<boolean> {
     if (!ctx.professionalId) {
       return false;
@@ -209,11 +222,11 @@ export class RequestInterestService {
 
   /**
    * Client assigns a specialist to the request.
-   * Uses domain entity's canAssignProfessionalBy for permission validation.
+   * Uses domain entity's canAssignProviderBy for permission validation.
    */
   async assignProfessional(
     requestId: string,
-    ctx: RequestAuthContext,
+    ctx: InterestAuthContext,
     professionalId: string,
   ): Promise<RequestEntity> {
     const request = await this.requestRepository.findById(requestId);
@@ -222,7 +235,7 @@ export class RequestInterestService {
     }
 
     // Validate using domain logic
-    if (!request.canAssignProfessionalBy(ctx)) {
+    if (!request.canAssignProviderBy(ctx)) {
       if (request.clientId !== ctx.userId && !ctx.isAdmin) {
         throw new ForbiddenException(
           'Only the request owner can assign a specialist',
@@ -251,12 +264,15 @@ export class RequestInterestService {
       );
     }
 
-    // Assign the professional and change status to ACCEPTED
+    // Get the professional to get their serviceProviderId
+    const professional = await this.professionalService.getByIdOrFail(professionalId);
+
+    // Assign the professional (via their serviceProviderId) and change status to ACCEPTED
     // Also mark as no longer public
     const fromStatus = request.status;
     const updatedRequest = await this.requestRepository.save(
       request.withChanges({
-        professionalId,
+        providerId: professional.serviceProviderId, // Use serviceProviderId
         status: RequestStatus.ACCEPTED,
         isPublic: false,
       }),
@@ -289,7 +305,7 @@ export class RequestInterestService {
           requestTitle: updatedRequest.title,
           clientId: updatedRequest.clientId,
           clientName,
-          professionalId: updatedRequest.professionalId,
+          professionalId: updatedRequest.providerId, // For backward compat
           professionalName: prof?.user
             ? `${prof.user.firstName} ${prof.user.lastName}`
             : null,

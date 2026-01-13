@@ -1,41 +1,51 @@
-import { ProfessionalStatus } from '@prisma/client';
 import { ServiceProviderEntity } from './service-provider.entity';
+import { TradeInfo } from './professional.entity';
 
-export interface TradeInfo {
-  id: string;
-  name: string;
-  category: string | null;
-  description: string | null;
-  isPrimary: boolean;
+/**
+ * Company verification status
+ */
+export enum CompanyStatus {
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
+  VERIFIED = 'VERIFIED',
+  REJECTED = 'REJECTED',
 }
 
 /**
- * Authorization context for professional profile operations.
+ * Authorization context for company profile operations.
  */
-export interface ProfessionalAuthContext {
+export interface CompanyAuthContext {
   userId: string;
   isAdmin: boolean;
 }
 
-export class ProfessionalEntity {
+/**
+ * CompanyEntity represents a business/company profile (constructora, etc.)
+ * It has similar functionality to ProfessionalEntity but with company-specific fields.
+ */
+export class CompanyEntity {
   constructor(
     public readonly id: string,
     public readonly userId: string,
     public readonly serviceProviderId: string,
-    public readonly trades: TradeInfo[],
+    public readonly companyName: string,
+    public readonly legalName: string | null,
+    public readonly taxId: string | null,
     public readonly description: string | null,
-    public readonly experienceYears: number | null,
-    public readonly status: ProfessionalStatus,
-    public readonly zone: string | null,
-    public readonly city: string,
-    public readonly address: string | null,
-    public readonly whatsapp: string | null,
+    public readonly foundedYear: number | null,
+    public readonly employeeCount: string | null,
     public readonly website: string | null,
+    public readonly phone: string | null,
+    public readonly email: string | null,
+    public readonly address: string | null,
+    public readonly city: string,
+    public readonly zone: string | null,
+    public readonly status: CompanyStatus,
     public readonly profileImage: string | null,
     public readonly gallery: string[],
     public readonly active: boolean,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
+    public readonly trades: TradeInfo[],
     // Optional: the full ServiceProvider entity when needed
     public readonly serviceProvider?: ServiceProviderEntity,
   ) {}
@@ -64,16 +74,23 @@ export class ProfessionalEntity {
     return this.trades.map((t) => t.id);
   }
 
+  /**
+   * Get the display name for the company
+   */
+  get displayName(): string {
+    return this.companyName;
+  }
+
   // ─────────────────────────────────────────────────────────────
   // Status Methods
   // ─────────────────────────────────────────────────────────────
 
   isVerified(): boolean {
-    return this.status === ProfessionalStatus.VERIFIED;
+    return this.status === CompanyStatus.VERIFIED;
   }
 
   isPending(): boolean {
-    return this.status === ProfessionalStatus.PENDING_VERIFICATION;
+    return this.status === CompanyStatus.PENDING_VERIFICATION;
   }
 
   isActive(): boolean {
@@ -85,7 +102,7 @@ export class ProfessionalEntity {
   // ─────────────────────────────────────────────────────────────
 
   /**
-   * Check if the professional profile is owned by the given user.
+   * Check if the company profile is owned by the given user.
    */
   isOwnedBy(userId: string): boolean {
     return this.userId === userId;
@@ -97,16 +114,16 @@ export class ProfessionalEntity {
    * - Admin can see full profile
    * - Public users see sanitized profile (handled by service)
    */
-  canViewFullProfileBy(ctx: ProfessionalAuthContext): boolean {
+  canViewFullProfileBy(ctx: CompanyAuthContext): boolean {
     if (ctx.isAdmin) return true;
     return this.isOwnedBy(ctx.userId);
   }
 
   /**
-   * Check if user can edit this professional profile.
+   * Check if user can edit this company profile.
    * - Only owner or admin can edit
    */
-  canBeEditedBy(ctx: ProfessionalAuthContext): boolean {
+  canBeEditedBy(ctx: CompanyAuthContext): boolean {
     if (ctx.isAdmin) return true;
     return this.isOwnedBy(ctx.userId);
   }
@@ -115,50 +132,56 @@ export class ProfessionalEntity {
    * Check if user can manage gallery (add/remove items).
    * - Only owner or admin can manage gallery
    */
-  canManageGalleryBy(ctx: ProfessionalAuthContext): boolean {
+  canManageGalleryBy(ctx: CompanyAuthContext): boolean {
     if (ctx.isAdmin) return true;
     return this.isOwnedBy(ctx.userId);
   }
 
   /**
-   * Check if user can change the professional status.
+   * Check if user can change the company status.
    * - Only admins can change status
    */
-  canChangeStatusBy(ctx: ProfessionalAuthContext): boolean {
+  canChangeStatusBy(ctx: CompanyAuthContext): boolean {
     return ctx.isAdmin;
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Helper: Build AuthContext
+  // Helper Methods
   // ─────────────────────────────────────────────────────────────
 
-  static buildAuthContext(userId: string, isAdmin: boolean): ProfessionalAuthContext {
+  static buildAuthContext(userId: string, isAdmin: boolean): CompanyAuthContext {
     return { userId, isAdmin };
   }
 
   /**
-   * Create a new professional entity with an associated service provider
+   * Create a new company entity with an associated service provider
    */
-  withServiceProvider(serviceProvider: ServiceProviderEntity): ProfessionalEntity {
-    return new ProfessionalEntity(
+  withServiceProvider(serviceProvider: ServiceProviderEntity): CompanyEntity {
+    return new CompanyEntity(
       this.id,
       this.userId,
       this.serviceProviderId,
-      this.trades,
+      this.companyName,
+      this.legalName,
+      this.taxId,
       this.description,
-      this.experienceYears,
-      this.status,
-      this.zone,
-      this.city,
-      this.address,
-      this.whatsapp,
+      this.foundedYear,
+      this.employeeCount,
       this.website,
+      this.phone,
+      this.email,
+      this.address,
+      this.city,
+      this.zone,
+      this.status,
       this.profileImage,
       this.gallery,
       this.active,
       this.createdAt,
       this.updatedAt,
+      this.trades,
       serviceProvider,
     );
   }
 }
+

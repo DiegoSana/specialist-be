@@ -9,31 +9,32 @@ datasource db {
 }
 
 model User {
-  id               String        @id @default(uuid())
-  email            String        @unique
-  password         String?       // Optional for social login users
-  firstName        String
-  lastName         String
-  phone            String?
-  profilePictureUrl String?
-  isAdmin          Boolean       @default(false)
-  status           UserStatus    @default(PENDING)
+  id                      String                   @id @default(uuid())
+  email                   String                   @unique
+  password                String? // Optional for social login users
+  firstName               String
+  lastName                String
+  phone                   String?
+  profilePictureUrl       String?
+  isAdmin                 Boolean                  @default(false)
+  status                  UserStatus               @default(PENDING)
   // Social login providers
-  googleId         String?       @unique
-  facebookId       String?       @unique
-  authProvider     AuthProvider  @default(LOCAL)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  contacts         Contact[]     @relation("FromUser")
-  contactsReceived Contact[]     @relation("ToUser")
-  client           Client?
-  professional     Professional?
-  requests         Request[]     @relation("Client")
-  reviewsGiven     Review[]      @relation("Reviewer")
-  reviewsModerated Review[]      @relation("Moderator")
-  inAppNotifications InAppNotification[]
+  googleId                String?                  @unique
+  facebookId              String?                  @unique
+  authProvider            AuthProvider             @default(LOCAL)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  contacts                Contact[]                @relation("FromUser")
+  contactsReceived        Contact[]                @relation("ToUser")
+  client                  Client?
+  professional            Professional?
+  company                 Company?
+  requests                Request[]                @relation("Client")
+  reviewsGiven            Review[]                 @relation("Reviewer")
+  reviewsModerated        Review[]                 @relation("Moderator")
+  inAppNotifications      InAppNotification[]
   notificationPreferences NotificationPreferences?
-  notifications     Notification[]
+  notifications           Notification[]
 
   @@map("users")
 }
@@ -53,40 +54,58 @@ model Client {
 }
 
 model Trade {
-  id            String                  @id @default(uuid())
-  name          String                  @unique
+  id            String              @id @default(uuid())
+  name          String              @unique
   category      String?
   description   String?
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
   professionals ProfessionalTrade[]
+  companies     CompanyTrade[]
   requests      Request[]
 
   @@map("trades")
 }
 
+// ServiceProvider is the abstract base for both Professional and Company
+// This allows Request and Review to work with either type
+model ServiceProvider {
+  id            String       @id @default(uuid())
+  type          ProviderType
+  averageRating Float        @default(0)
+  totalReviews  Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  professional Professional?
+  company      Company?
+  requests     Request[]     @relation("Provider")
+  reviews      Review[]
+
+  @@map("service_providers")
+}
+
 model Professional {
-  id              String             @id @default(uuid())
-  userId          String             @unique
-  description     String?
-  experienceYears Int?
-  status          ProfessionalStatus @default(PENDING_VERIFICATION)
-  zone            String?
-  city            String             @default("Bariloche")
-  address         String?
-  whatsapp        String?
-  website         String?
-  averageRating   Float              @default(0)
-  totalReviews    Int                @default(0)
-  profileImage    String?
-  gallery         String[]
-  active          Boolean            @default(true)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id                String             @id @default(uuid())
+  userId            String             @unique
+  serviceProviderId String             @unique
+  description       String?
+  experienceYears   Int?
+  status            ProfessionalStatus @default(PENDING_VERIFICATION)
+  zone              String?
+  city              String             @default("Bariloche")
+  address           String?
+  whatsapp          String?
+  website           String?
+  profileImage      String?
+  gallery           String[]
+  active            Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
   trades          ProfessionalTrade[]
-  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  requests        Request[]          @relation("Professional")
-  reviews         Review[]
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceProvider ServiceProvider     @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
   interests       RequestInterest[]
 
   @@map("professionals")
@@ -105,30 +124,90 @@ model ProfessionalTrade {
   @@map("professional_trades")
 }
 
+// Company profile for businesses (constructoras, etc.)
+model Company {
+  id                String @id @default(uuid())
+  userId            String @unique
+  serviceProviderId String @unique
+
+  // Company info
+  companyName   String
+  legalName     String?
+  taxId         String? // CUIT/RUT
+  description   String?
+  foundedYear   Int?
+  employeeCount String? // "1-5", "6-20", "21-50", "50+"
+
+  // Contact
+  website String?
+  phone   String?
+  email   String?
+
+  // Location
+  address String?
+  city    String  @default("Bariloche")
+  zone    String?
+
+  // Status
+  status       CompanyStatus @default(PENDING_VERIFICATION)
+  profileImage String?
+  gallery      String[]
+  active       Boolean       @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceProvider ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+  trades          CompanyTrade[]
+
+  @@map("companies")
+}
+
+model CompanyTrade {
+  id        String   @id @default(uuid())
+  companyId String
+  tradeId   String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  trade     Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, tradeId])
+  @@map("company_trades")
+}
+
+enum CompanyStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
+}
+
 model Request {
-  id             String        @id @default(uuid())
-  clientId       String
-  professionalId String?       // Optional for public requests
-  tradeId        String?       // Trade for public requests
-  isPublic       Boolean       @default(false)
-  title          String        @default("")
-  description    String
-  address        String?
-  availability   String?
-  photos         String[]      @default([])
-  status         RequestStatus @default(PENDING)
-  quoteAmount    Float?
-  quoteNotes     String?
-  // Client rating by professional (after work is done)
+  id                  String        @id @default(uuid())
+  clientId            String
+  providerId          String? // ServiceProvider ID (Professional or Company)
+  tradeId             String? // Trade for public requests
+  isPublic            Boolean       @default(false)
+  title               String        @default("")
+  description         String
+  address             String?
+  availability        String?
+  photos              String[]      @default([])
+  status              RequestStatus @default(PENDING)
+  quoteAmount         Float?
+  quoteNotes          String?
+  // Client rating by provider (after work is done)
   clientRating        Int?
   clientRatingComment String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  client         User          @relation("Client", fields: [clientId], references: [id], onDelete: Cascade)
-  professional   Professional? @relation("Professional", fields: [professionalId], references: [id], onDelete: Cascade)
-  trade          Trade?        @relation(fields: [tradeId], references: [id])
-  review         Review?
-  interests      RequestInterest[]
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  client    User              @relation("Client", fields: [clientId], references: [id], onDelete: Cascade)
+  provider  ServiceProvider?  @relation("Provider", fields: [providerId], references: [id], onDelete: Cascade)
+  trade     Trade?            @relation(fields: [tradeId], references: [id])
+  review    Review?
+  interests RequestInterest[]
 
   @@map("requests")
 }
@@ -137,7 +216,7 @@ model RequestInterest {
   id             String       @id @default(uuid())
   requestId      String
   professionalId String
-  message        String?      // Optional message from specialist
+  message        String? // Optional message from specialist
   createdAt      DateTime     @default(now())
   request        Request      @relation(fields: [requestId], references: [id], onDelete: Cascade)
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
@@ -147,21 +226,22 @@ model RequestInterest {
 }
 
 model Review {
-  id             String       @id @default(uuid())
-  reviewerId     String
-  professionalId String
-  requestId      String?      @unique
-  rating         Int
-  comment        String?
-  status         ReviewStatus @default(PENDING)
-  moderatedAt    DateTime?
-  moderatedBy    String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
-  request        Request?     @relation(fields: [requestId], references: [id])
-  reviewer       User         @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
-  moderator      User?        @relation("Moderator", fields: [moderatedBy], references: [id])
+  id                String       @id @default(uuid())
+  reviewerId        String
+  serviceProviderId String // ServiceProvider being reviewed
+  requestId         String       @unique // Review is always tied to a request
+  rating            Int
+  comment           String?
+  status            ReviewStatus @default(PENDING)
+  moderatedAt       DateTime?
+  moderatedBy       String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  serviceProvider ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+  request         Request         @relation(fields: [requestId], references: [id])
+  reviewer        User            @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  moderator       User?           @relation("Moderator", fields: [moderatedBy], references: [id])
 
   @@map("reviews")
 }
@@ -186,14 +266,14 @@ model Contact {
 }
 
 model InAppNotification {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   type      String
   title     String
   body      String?
   data      Json?
   readAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -229,7 +309,7 @@ model Notification {
   idempotencyKey String?  @unique
   createdAt      DateTime @default(now())
 
-  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries NotificationDelivery[]
 
   @@index([userId, createdAt])
@@ -237,20 +317,20 @@ model Notification {
 }
 
 model NotificationDelivery {
-  id              String                   @id @default(uuid())
-  notificationId  String
-  channel         NotificationChannel
-  status          NotificationDeliveryStatus @default(PENDING)
+  id                String                     @id @default(uuid())
+  notificationId    String
+  channel           NotificationChannel
+  status            NotificationDeliveryStatus @default(PENDING)
   providerMessageId String?
-  errorCode       String?
-  errorMessage    String?
-  attemptCount    Int                      @default(0)
-  lastAttemptAt   DateTime?
-  nextAttemptAt   DateTime?
-  sentAt          DateTime?
-  readAt          DateTime?
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
+  errorCode         String?
+  errorMessage      String?
+  attemptCount      Int                        @default(0)
+  lastAttemptAt     DateTime?
+  nextAttemptAt     DateTime?
+  sentAt            DateTime?
+  readAt            DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
 
   notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
 
@@ -260,10 +340,10 @@ model NotificationDelivery {
 }
 
 model NotificationPreferences {
-  id                      String                     @id @default(uuid())
-  userId                  String                     @unique
-  inAppEnabled            Boolean                    @default(true)
-  externalEnabled         Boolean                    @default(true)
+  id                       String                      @id @default(uuid())
+  userId                   String                      @unique
+  inAppEnabled             Boolean                     @default(true)
+  externalEnabled          Boolean                     @default(true)
   preferredExternalChannel ExternalNotificationChannel @default(EMAIL)
   /// Per-type overrides (optional).
   /// Example:
@@ -271,9 +351,9 @@ model NotificationPreferences {
   ///   "REQUEST_STATUS_CHANGED": { "externalEnabled": false },
   ///   "REQUEST_INTEREST_EXPRESSED": { "preferredExternalChannel": "WHATSAPP" }
   /// }
-  overrides               Json?
-  createdAt               DateTime                   @default(now())
-  updatedAt               DateTime                   @updatedAt
+  overrides                Json?
+  createdAt                DateTime                    @default(now())
+  updatedAt                DateTime                    @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -309,4 +389,9 @@ enum AuthProvider {
   LOCAL
   GOOGLE
   FACEBOOK
+}
+
+enum ProviderType {
+  PROFESSIONAL
+  COMPANY
 }

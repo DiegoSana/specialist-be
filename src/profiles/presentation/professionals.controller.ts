@@ -88,8 +88,8 @@ export class ProfessionalsController {
     @CurrentUser() user: UserEntity,
     @Body() createDto: CreateProfessionalDto,
   ): Promise<ProfessionalResponseDto> {
-    const entity = await this.professionalService.createProfile(user.id, createDto);
-    return ProfessionalResponseDto.fromEntity(entity);
+    const result = await this.professionalService.createProfile(user.id, createDto);
+    return ProfessionalResponseDto.fromEntity(result.professional);
   }
 
   @Patch('me')

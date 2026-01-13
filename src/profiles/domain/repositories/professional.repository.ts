@@ -3,6 +3,8 @@ import { ProfessionalEntity } from '../entities/professional.entity';
 export interface ProfessionalRepository {
   findById(id: string): Promise<ProfessionalEntity | null>;
   findByUserId(userId: string): Promise<ProfessionalEntity | null>;
+  findByServiceProviderId(serviceProviderId: string): Promise<ProfessionalEntity | null>;
+  
   /**
    * Queries (read-model). En una separación más estricta, esto viviría
    * en un "ProfessionalQueryRepository" fuera del contrato de aggregate.
@@ -20,7 +22,10 @@ export interface ProfessionalRepository {
    */
   save(professional: ProfessionalEntity): Promise<ProfessionalEntity>;
 
-  // Mantener por ahora (derivado), pero idealmente se actualiza vía dominio/eventos.
+  /**
+   * Update rating on the ServiceProvider associated with this professional.
+   * The rating data lives on ServiceProvider, not Professional.
+   */
   updateRating(
     id: string,
     averageRating: number,

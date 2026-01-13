@@ -6,7 +6,7 @@ export class PrismaRequestMapper {
     const entity = new RequestEntity(
       request.id,
       request.clientId,
-      request.professionalId,
+      request.providerId, // Now using providerId (ServiceProvider ID)
       request.tradeId,
       request.isPublic,
       request.title || '',
@@ -23,36 +23,88 @@ export class PrismaRequestMapper {
       request.updatedAt,
     );
 
-    // Mantener el comportamiento actual: adjuntar objetos para respuestas API.
-    if (request.professional) {
-      const professional = request.professional;
-      const trades = (professional.trades || []).map((pt: any) => ({
-        id: pt.trade.id,
-        name: pt.trade.name,
-        category: pt.trade.category,
-        description: pt.trade.description,
-        isPrimary: pt.isPrimary,
-      }));
-
-      (entity as any).professional = {
-        id: professional.id,
-        userId: professional.userId,
-        trades,
-        description: professional.description,
-        experienceYears: professional.experienceYears,
-        status: professional.status,
-        zone: professional.zone,
-        city: professional.city,
-        address: professional.address,
-        whatsapp: professional.whatsapp,
-        website: professional.website,
-        averageRating: professional.averageRating,
-        totalReviews: professional.totalReviews,
-        profileImage: professional.profileImage,
-        gallery: professional.gallery || [],
-        active: professional.active,
-        user: professional.user,
+    // Map provider data (which includes professional or company through serviceProvider)
+    if (request.provider) {
+      const provider = request.provider;
+      
+      // Attach the provider with its professional or company data
+      (entity as any).provider = {
+        id: provider.id,
+        type: provider.type,
+        averageRating: provider.averageRating,
+        totalReviews: provider.totalReviews,
       };
+
+      // If provider has a professional, map it
+      if (provider.professional) {
+        const professional = provider.professional;
+        const trades = (professional.trades || []).map((pt: any) => ({
+          id: pt.trade.id,
+          name: pt.trade.name,
+          category: pt.trade.category,
+          description: pt.trade.description,
+          isPrimary: pt.isPrimary,
+        }));
+
+        (entity as any).professional = {
+          id: professional.id,
+          userId: professional.userId,
+          serviceProviderId: professional.serviceProviderId,
+          trades,
+          description: professional.description,
+          experienceYears: professional.experienceYears,
+          status: professional.status,
+          zone: professional.zone,
+          city: professional.city,
+          address: professional.address,
+          whatsapp: professional.whatsapp,
+          website: professional.website,
+          averageRating: provider.averageRating,
+          totalReviews: provider.totalReviews,
+          profileImage: professional.profileImage,
+          gallery: professional.gallery || [],
+          active: professional.active,
+          user: professional.user,
+        };
+      }
+
+      // If provider has a company, map it
+      if (provider.company) {
+        const company = provider.company;
+        const trades = (company.trades || []).map((ct: any) => ({
+          id: ct.trade.id,
+          name: ct.trade.name,
+          category: ct.trade.category,
+          description: ct.trade.description,
+          isPrimary: ct.isPrimary,
+        }));
+
+        (entity as any).company = {
+          id: company.id,
+          userId: company.userId,
+          serviceProviderId: company.serviceProviderId,
+          companyName: company.companyName,
+          legalName: company.legalName,
+          taxId: company.taxId,
+          description: company.description,
+          foundedYear: company.foundedYear,
+          employeeCount: company.employeeCount,
+          website: company.website,
+          phone: company.phone,
+          email: company.email,
+          address: company.address,
+          city: company.city,
+          zone: company.zone,
+          status: company.status,
+          averageRating: provider.averageRating,
+          totalReviews: provider.totalReviews,
+          profileImage: company.profileImage,
+          gallery: company.gallery || [],
+          active: company.active,
+          trades,
+          user: company.user,
+        };
+      }
     }
 
     if (request.client) {
@@ -79,7 +131,7 @@ export class PrismaRequestMapper {
 
   static toPersistenceCreate(input: {
     clientId: string;
-    professionalId: string | null;
+    providerId: string | null; // ServiceProvider ID
     tradeId: string | null;
     isPublic: boolean;
     title: string;
@@ -93,7 +145,7 @@ export class PrismaRequestMapper {
   }): Record<string, unknown> {
     return {
       clientId: input.clientId,
-      professionalId: input.professionalId,
+      providerId: input.providerId,
       tradeId: input.tradeId,
       isPublic: input.isPublic,
       title: input.title,
@@ -121,8 +173,8 @@ export class PrismaRequestMapper {
     if (partial.quoteNotes !== undefined)
       updateData.quoteNotes = partial.quoteNotes;
     if (partial.photos !== undefined) updateData.photos = partial.photos;
-    if (partial.professionalId !== undefined)
-      updateData.professionalId = partial.professionalId;
+    if (partial.providerId !== undefined)
+      updateData.providerId = partial.providerId;
     if (partial.clientRating !== undefined)
       updateData.clientRating = partial.clientRating;
     if (partial.clientRatingComment !== undefined)

@@ -102,6 +102,7 @@ export const createMockProfessional = (
   const defaults = {
     id: 'professional-123',
     userId: 'user-123',
+    serviceProviderId: 'service-provider-123',
     trades: [
       {
         id: 'trade-1',
@@ -119,8 +120,6 @@ export const createMockProfessional = (
     address: 'Main Street 123',
     whatsapp: '+5491155551234',
     website: 'https://professional.com',
-    averageRating: 4.5,
-    totalReviews: 10,
     profileImage: null,
     gallery: [],
     active: true,
@@ -132,6 +131,7 @@ export const createMockProfessional = (
   return new ProfessionalEntity(
     defaults.id,
     defaults.userId,
+    defaults.serviceProviderId,
     defaults.trades,
     defaults.description,
     defaults.experienceYears,
@@ -141,8 +141,6 @@ export const createMockProfessional = (
     defaults.address,
     defaults.whatsapp,
     defaults.website,
-    defaults.averageRating,
-    defaults.totalReviews,
     defaults.profileImage,
     defaults.gallery,
     defaults.active,
@@ -156,7 +154,7 @@ export const createMockRequest = (
   overrides: Partial<{
     id: string;
     clientId: string;
-    professionalId: string | null;
+    providerId: string | null;
     tradeId: string | null;
     isPublic: boolean;
     title: string;
@@ -176,7 +174,7 @@ export const createMockRequest = (
   const defaults = {
     id: 'request-123',
     clientId: 'user-123',
-    professionalId: 'professional-123',
+    providerId: 'service-provider-123',
     tradeId: 'trade-123',
     isPublic: false,
     title: 'Test Request Title',
@@ -197,7 +195,7 @@ export const createMockRequest = (
   return new RequestEntity(
     defaults.id,
     defaults.clientId,
-    defaults.professionalId,
+    defaults.providerId,
     defaults.tradeId,
     defaults.isPublic,
     defaults.title,
