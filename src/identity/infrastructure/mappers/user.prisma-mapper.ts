@@ -23,6 +23,7 @@ export class PrismaUserMapper {
     updatedAt: Date;
     client?: unknown | null;
     professional?: unknown | null;
+    company?: unknown | null;
     googleId?: string | null;
     facebookId?: string | null;
     authProvider?: AuthProvider | null;
@@ -41,6 +42,7 @@ export class PrismaUserMapper {
       user.updatedAt,
       !!user.client,
       !!user.professional,
+      !!user.company,
       user.googleId || null,
       user.facebookId || null,
       user.authProvider || AuthProvider.LOCAL,

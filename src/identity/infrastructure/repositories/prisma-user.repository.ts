@@ -18,6 +18,7 @@ export class PrismaUserRepository implements UserRepository {
         ? {
             client: true,
             professional: true,
+            company: true,
           }
         : undefined,
     });
@@ -37,6 +38,7 @@ export class PrismaUserRepository implements UserRepository {
         ? {
             client: true,
             professional: true,
+            company: true,
           }
         : undefined,
     });
@@ -52,6 +54,7 @@ export class PrismaUserRepository implements UserRepository {
       include: {
         client: true,
         professional: true,
+        company: true,
       },
     });
 
@@ -66,6 +69,7 @@ export class PrismaUserRepository implements UserRepository {
       include: {
         client: true,
         professional: true,
+        company: true,
       },
     });
 
@@ -89,6 +93,7 @@ export class PrismaUserRepository implements UserRepository {
       include: {
         client: { select: { id: true } },
         professional: { select: { id: true } },
+        company: { select: { id: true } },
       },
     });
 

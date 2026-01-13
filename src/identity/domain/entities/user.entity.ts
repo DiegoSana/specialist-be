@@ -34,6 +34,7 @@ export class UserEntity {
       now,
       false,
       false,
+      false,
       null,
       null,
       AuthProvider.LOCAL,
@@ -66,6 +67,7 @@ export class UserEntity {
       now,
       false,
       false,
+      false,
       params.provider === AuthProvider.GOOGLE ? params.externalId : null,
       params.provider === AuthProvider.FACEBOOK ? params.externalId : null,
       params.provider,
@@ -86,6 +88,7 @@ export class UserEntity {
     public readonly updatedAt: Date,
     public readonly hasClientProfile: boolean = false,
     public readonly hasProfessionalProfile: boolean = false,
+    public readonly hasCompanyProfile: boolean = false,
     public readonly googleId: string | null = null,
     public readonly facebookId: string | null = null,
     public readonly authProvider: AuthProvider = AuthProvider.LOCAL,
@@ -107,11 +110,26 @@ export class UserEntity {
     return this.hasProfessionalProfile;
   }
 
+  isCompany(): boolean {
+    return this.hasCompanyProfile;
+  }
+
+  /**
+   * Check if user is any type of service provider
+   */
+  isServiceProvider(): boolean {
+    return this.hasProfessionalProfile || this.hasCompanyProfile;
+  }
+
   isAdminUser(): boolean {
     return this.isAdmin;
   }
 
   canCreateProfessionalProfile(): boolean {
+    return this.isActive();
+  }
+
+  canCreateCompanyProfile(): boolean {
     return this.isActive();
   }
 
@@ -121,6 +139,10 @@ export class UserEntity {
 
   hasBothProfiles(): boolean {
     return this.hasClientProfile && this.hasProfessionalProfile;
+  }
+
+  hasAnyProviderProfile(): boolean {
+    return this.hasProfessionalProfile || this.hasCompanyProfile;
   }
 
   withUpdatedProfile(input: {
@@ -147,6 +169,7 @@ export class UserEntity {
       now,
       this.hasClientProfile,
       this.hasProfessionalProfile,
+      this.hasCompanyProfile,
       this.googleId,
       this.facebookId,
       this.authProvider,
@@ -168,6 +191,7 @@ export class UserEntity {
       now,
       this.hasClientProfile,
       this.hasProfessionalProfile,
+      this.hasCompanyProfile,
       this.googleId,
       this.facebookId,
       this.authProvider,
@@ -193,6 +217,7 @@ export class UserEntity {
       now,
       this.hasClientProfile,
       this.hasProfessionalProfile,
+      this.hasCompanyProfile,
       googleId,
       this.facebookId,
       this.authProvider,
@@ -218,6 +243,7 @@ export class UserEntity {
       now,
       this.hasClientProfile,
       this.hasProfessionalProfile,
+      this.hasCompanyProfile,
       this.googleId,
       facebookId,
       this.authProvider,
