@@ -5,6 +5,7 @@ import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { UserService } from '../../identity/application/services/user.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
+import { UserEntity } from '../../identity/domain/entities/user.entity';
 
 @Injectable()
 export class AdminService {
@@ -109,10 +110,12 @@ export class AdminService {
   async updateProfessionalStatus(
     professionalId: string,
     updateDto: UpdateProfessionalStatusDto,
+    user: UserEntity,
   ) {
     return this.professionalService.updateStatus(
       professionalId,
       updateDto.status,
+      user,
     );
   }
 }

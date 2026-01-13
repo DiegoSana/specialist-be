@@ -21,6 +21,8 @@ import { UpdateUserStatusDto } from '../application/dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from '../application/dto/update-professional-status.dto';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
+import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
+import { UserEntity } from '../../identity/domain/entities/user.entity';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -91,7 +93,8 @@ export class AdminController {
   async updateProfessionalStatus(
     @Param('id') id: string,
     @Body() updateDto: UpdateProfessionalStatusDto,
+    @CurrentUser() user: UserEntity,
   ) {
-    return this.adminService.updateProfessionalStatus(id, updateDto);
+    return this.adminService.updateProfessionalStatus(id, updateDto, user);
   }
 }

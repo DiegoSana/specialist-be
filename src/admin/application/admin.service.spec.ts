@@ -237,6 +237,8 @@ describe('AdminService', () => {
   });
 
   describe('updateProfessionalStatus', () => {
+    const adminUser = createMockUser({ id: 'admin-123', isAdmin: true });
+
     it('should update professional status successfully', async () => {
       const updatedProfessional = createMockProfessional({
         status: ProfessionalStatus.VERIFIED,
@@ -245,14 +247,17 @@ describe('AdminService', () => {
         updatedProfessional,
       );
 
-      const result = await service.updateProfessionalStatus('prof-123', {
-        status: ProfessionalStatus.VERIFIED,
-      });
+      const result = await service.updateProfessionalStatus(
+        'prof-123',
+        { status: ProfessionalStatus.VERIFIED },
+        adminUser,
+      );
 
       expect(result.status).toBe(ProfessionalStatus.VERIFIED);
       expect(mockProfessionalService.updateStatus).toHaveBeenCalledWith(
         'prof-123',
         ProfessionalStatus.VERIFIED,
+        adminUser,
       );
     });
 
@@ -262,9 +267,11 @@ describe('AdminService', () => {
       );
 
       await expect(
-        service.updateProfessionalStatus('non-existent', {
-          status: ProfessionalStatus.VERIFIED,
-        }),
+        service.updateProfessionalStatus(
+          'non-existent',
+          { status: ProfessionalStatus.VERIFIED },
+          adminUser,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -276,9 +283,11 @@ describe('AdminService', () => {
         rejectedProfessional,
       );
 
-      const result = await service.updateProfessionalStatus('prof-123', {
-        status: ProfessionalStatus.REJECTED,
-      });
+      const result = await service.updateProfessionalStatus(
+        'prof-123',
+        { status: ProfessionalStatus.REJECTED },
+        adminUser,
+      );
 
       expect(result.status).toBe(ProfessionalStatus.REJECTED);
     });

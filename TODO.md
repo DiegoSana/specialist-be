@@ -12,7 +12,7 @@
 | Request Interest | ✅ | ✅ | ⬜ |
 | Reviews | ✅ | ✅ | ⬜ |
 | Notifications | ✅ | ✅ | ⬜ |
-| Profiles | ⬜ | ✅ | ⬜ |
+| Profiles | ✅ | ✅ | ⬜ |
 | Identity | ⬜ | ✅ | ⬜ |
 | **Companies** | ⬜ | ⬜ | ⬜ |
 
@@ -74,13 +74,23 @@
     - `POST /admin/notifications/:id/resend` - reenviar fallidas
   - [x] Actualizar tests
 
-### ⬜ Pendiente
+- [x] **Profiles Module**
+  - [x] Crear `ProfessionalAuthContext` interface en dominio
+  - [x] Agregar métodos de autorización a `ProfessionalEntity`:
+    - `isOwnedBy(userId)` - helper para verificar propiedad
+    - `canViewFullProfileBy(ctx)` - owner o admin
+    - `canBeEditedBy(ctx)` - owner o admin
+    - `canManageGalleryBy(ctx)` - owner o admin
+    - `canChangeStatusBy(ctx)` - solo admin
+  - [x] Refactorizar `ProfessionalService`:
+    - `updateProfile()` - usa `canBeEditedBy()`
+    - `addGalleryItem()` / `removeGalleryItem()` - usa `canManageGalleryBy()`
+    - `updateStatus()` - usa `canChangeStatusBy()` y requiere user
+  - [x] Actualizar `AdminService.updateProfessionalStatus()` para pasar user
+  - [x] Actualizar tests (222 tests pasando)
+  - [x] `ClientService` no requiere refactor (solo activa perfil propio)
 
-- [ ] **Profiles Module**
-  - [ ] Verificar permisos en `ProfessionalService`
-  - [ ] Verificar permisos en `ClientService`
-  - [ ] ¿Quién puede ver perfiles de otros usuarios?
-  - [ ] ¿Quién puede editar perfiles?
+### ⬜ Pendiente
 
 - [ ] **Identity Module**
   - [ ] Revisar permisos de admin para gestión de usuarios
@@ -559,8 +569,9 @@ model Company {
 
 ### Próxima Semana
 1. ~~Refactorizar Notifications module~~ ✅
-2. Revisar DTOs en controladores principales
-3. Revisar Profiles module
+2. ~~Revisar Profiles module~~ ✅
+3. Revisar DTOs en controladores principales
+4. Revisar Identity module
 
 ### Mes
 1. DTOs completos en todos los controladores

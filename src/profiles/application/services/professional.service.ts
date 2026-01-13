@@ -10,7 +10,10 @@ import {
   ProfessionalRepository,
   PROFESSIONAL_REPOSITORY,
 } from '../../domain/repositories/professional.repository';
-import { ProfessionalEntity } from '../../domain/entities/professional.entity';
+import {
+  ProfessionalEntity,
+  ProfessionalAuthContext,
+} from '../../domain/entities/professional.entity';
 import {
   TradeRepository,
   TRADE_REPOSITORY,
@@ -23,6 +26,7 @@ import { randomUUID } from 'crypto';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { UserService } from '../../../identity/application/services/user.service';
 import { RequestService } from '../../../requests/application/services/request.service';
+import { UserEntity } from '../../../identity/domain/entities/user.entity';
 
 @Injectable()
 export class ProfessionalService {
@@ -36,6 +40,14 @@ export class ProfessionalService {
     @Inject(forwardRef(() => RequestService))
     private readonly requestService: RequestService,
   ) {}
+
+  // ─────────────────────────────────────────────────────────────
+  // Auth Context Helper
+  // ─────────────────────────────────────────────────────────────
+
+  private buildAuthContext(user: UserEntity): ProfessionalAuthContext {
+    return ProfessionalEntity.buildAuthContext(user.id, user.isAdminUser());
+  }
 
   async search(
     searchDto: SearchProfessionalsDto,
@@ -81,8 +93,15 @@ export class ProfessionalService {
   async updateStatus(
     professionalId: string,
     status: ProfessionalStatus,
+    user: UserEntity,
   ): Promise<ProfessionalEntity> {
+    const ctx = this.buildAuthContext(user);
     const professional = await this.getByIdOrFail(professionalId);
+
+    if (!professional.canChangeStatusBy(ctx)) {
+      throw new ForbiddenException('Only admins can change professional status');
+    }
+
     const now = new Date();
     return this.professionalRepository.save(
       new ProfessionalEntity(
@@ -301,17 +320,19 @@ export class ProfessionalService {
   }
 
   async updateProfile(
-    userId: string,
+    user: UserEntity,
     professionalId: string,
     updateDto: UpdateProfessionalDto,
   ): Promise<ProfessionalEntity> {
+    const ctx = this.buildAuthContext(user);
     const professional =
       await this.professionalRepository.findById(professionalId);
+
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }
 
-    if (professional.userId !== userId) {
+    if (!professional.canBeEditedBy(ctx)) {
       throw new ForbiddenException('You can only update your own profile');
     }
 
@@ -382,12 +403,18 @@ export class ProfessionalService {
   }
 
   async addGalleryItem(
-    userId: string,
+    user: UserEntity,
     url: string,
   ): Promise<ProfessionalEntity> {
-    const professional = await this.professionalRepository.findByUserId(userId);
+    const ctx = this.buildAuthContext(user);
+    const professional = await this.professionalRepository.findByUserId(user.id);
+
     if (!professional) {
       throw new NotFoundException('Professional profile not found');
+    }
+
+    if (!professional.canManageGalleryBy(ctx)) {
+      throw new ForbiddenException('You can only manage your own gallery');
     }
 
     const currentGallery = professional.gallery || [];
@@ -422,12 +449,18 @@ export class ProfessionalService {
   }
 
   async removeGalleryItem(
-    userId: string,
+    user: UserEntity,
     url: string,
   ): Promise<ProfessionalEntity> {
-    const professional = await this.professionalRepository.findByUserId(userId);
+    const ctx = this.buildAuthContext(user);
+    const professional = await this.professionalRepository.findByUserId(user.id);
+
     if (!professional) {
       throw new NotFoundException('Professional profile not found');
+    }
+
+    if (!professional.canManageGalleryBy(ctx)) {
+      throw new ForbiddenException('You can only manage your own gallery');
     }
 
     const currentGallery = professional.gallery || [];

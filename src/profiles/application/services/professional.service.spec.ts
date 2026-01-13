@@ -297,6 +297,7 @@ describe('ProfessionalService', () => {
       description: 'Updated description',
       experienceYears: 10,
     };
+    const mockUser = createMockUser({ id: 'user-123', isAdmin: false });
 
     it('should successfully update own profile', async () => {
       const professional = createMockProfessional({
@@ -312,11 +313,7 @@ describe('ProfessionalService', () => {
       mockProfessionalRepository.findById.mockResolvedValue(professional);
       mockProfessionalRepository.save.mockResolvedValue(updatedProfessional);
 
-      const result = await service.updateProfile(
-        'user-123',
-        'prof-123',
-        updateDto,
-      );
+      const result = await service.updateProfile(mockUser, 'prof-123', updateDto);
 
       expect(result.description).toBe('Updated description');
       expect(mockProfessionalRepository.save).toHaveBeenCalled();
@@ -326,7 +323,7 @@ describe('ProfessionalService', () => {
       mockProfessionalRepository.findById.mockResolvedValue(null);
 
       await expect(
-        service.updateProfile('user-123', 'non-existent', updateDto),
+        service.updateProfile(mockUser, 'non-existent', updateDto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -339,8 +336,29 @@ describe('ProfessionalService', () => {
       mockProfessionalRepository.findById.mockResolvedValue(professional);
 
       await expect(
-        service.updateProfile('user-123', 'prof-123', updateDto),
+        service.updateProfile(mockUser, 'prof-123', updateDto),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow admin to update any profile', async () => {
+      const adminUser = createMockUser({ id: 'admin-123', isAdmin: true });
+      const professional = createMockProfessional({
+        id: 'prof-123',
+        userId: 'other-user',
+      });
+      const updatedProfessional = createMockProfessional({
+        ...professional,
+        description: 'Admin updated',
+      });
+
+      mockProfessionalRepository.findById.mockResolvedValue(professional);
+      mockProfessionalRepository.save.mockResolvedValue(updatedProfessional);
+
+      const result = await service.updateProfile(adminUser, 'prof-123', {
+        description: 'Admin updated',
+      });
+
+      expect(result.description).toBe('Admin updated');
     });
 
     it('should validate trades when updating tradeIds', async () => {
@@ -353,7 +371,7 @@ describe('ProfessionalService', () => {
       mockTradeRepository.findById.mockResolvedValue(null);
 
       await expect(
-        service.updateProfile('user-123', 'prof-123', {
+        service.updateProfile(mockUser, 'prof-123', {
           tradeIds: ['invalid-trade'],
         }),
       ).rejects.toThrow(NotFoundException);
@@ -361,9 +379,12 @@ describe('ProfessionalService', () => {
   });
 
   describe('addGalleryItem', () => {
+    const mockUser = createMockUser({ id: 'user-123', isAdmin: false });
+
     it('should add new image to gallery', async () => {
       const professional = createMockProfessional({
         id: 'prof-123',
+        userId: 'user-123',
         gallery: ['existing.jpg'],
       });
       const updatedProfessional = createMockProfessional({
@@ -373,7 +394,7 @@ describe('ProfessionalService', () => {
       mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
       mockProfessionalRepository.save.mockResolvedValue(updatedProfessional);
 
-      const result = await service.addGalleryItem('user-123', 'new.jpg');
+      const result = await service.addGalleryItem(mockUser, 'new.jpg');
 
       expect(result.gallery).toContain('new.jpg');
       expect(mockProfessionalRepository.save).toHaveBeenCalled();
@@ -381,13 +402,14 @@ describe('ProfessionalService', () => {
 
     it('should throw BadRequestException if image already in gallery', async () => {
       const professional = createMockProfessional({
+        userId: 'user-123',
         gallery: ['existing.jpg'],
       });
 
       mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
 
       await expect(
-        service.addGalleryItem('user-123', 'existing.jpg'),
+        service.addGalleryItem(mockUser, 'existing.jpg'),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -395,15 +417,18 @@ describe('ProfessionalService', () => {
       mockProfessionalRepository.findByUserId.mockResolvedValue(null);
 
       await expect(
-        service.addGalleryItem('user-123', 'new.jpg'),
+        service.addGalleryItem(mockUser, 'new.jpg'),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('removeGalleryItem', () => {
+    const mockUser = createMockUser({ id: 'user-123', isAdmin: false });
+
     it('should remove image from gallery', async () => {
       const professional = createMockProfessional({
         id: 'prof-123',
+        userId: 'user-123',
         gallery: ['img1.jpg', 'img2.jpg', 'img3.jpg'],
       });
       const updatedProfessional = createMockProfessional({
@@ -413,7 +438,7 @@ describe('ProfessionalService', () => {
       mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
       mockProfessionalRepository.save.mockResolvedValue(updatedProfessional);
 
-      const result = await service.removeGalleryItem('user-123', 'img2.jpg');
+      const result = await service.removeGalleryItem(mockUser, 'img2.jpg');
 
       expect(result.gallery).not.toContain('img2.jpg');
       expect(mockProfessionalRepository.save).toHaveBeenCalled();
@@ -423,7 +448,7 @@ describe('ProfessionalService', () => {
       mockProfessionalRepository.findByUserId.mockResolvedValue(null);
 
       await expect(
-        service.removeGalleryItem('user-123', 'img.jpg'),
+        service.removeGalleryItem(mockUser, 'img.jpg'),
       ).rejects.toThrow(NotFoundException);
     });
   });
