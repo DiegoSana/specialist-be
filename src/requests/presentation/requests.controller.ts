@@ -30,6 +30,7 @@ import { UpdateRequestDto } from '../application/dto/update-request.dto';
 import {
   ExpressInterestDto,
   AssignProfessionalDto,
+  AssignProviderDto,
 } from '../application/dto/express-interest.dto';
 import { RequestResponseDto } from './dto/request-response.dto';
 import { InterestedProfessionalResponseDto } from './dto/interested-professional-response.dto';
@@ -235,10 +236,10 @@ export class RequestsController {
   }
 
   @Get(':id/interests')
-  @ApiOperation({ summary: 'Get all interested professionals (client/admin only)' })
-  @ApiResponse({ status: 200, description: 'List of interested professionals', type: [InterestedProfessionalResponseDto] })
+  @ApiOperation({ summary: 'Get all interested providers (client/admin only)' })
+  @ApiResponse({ status: 200, description: 'List of interested providers', type: [InterestedProfessionalResponseDto] })
   @ApiResponse({ status: 403, description: 'Not authorized to view interests' })
-  async getInterestedProfessionals(
+  async getInterestedProviders(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
   ): Promise<InterestedProfessionalResponseDto[]> {
@@ -246,13 +247,42 @@ export class RequestsController {
       user.id,
       user.isAdminUser(),
     );
-    const entities = await this.requestInterestService.getInterestedProfessionals(id, ctx);
+    const entities = await this.requestInterestService.getInterestedProviders(id, ctx);
     return InterestedProfessionalResponseDto.fromEntities(entities);
   }
 
+  @Post(':id/assign-provider')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Assign a provider to request (client/admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Provider assigned successfully',
+    type: RequestResponseDto,
+  })
+  @ApiResponse({ status: 403, description: 'Not authorized to assign' })
+  async assignProvider(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+    @Body() dto: AssignProviderDto,
+  ): Promise<RequestResponseDto> {
+    const ctx = await this.requestInterestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+    const entity = await this.requestInterestService.assignProvider(
+      id,
+      ctx,
+      dto.serviceProviderId,
+    );
+    return RequestResponseDto.fromEntity(entity);
+  }
+
+  /**
+   * @deprecated Use POST /assign-provider instead
+   */
   @Post(':id/assign')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Assign a professional to request (client/admin only)' })
+  @ApiOperation({ summary: '[Deprecated] Assign a professional - use /assign-provider instead' })
   @ApiResponse({
     status: 200,
     description: 'Professional assigned successfully',

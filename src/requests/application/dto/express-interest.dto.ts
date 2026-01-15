@@ -12,8 +12,27 @@ export class ExpressInterestDto {
   message?: string;
 }
 
+/**
+ * DTO for assigning a provider to a request.
+ * Can be a Professional or Company (via their serviceProviderId).
+ */
+export class AssignProviderDto {
+  @ApiProperty({
+    example: 'uuid-of-service-provider',
+    description: 'The ServiceProvider ID of the provider to assign',
+  })
+  @IsString()
+  serviceProviderId: string;
+}
+
+/**
+ * @deprecated Use AssignProviderDto instead
+ */
 export class AssignProfessionalDto {
-  @ApiProperty({ example: 'uuid-of-professional' })
+  @ApiProperty({
+    example: 'uuid-of-professional',
+    description: 'The Professional ID to assign (deprecated, use serviceProviderId)',
+  })
   @IsString()
   professionalId: string;
 }

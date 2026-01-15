@@ -79,8 +79,9 @@ model ServiceProvider {
 
   professional Professional?
   company      Company?
-  requests     Request[]     @relation("Provider")
+  requests     Request[]          @relation("Provider")
   reviews      Review[]
+  interests    RequestInterest[]
 
   @@map("service_providers")
 }
@@ -106,7 +107,6 @@ model Professional {
   trades          ProfessionalTrade[]
   user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   serviceProvider ServiceProvider     @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
-  interests       RequestInterest[]
 
   @@map("professionals")
 }
@@ -213,15 +213,15 @@ model Request {
 }
 
 model RequestInterest {
-  id             String       @id @default(uuid())
-  requestId      String
-  professionalId String
-  message        String? // Optional message from specialist
-  createdAt      DateTime     @default(now())
-  request        Request      @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  id                String          @id @default(uuid())
+  requestId         String
+  serviceProviderId String          // Can be Professional or Company
+  message           String?         // Optional message from provider
+  createdAt         DateTime        @default(now())
+  request           Request         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
 
-  @@unique([requestId, professionalId])
+  @@unique([requestId, serviceProviderId])
   @@map("request_interests")
 }
 

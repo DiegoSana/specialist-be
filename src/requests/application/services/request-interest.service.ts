@@ -25,15 +25,21 @@ import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { RequestInterestExpressedEvent } from '../../domain/events/request-interest-expressed.event';
 import { RequestProfessionalAssignedEvent } from '../../domain/events/request-professional-assigned.event';
 import { RequestStatusChangedEvent } from '../../domain/events/request-status-changed.event';
-// Cross-context dependency - using Service instead of Repository (DDD)
+// Cross-context dependencies - using Services instead of Repositories (DDD)
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { CompanyService } from '../../../profiles/application/services/company.service';
 
 /**
- * Extended context that includes both serviceProviderId (for Request auth) 
- * and professionalId (for RequestInterest operations)
+ * Extended context that includes provider info for interest operations.
+ * Works with both Professional and Company providers.
  */
 interface InterestAuthContext extends RequestAuthContext {
-  professionalId?: string | null;
+  /** Provider type (PROFESSIONAL or COMPANY) */
+  providerType?: ProviderType | null;
+  /** Provider display name for notifications */
+  providerName?: string | null;
+  /** Trade IDs the provider has */
+  providerTradeIds?: string[];
 }
 
 @Injectable()
@@ -47,34 +53,65 @@ export class RequestInterestService {
     private readonly eventBus: EventBus,
     @Inject(forwardRef(() => ProfessionalService))
     private readonly professionalService: ProfessionalService,
+    @Inject(forwardRef(() => CompanyService))
+    private readonly companyService: CompanyService,
   ) {}
 
   /**
    * Build auth context from userId.
-   * Returns both serviceProviderId (for Request auth) and professionalId (for RequestInterest).
+   * Checks for both Professional and Company profiles.
    */
   async buildAuthContext(
     userId: string,
     isAdmin: boolean = false,
   ): Promise<InterestAuthContext> {
     let serviceProviderId: string | null = null;
-    let professionalId: string | null = null;
+    let providerType: ProviderType | null = null;
+    let providerName: string | null = null;
+    let providerTradeIds: string[] = [];
 
+    // Try Professional first
     try {
       const professional = await this.professionalService.findByUserId(userId);
       if (professional) {
-        professionalId = professional.id;
         serviceProviderId = professional.serviceProviderId;
+        providerType = ProviderType.PROFESSIONAL;
+        providerName = (professional as any).user
+          ? `${(professional as any).user.firstName} ${(professional as any).user.lastName}`
+          : 'Especialista';
+        providerTradeIds = professional.tradeIds || [];
       }
     } catch {
       // User doesn't have a professional profile
     }
 
-    return { userId, serviceProviderId, professionalId, isAdmin };
+    // If no professional, try Company
+    if (!serviceProviderId) {
+      try {
+        const company = await this.companyService.findByUserId(userId);
+        if (company) {
+          serviceProviderId = company.serviceProviderId;
+          providerType = ProviderType.COMPANY;
+          providerName = company.companyName;
+          providerTradeIds = company.tradeIds || [];
+        }
+      } catch {
+        // User doesn't have a company profile
+      }
+    }
+
+    return {
+      userId,
+      serviceProviderId,
+      providerType,
+      providerName,
+      providerTradeIds,
+      isAdmin,
+    };
   }
 
   /**
-   * Specialist expresses interest in a public request.
+   * Provider (Professional or Company) expresses interest in a public request.
    * Uses domain entity's canExpressInterestBy for permission validation.
    */
   async expressInterest(
@@ -82,9 +119,11 @@ export class RequestInterestService {
     ctx: InterestAuthContext,
     dto: ExpressInterestDto,
   ): Promise<RequestInterestEntity> {
-    // Must have a professional profile (only professionals can express interest)
-    if (!ctx.professionalId) {
-      throw new ForbiddenException('Only specialists can express interest');
+    // Must have a provider profile
+    if (!ctx.serviceProviderId) {
+      throw new ForbiddenException(
+        'Only service providers (professionals or companies) can express interest',
+      );
     }
 
     // Get request
@@ -108,9 +147,9 @@ export class RequestInterestService {
 
     // Check if already expressed interest
     const existingInterest =
-      await this.requestInterestRepository.findByRequestAndProfessional(
+      await this.requestInterestRepository.findByRequestAndProvider(
         requestId,
-        ctx.professionalId,
+        ctx.serviceProviderId,
       );
     if (existingInterest) {
       throw new BadRequestException(
@@ -118,14 +157,9 @@ export class RequestInterestService {
       );
     }
 
-    // Get professional info (includes user data via findByUserId)
-    const professional = await this.professionalService.findByUserId(
-      ctx.userId,
-    ) as any;
-
-    // Validate professional has matching trade
-    if (request.tradeId) {
-      const hasTrade = professional.tradeIds.includes(request.tradeId);
+    // Validate provider has matching trade (if request has tradeId)
+    if (request.tradeId && ctx.providerTradeIds) {
+      const hasTrade = ctx.providerTradeIds.includes(request.tradeId);
       if (!hasTrade) {
         throw new BadRequestException(
           'You do not have the required trade for this request',
@@ -135,27 +169,22 @@ export class RequestInterestService {
 
     const savedInterest = await this.requestInterestRepository.add({
       requestId,
-      professionalId: ctx.professionalId,
+      serviceProviderId: ctx.serviceProviderId,
       message: dto.message || null,
     });
-
-    const providerName = professional.user
-      ? `${professional.user.firstName} ${professional.user.lastName}`
-      : 'Especialista';
 
     await this.eventBus.publish(
       new RequestInterestExpressedEvent({
         requestId,
         requestTitle: request.title,
         clientId: request.clientId,
-        // New fields (preferred)
-        serviceProviderId: professional.serviceProviderId,
+        serviceProviderId: ctx.serviceProviderId,
         providerUserId: ctx.userId,
-        providerType: ProviderType.PROFESSIONAL,
-        providerName,
-        // Backward compatibility
-        professionalId: ctx.professionalId!,
-        professionalName: providerName,
+        providerType: ctx.providerType!,
+        providerName: ctx.providerName || 'Proveedor',
+        // Backward compatibility (deprecated)
+        professionalId: ctx.serviceProviderId,
+        professionalName: ctx.providerName || 'Especialista',
       }),
     );
 
@@ -163,33 +192,33 @@ export class RequestInterestService {
   }
 
   /**
-   * Specialist removes their interest
+   * Provider removes their interest
    */
   async removeInterest(
     requestId: string,
     ctx: InterestAuthContext,
   ): Promise<void> {
-    if (!ctx.professionalId) {
-      throw new ForbiddenException('Only specialists can remove interest');
+    if (!ctx.serviceProviderId) {
+      throw new ForbiddenException('Only providers can remove interest');
     }
 
     const interest =
-      await this.requestInterestRepository.findByRequestAndProfessional(
+      await this.requestInterestRepository.findByRequestAndProvider(
         requestId,
-        ctx.professionalId,
+        ctx.serviceProviderId,
       );
     if (!interest) {
       throw new NotFoundException('Interest not found');
     }
 
-    await this.requestInterestRepository.remove(requestId, ctx.professionalId);
+    await this.requestInterestRepository.remove(requestId, ctx.serviceProviderId);
   }
 
   /**
-   * Get all interested specialists for a request.
+   * Get all interested providers for a request.
    * Only client owner or admins can view.
    */
-  async getInterestedProfessionals(
+  async getInterestedProviders(
     requestId: string,
     ctx: InterestAuthContext,
   ): Promise<RequestInterestEntity[]> {
@@ -198,15 +227,25 @@ export class RequestInterestService {
       throw new NotFoundException('Request not found');
     }
 
-    // Only client owner or admin can see interested professionals
+    // Only client owner or admin can see interested providers
     const isOwner = request.clientId === ctx.userId;
     if (!ctx.isAdmin && !isOwner) {
       throw new ForbiddenException(
-        'Only the request owner can view interested specialists',
+        'Only the request owner can view interested providers',
       );
     }
 
     return this.requestInterestRepository.findByRequestId(requestId);
+  }
+
+  /**
+   * @deprecated Use getInterestedProviders instead
+   */
+  async getInterestedProfessionals(
+    requestId: string,
+    ctx: InterestAuthContext,
+  ): Promise<RequestInterestEntity[]> {
+    return this.getInterestedProviders(requestId, ctx);
   }
 
   /**
@@ -216,26 +255,26 @@ export class RequestInterestService {
     requestId: string,
     ctx: InterestAuthContext,
   ): Promise<boolean> {
-    if (!ctx.professionalId) {
+    if (!ctx.serviceProviderId) {
       return false;
     }
 
     const interest =
-      await this.requestInterestRepository.findByRequestAndProfessional(
+      await this.requestInterestRepository.findByRequestAndProvider(
         requestId,
-        ctx.professionalId,
+        ctx.serviceProviderId,
       );
     return interest !== null;
   }
 
   /**
-   * Client assigns a specialist to the request.
+   * Client assigns a provider to the request.
    * Uses domain entity's canAssignProviderBy for permission validation.
    */
-  async assignProfessional(
+  async assignProvider(
     requestId: string,
     ctx: InterestAuthContext,
-    professionalId: string,
+    serviceProviderId: string,
   ): Promise<RequestEntity> {
     const request = await this.requestRepository.findById(requestId);
     if (!request) {
@@ -246,41 +285,62 @@ export class RequestInterestService {
     if (!request.canAssignProviderBy(ctx)) {
       if (request.clientId !== ctx.userId && !ctx.isAdmin) {
         throw new ForbiddenException(
-          'Only the request owner can assign a specialist',
+          'Only the request owner can assign a provider',
         );
       }
       if (!request.isPublic) {
         throw new BadRequestException(
-          'Can only assign specialists to public requests',
+          'Can only assign providers to public requests',
         );
       }
       if (!request.isPending()) {
         throw new BadRequestException('Request is no longer pending');
       }
-      throw new ForbiddenException('Cannot assign professional to this request');
+      throw new ForbiddenException('Cannot assign provider to this request');
     }
 
-    // Verify professional exists and has expressed interest
+    // Verify provider has expressed interest
     const interest =
-      await this.requestInterestRepository.findByRequestAndProfessional(
+      await this.requestInterestRepository.findByRequestAndProvider(
         requestId,
-        professionalId,
+        serviceProviderId,
       );
     if (!interest) {
       throw new BadRequestException(
-        'This specialist has not expressed interest in this request',
+        'This provider has not expressed interest in this request',
       );
     }
 
-    // Get the professional to get their serviceProviderId
-    const professional = await this.professionalService.getByIdOrFail(professionalId);
+    // Get provider info for notifications
+    let providerUserId: string;
+    let providerType: ProviderType;
+    let providerName: string;
 
-    // Assign the professional (via their serviceProviderId) and change status to ACCEPTED
+    // Try Professional first
+    const professional = await this.professionalService.findByServiceProviderId(serviceProviderId);
+    if (professional) {
+      providerUserId = professional.userId;
+      providerType = ProviderType.PROFESSIONAL;
+      providerName = (professional as any).user
+        ? `${(professional as any).user.firstName} ${(professional as any).user.lastName}`
+        : 'Especialista';
+    } else {
+      // Try Company
+      const company = await this.companyService.findByServiceProviderId(serviceProviderId);
+      if (!company) {
+        throw new NotFoundException('Provider not found');
+      }
+      providerUserId = company.userId;
+      providerType = ProviderType.COMPANY;
+      providerName = company.companyName;
+    }
+
+    // Assign the provider and change status to ACCEPTED
     // Also mark as no longer public
     const fromStatus = request.status;
     const updatedRequest = await this.requestRepository.save(
       request.withChanges({
-        providerId: professional.serviceProviderId, // Use serviceProviderId
+        providerId: serviceProviderId,
         status: RequestStatus.ACCEPTED,
         isPublic: false,
       }),
@@ -289,9 +349,8 @@ export class RequestInterestService {
     // Clean up all interests for this request
     await this.requestInterestRepository.removeAllByRequestId(requestId);
 
-    // Get names for notifications
+    // Get client name for notifications
     const client = (updatedRequest as any).client;
-    const prof = (updatedRequest as any).professional;
     const clientName = client
       ? `${client.firstName} ${client.lastName}`
       : 'Cliente';
@@ -302,33 +361,27 @@ export class RequestInterestService {
         requestTitle: updatedRequest.title,
         clientId: updatedRequest.clientId,
         clientName,
-        // New fields (preferred)
-        serviceProviderId: professional.serviceProviderId,
-        providerUserId: professional.userId,
-        providerType: ProviderType.PROFESSIONAL,
+        serviceProviderId,
+        providerUserId,
+        providerType,
         // Backward compatibility
-        professionalId,
+        professionalId: serviceProviderId,
       }),
     );
 
     if (updatedRequest.status !== fromStatus) {
-      const providerName = prof?.user
-        ? `${prof.user.firstName} ${prof.user.lastName}`
-        : null;
-      
       await this.eventBus.publish(
         new RequestStatusChangedEvent({
           requestId: updatedRequest.id,
           requestTitle: updatedRequest.title,
           clientId: updatedRequest.clientId,
           clientName,
-          // New fields
-          serviceProviderId: professional.serviceProviderId,
-          providerUserId: professional.userId,
-          providerType: ProviderType.PROFESSIONAL,
+          serviceProviderId,
+          providerUserId,
+          providerType,
           providerName,
           // Backward compat
-          professionalId: updatedRequest.providerId,
+          professionalId: serviceProviderId,
           professionalName: providerName,
           fromStatus,
           toStatus: updatedRequest.status,
@@ -338,5 +391,18 @@ export class RequestInterestService {
     }
 
     return updatedRequest;
+  }
+
+  /**
+   * @deprecated Use assignProvider instead
+   */
+  async assignProfessional(
+    requestId: string,
+    ctx: InterestAuthContext,
+    professionalId: string,
+  ): Promise<RequestEntity> {
+    // Get professional to find their serviceProviderId
+    const professional = await this.professionalService.getByIdOrFail(professionalId);
+    return this.assignProvider(requestId, ctx, professional.serviceProviderId);
   }
 }

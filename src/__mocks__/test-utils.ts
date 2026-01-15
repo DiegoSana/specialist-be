@@ -83,6 +83,7 @@ export const createMockProfessional = (
   overrides: Partial<{
     id: string;
     userId: string;
+    serviceProviderId: string;
     trades: TradeInfo[];
     description: string | null;
     experienceYears: number | null;

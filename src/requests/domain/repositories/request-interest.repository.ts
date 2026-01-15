@@ -1,24 +1,24 @@
 import { RequestInterestEntity } from '../entities/request-interest.entity';
 
 /**
- * Association store (append/remove) entre Request y Professional.
- * No es un aggregate con "save", sino operaciones explícitas de intención.
+ * Association store (append/remove) between Request and ServiceProvider.
+ * Not an aggregate with "save", but explicit interest operations.
  */
 export interface RequestInterestRepository {
   findByRequestId(requestId: string): Promise<RequestInterestEntity[]>;
-  findByProfessionalId(
-    professionalId: string,
+  findByServiceProviderId(
+    serviceProviderId: string,
   ): Promise<RequestInterestEntity[]>;
-  findByRequestAndProfessional(
+  findByRequestAndProvider(
     requestId: string,
-    professionalId: string,
+    serviceProviderId: string,
   ): Promise<RequestInterestEntity | null>;
   add(data: {
     requestId: string;
-    professionalId: string;
+    serviceProviderId: string;
     message: string | null;
   }): Promise<RequestInterestEntity>;
-  remove(requestId: string, professionalId: string): Promise<void>;
+  remove(requestId: string, serviceProviderId: string): Promise<void>;
   removeAllByRequestId(requestId: string): Promise<void>;
 }
 
