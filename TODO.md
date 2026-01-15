@@ -14,7 +14,8 @@
 | Notifications | ✅ | ✅ | ✅ |
 | Profiles | ✅ | ✅ | ⬜ |
 | Identity | ✅ | ✅ | ⬜ |
-| **Companies** | ✅ | ✅ | ⬜ |
+| **Companies** | ✅ | ✅ | ✅ |
+| **RequestInterest** | ✅ | ✅ | ✅ |
 
 ---
 
