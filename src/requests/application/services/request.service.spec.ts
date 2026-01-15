@@ -7,6 +7,7 @@ import {
 import { RequestService } from './request.service';
 import { REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { CompanyService } from '../../../profiles/application/services/company.service';
 import { UserService } from '../../../identity/application/services/user.service';
 import {
   createMockUser,
@@ -21,6 +22,7 @@ describe('RequestService', () => {
   let service: RequestService;
   let mockRequestRepository: any;
   let mockProfessionalService: any;
+  let mockCompanyService: any;
   let mockUserService: any;
   let mockEventBus: any;
 
@@ -48,6 +50,11 @@ describe('RequestService', () => {
     mockProfessionalService = {
       getByIdOrFail: jest.fn(),
       findByUserId: jest.fn(),
+      findByServiceProviderId: jest.fn(),
+    };
+
+    mockCompanyService = {
+      findByServiceProviderId: jest.fn(),
     };
 
     mockUserService = {
@@ -64,6 +71,7 @@ describe('RequestService', () => {
         { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
         { provide: EVENT_BUS, useValue: mockEventBus },
         { provide: ProfessionalService, useValue: mockProfessionalService },
+        { provide: CompanyService, useValue: mockCompanyService },
         { provide: UserService, useValue: mockUserService },
       ],
     }).compile();

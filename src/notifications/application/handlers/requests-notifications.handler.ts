@@ -60,8 +60,11 @@ export class RequestsNotificationsHandler implements OnModuleInit {
     event: RequestInterestExpressedEvent,
   ): Promise<void> {
     try {
-      const { requestTitle, professionalName } = event.payload;
-      const title = `${professionalName} mostró interés en tu solicitud`;
+      // Use new providerName field, fallback to professionalName for backward compat
+      const providerName = event.payload.providerName || event.payload.professionalName;
+      const { requestTitle, serviceProviderId } = event.payload;
+      
+      const title = `${providerName} mostró interés en tu solicitud`;
       const body = requestTitle
         ? `"${requestTitle}" - Revisá los especialistas interesados y elegí el que prefieras.`
         : 'Revisá los especialistas interesados y elegí el que prefieras.';
@@ -73,14 +76,17 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         body,
         data: {
           requestId: event.payload.requestId,
+          serviceProviderId,
+          providerType: event.payload.providerType,
+          // Backward compat
           professionalId: event.payload.professionalId,
         },
-        idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.professionalId}:${event.payload.clientId}`,
+        idempotencyKey: `${event.name}:${event.payload.requestId}:${serviceProviderId}:${event.payload.clientId}`,
         includeExternal: true,
       });
     } catch (err) {
       this.logger.error(
-        `Failed handling ${event.name} (requestId=${event.payload.requestId}, clientId=${event.payload.clientId}, professionalId=${event.payload.professionalId})`,
+        `Failed handling ${event.name} (requestId=${event.payload.requestId}, clientId=${event.payload.clientId}, serviceProviderId=${event.payload.serviceProviderId})`,
         err instanceof Error ? err.stack : String(err),
       );
     }
@@ -90,30 +96,32 @@ export class RequestsNotificationsHandler implements OnModuleInit {
     event: RequestProfessionalAssignedEvent,
   ): Promise<void> {
     try {
-      const professional = await this.professionalService.getByIdOrFail(
-        event.payload.professionalId,
-      );
-      const { requestTitle, clientName } = event.payload;
+      // Use providerUserId directly (no lookup needed)
+      const { requestTitle, clientName, providerUserId, serviceProviderId } = event.payload;
+      
       const title = `${clientName} te asignó a una solicitud`;
       const body = requestTitle
         ? `"${requestTitle}" - Revisá los detalles de la solicitud.`
         : 'Revisá los detalles de la solicitud.';
 
       await this.notifications.createForUser({
-        userId: professional.userId,
+        userId: providerUserId,
         type: 'REQUEST_PROFESSIONAL_ASSIGNED',
         title,
         body,
         data: {
           requestId: event.payload.requestId,
+          serviceProviderId,
+          providerType: event.payload.providerType,
+          // Backward compat
           professionalId: event.payload.professionalId,
         },
-        idempotencyKey: `${event.name}:${event.payload.requestId}:${professional.userId}:${event.payload.professionalId}`,
+        idempotencyKey: `${event.name}:${event.payload.requestId}:${providerUserId}:${serviceProviderId}`,
         includeExternal: true,
       });
     } catch (err) {
       this.logger.error(
-        `Failed handling ${event.name} (requestId=${event.payload.requestId}, professionalId=${event.payload.professionalId})`,
+        `Failed handling ${event.name} (requestId=${event.payload.requestId}, serviceProviderId=${event.payload.serviceProviderId})`,
         err instanceof Error ? err.stack : String(err),
       );
     }
@@ -126,10 +134,15 @@ export class RequestsNotificationsHandler implements OnModuleInit {
       const {
         requestTitle,
         clientName,
-        professionalName,
         changedByUserId,
         toStatus,
+        providerUserId,
+        providerName,
+        serviceProviderId,
       } = event.payload;
+      
+      // Use new field or fall back to deprecated
+      const displayProviderName = providerName || event.payload.professionalName;
       const clientMadeChange = changedByUserId === event.payload.clientId;
       const statusLabel = this.statusLabel(toStatus);
       const requestRef = requestTitle ? `"${requestTitle}"` : 'la solicitud';
@@ -137,7 +150,7 @@ export class RequestsNotificationsHandler implements OnModuleInit {
       // Notification for client
       const clientTitle = clientMadeChange
         ? `Moviste ${requestRef} a "${statusLabel}"`
-        : `${professionalName || 'El especialista'} movió ${requestRef} a "${statusLabel}"`;
+        : `${displayProviderName || 'El especialista'} movió ${requestRef} a "${statusLabel}"`;
 
       await this.notifications.createForUser({
         userId: event.payload.clientId,
@@ -148,41 +161,47 @@ export class RequestsNotificationsHandler implements OnModuleInit {
           requestId: event.payload.requestId,
           fromStatus: event.payload.fromStatus,
           toStatus: event.payload.toStatus,
+          serviceProviderId,
         },
         idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.clientId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
         includeExternal: !clientMadeChange,
         requireExternal: !clientMadeChange,
       });
 
-      // Notification for professional (if assigned)
-      if (event.payload.professionalId) {
-        const professional = await this.professionalService.getByIdOrFail(
-          event.payload.professionalId,
-        );
-        const professionalMadeChange = changedByUserId === professional.userId;
+      // Notification for provider (if assigned)
+      // Use providerUserId directly if available, otherwise fall back to lookup (backward compat)
+      const effectiveProviderUserId = providerUserId || (
+        event.payload.professionalId 
+          ? (await this.professionalService.getByIdOrFail(event.payload.professionalId)).userId 
+          : null
+      );
 
-        const profTitle = professionalMadeChange
+      if (effectiveProviderUserId) {
+        const providerMadeChange = changedByUserId === effectiveProviderUserId;
+
+        const providerTitle = providerMadeChange
           ? `Moviste ${requestRef} a "${statusLabel}"`
           : `${clientName} movió ${requestRef} a "${statusLabel}"`;
 
         await this.notifications.createForUser({
-          userId: professional.userId,
+          userId: effectiveProviderUserId,
           type: 'REQUEST_STATUS_CHANGED',
-          title: profTitle,
-          body: this.statusChangeBody(toStatus, professionalMadeChange),
+          title: providerTitle,
+          body: this.statusChangeBody(toStatus, providerMadeChange),
           data: {
             requestId: event.payload.requestId,
             fromStatus: event.payload.fromStatus,
             toStatus: event.payload.toStatus,
+            serviceProviderId,
           },
-          idempotencyKey: `${event.name}:${event.payload.requestId}:${professional.userId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
-          includeExternal: !professionalMadeChange,
-          requireExternal: !professionalMadeChange,
+          idempotencyKey: `${event.name}:${event.payload.requestId}:${effectiveProviderUserId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
+          includeExternal: !providerMadeChange,
+          requireExternal: !providerMadeChange,
         });
       }
     } catch (err) {
       this.logger.error(
-        `Failed handling ${event.name} (requestId=${event.payload.requestId}, clientId=${event.payload.clientId}, from=${event.payload.fromStatus}, to=${event.payload.toStatus}, professionalId=${event.payload.professionalId ?? 'n/a'})`,
+        `Failed handling ${event.name} (requestId=${event.payload.requestId}, clientId=${event.payload.clientId}, from=${event.payload.fromStatus}, to=${event.payload.toStatus}, serviceProviderId=${event.payload.serviceProviderId ?? 'n/a'})`,
         err instanceof Error ? err.stack : String(err),
       );
     }

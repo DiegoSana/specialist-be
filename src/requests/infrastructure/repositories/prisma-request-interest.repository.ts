@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { RequestInterestRepository } from '../../domain/repositories/request-interest.repository';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
-import { PrismaRequestInterestMapper } from '../mappers/request-interest.prisma-mapper';
+import { ProviderType } from '@prisma/client';
 
 @Injectable()
 export class PrismaRequestInterestRepository
@@ -10,9 +10,8 @@ export class PrismaRequestInterestRepository
 {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByRequestId(requestId: string): Promise<RequestInterestEntity[]> {
-    const interests = await this.prisma.requestInterest.findMany({
-      where: { requestId },
+  private readonly providerInclude = {
+    serviceProvider: {
       include: {
         professional: {
           include: {
@@ -21,93 +20,116 @@ export class PrismaRequestInterestRepository
                 id: true,
                 firstName: true,
                 lastName: true,
-                email: true,
-                phone: true,
                 profilePictureUrl: true,
-              },
-            },
-            trades: {
-              include: {
-                trade: true,
               },
             },
           },
         },
+        company: true,
       },
+    },
+  } as const;
+
+  private mapToDomain(raw: any): RequestInterestEntity {
+    const sp = raw.serviceProvider;
+    let providerInfo: RequestInterestEntity['provider'] | undefined;
+
+    if (sp) {
+      if (sp.type === ProviderType.PROFESSIONAL && sp.professional) {
+        const prof = sp.professional;
+        const user = prof.user;
+        providerInfo = {
+          id: sp.id,
+          type: 'PROFESSIONAL',
+          displayName: user ? `${user.firstName} ${user.lastName}` : 'Especialista',
+          profileImage: prof.profileImage || user?.profilePictureUrl || null,
+          averageRating: sp.averageRating,
+          totalReviews: sp.totalReviews,
+        };
+      } else if (sp.type === ProviderType.COMPANY && sp.company) {
+        providerInfo = {
+          id: sp.id,
+          type: 'COMPANY',
+          displayName: sp.company.companyName,
+          profileImage: sp.company.profileImage || null,
+          averageRating: sp.averageRating,
+          totalReviews: sp.totalReviews,
+        };
+      }
+    }
+
+    return new RequestInterestEntity(
+      raw.id,
+      raw.requestId,
+      raw.serviceProviderId,
+      raw.message,
+      raw.createdAt,
+      providerInfo,
+    );
+  }
+
+  async findByRequestId(requestId: string): Promise<RequestInterestEntity[]> {
+    const interests = await this.prisma.requestInterest.findMany({
+      where: { requestId },
+      include: this.providerInclude,
       orderBy: { createdAt: 'desc' },
     });
 
-    return interests.map((i) => PrismaRequestInterestMapper.toDomain(i));
+    return interests.map((i) => this.mapToDomain(i));
   }
 
-  async findByProfessionalId(
-    professionalId: string,
+  async findByServiceProviderId(
+    serviceProviderId: string,
   ): Promise<RequestInterestEntity[]> {
     const interests = await this.prisma.requestInterest.findMany({
-      where: { professionalId },
+      where: { serviceProviderId },
+      include: this.providerInclude,
       orderBy: { createdAt: 'desc' },
     });
 
-    return interests.map((i) => PrismaRequestInterestMapper.toDomain(i));
+    return interests.map((i) => this.mapToDomain(i));
   }
 
-  async findByRequestAndProfessional(
+  async findByRequestAndProvider(
     requestId: string,
-    professionalId: string,
+    serviceProviderId: string,
   ): Promise<RequestInterestEntity | null> {
     const interest = await this.prisma.requestInterest.findUnique({
       where: {
-        requestId_professionalId: {
+        requestId_serviceProviderId: {
           requestId,
-          professionalId,
+          serviceProviderId,
         },
       },
+      include: this.providerInclude,
     });
 
-    return interest ? PrismaRequestInterestMapper.toDomain(interest) : null;
+    return interest ? this.mapToDomain(interest) : null;
   }
 
   async add(data: {
     requestId: string;
-    professionalId: string;
+    serviceProviderId: string;
     message: string | null;
   }): Promise<RequestInterestEntity> {
     const interest = await this.prisma.requestInterest.create({
       data: {
-        ...PrismaRequestInterestMapper.toPersistenceCreate(data),
+        requestId: data.requestId,
+        serviceProviderId: data.serviceProviderId,
+        message: data.message,
       },
-      include: {
-        professional: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                phone: true,
-                profilePictureUrl: true,
-              },
-            },
-            trades: {
-              include: {
-                trade: true,
-              },
-            },
-          },
-        },
-      },
+      include: this.providerInclude,
     });
 
-    return PrismaRequestInterestMapper.toDomain(interest);
+    return this.mapToDomain(interest);
   }
 
-  async remove(requestId: string, professionalId: string): Promise<void> {
+  async remove(requestId: string, serviceProviderId: string): Promise<void> {
     await this.prisma.requestInterest.delete({
       where: {
-        requestId_professionalId: {
+        requestId_serviceProviderId: {
           requestId,
-          professionalId,
+          serviceProviderId,
         },
       },
     });

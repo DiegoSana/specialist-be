@@ -30,7 +30,9 @@ export class ReviewsNotificationsHandler implements OnModuleInit {
   }
 
   private async onReviewApproved(event: ReviewApprovedEvent): Promise<void> {
-    const { reviewId, professionalUserId, rating, comment } = event.payload;
+    // Use new field, fall back to deprecated for backward compat
+    const providerUserId = event.payload.providerUserId;
+    const { reviewId, rating, comment, serviceProviderId, providerType } = event.payload;
 
     try {
       const stars = '⭐'.repeat(rating);
@@ -39,12 +41,15 @@ export class ReviewsNotificationsHandler implements OnModuleInit {
         : stars;
 
       await this.notifications.createForUser({
-        userId: professionalUserId,
+        userId: providerUserId,
         type: 'REVIEW_APPROVED',
         title: '¡Tenés una nueva reseña!',
         body,
         data: {
           reviewId,
+          serviceProviderId,
+          providerType,
+          // Backward compat
           professionalId: event.payload.professionalId,
           rating,
         },
@@ -53,11 +58,11 @@ export class ReviewsNotificationsHandler implements OnModuleInit {
       });
 
       this.logger.log(
-        `Notification created for approved review ${reviewId} to user ${professionalUserId}`,
+        `Notification created for approved review ${reviewId} to provider userId ${providerUserId}`,
       );
     } catch (err) {
       this.logger.error(
-        `Failed handling ${event.name} (reviewId=${reviewId}, professionalUserId=${professionalUserId})`,
+        `Failed handling ${event.name} (reviewId=${reviewId}, providerUserId=${providerUserId})`,
         err instanceof Error ? err.stack : String(err),
       );
     }

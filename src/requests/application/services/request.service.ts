@@ -16,13 +16,14 @@ import {
 } from '../../domain/entities/request.entity';
 import { CreateRequestDto } from '../dto/create-request.dto';
 import { UpdateRequestDto } from '../dto/update-request.dto';
-import { RequestStatus } from '@prisma/client';
+import { RequestStatus, ProviderType } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { RequestCreatedEvent } from '../../domain/events/request-created.event';
 import { RequestStatusChangedEvent } from '../../domain/events/request-status-changed.event';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { CompanyService } from '../../../profiles/application/services/company.service';
 import { UserService } from '../../../identity/application/services/user.service';
 
 @Injectable()
@@ -34,6 +35,8 @@ export class RequestService {
     private readonly eventBus: EventBus,
     @Inject(forwardRef(() => ProfessionalService))
     private readonly professionalService: ProfessionalService,
+    @Inject(forwardRef(() => CompanyService))
+    private readonly companyService: CompanyService,
     private readonly userService: UserService,
   ) {}
 
@@ -216,6 +219,32 @@ export class RequestService {
       // Get names for notification
       const client = (saved as any).client;
       const prof = (saved as any).professional;
+      
+      // Resolve provider info if assigned
+      let providerUserId: string | null = null;
+      let providerType: ProviderType | null = null;
+      let providerName: string | null = null;
+
+      if (saved.providerId) {
+        // Try Professional first
+        const professional = await this.professionalService.findByServiceProviderId(saved.providerId);
+        if (professional) {
+          providerUserId = professional.userId;
+          providerType = ProviderType.PROFESSIONAL;
+          providerName = prof?.user
+            ? `${prof.user.firstName} ${prof.user.lastName}`
+            : null;
+        } else {
+          // Try Company
+          const company = await this.companyService.findByServiceProviderId(saved.providerId);
+          if (company) {
+            providerUserId = company.userId;
+            providerType = ProviderType.COMPANY;
+            providerName = company.companyName;
+          }
+        }
+      }
+
       await this.eventBus.publish(
         new RequestStatusChangedEvent({
           requestId: saved.id,
@@ -224,10 +253,14 @@ export class RequestService {
           clientName: client
             ? `${client.firstName} ${client.lastName}`
             : 'Cliente',
-          professionalId: saved.providerId, // For backward compat
-          professionalName: prof?.user
-            ? `${prof.user.firstName} ${prof.user.lastName}`
-            : null,
+          // New fields
+          serviceProviderId: saved.providerId,
+          providerUserId,
+          providerType,
+          providerName,
+          // Backward compat
+          professionalId: saved.providerId,
+          professionalName: providerName,
           fromStatus,
           toStatus: saved.status,
           changedByUserId: ctx.userId,

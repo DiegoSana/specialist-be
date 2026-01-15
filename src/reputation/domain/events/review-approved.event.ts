@@ -1,10 +1,17 @@
 import { DomainEvent } from '../../../shared/domain/events/domain-event';
+import { ProviderType } from '@prisma/client';
 
 export type ReviewApprovedPayload = {
   reviewId: string;
   reviewerId: string;
+  /** @deprecated Use serviceProviderId instead */
   professionalId: string;
-  professionalUserId: string;
+  /** The ServiceProvider ID */
+  serviceProviderId: string;
+  /** The userId of the provider (Professional or Company owner) */
+  providerUserId: string;
+  /** The type of provider */
+  providerType: ProviderType;
   rating: number;
   comment: string | null;
   moderatorId: string;

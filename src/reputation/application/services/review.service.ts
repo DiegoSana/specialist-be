@@ -21,10 +21,12 @@ import { Rating } from '../../domain/value-objects/rating.vo';
 import { randomUUID } from 'crypto';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { CompanyService } from '../../../profiles/application/services/company.service';
 import { RequestService } from '../../../requests/application/services/request.service';
 import { UserService } from '../../../identity/application/services/user.service';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { ReviewApprovedEvent } from '../../domain/events/review-approved.event';
+import { ProviderType } from '@prisma/client';
 
 @Injectable()
 export class ReviewService {
@@ -32,6 +34,7 @@ export class ReviewService {
     @Inject(REVIEW_REPOSITORY)
     private readonly reviewRepository: ReviewRepository,
     private readonly professionalService: ProfessionalService,
+    private readonly companyService: CompanyService,
     private readonly requestService: RequestService,
     private readonly userService: UserService,
     @Inject(EVENT_BUS) private readonly eventBus: EventBus,
@@ -199,19 +202,40 @@ export class ReviewService {
     // Now update provider rating (only for approved reviews)
     await this.updateServiceProviderRating(review.serviceProviderId);
 
-    // Get professional to find their userId (for notifications)
+    // Try to find the provider (Professional or Company) to get userId for notifications
+    let providerUserId: string | null = null;
+    let providerType: ProviderType = ProviderType.PROFESSIONAL;
+
+    // Try Professional first
     const professional = await this.professionalService.findByServiceProviderId(
       review.serviceProviderId,
     );
-
-    // Emit event for notifications (if it's a professional provider)
     if (professional) {
+      providerUserId = professional.userId;
+      providerType = ProviderType.PROFESSIONAL;
+    } else {
+      // Try Company
+      const company = await this.companyService.findByServiceProviderId(
+        review.serviceProviderId,
+      );
+      if (company) {
+        providerUserId = company.userId;
+        providerType = ProviderType.COMPANY;
+      }
+    }
+
+    // Emit event for notifications (if provider found)
+    if (providerUserId) {
       await this.eventBus.publish(
         new ReviewApprovedEvent({
           reviewId: saved.id,
           reviewerId: saved.reviewerId,
-          professionalId: saved.serviceProviderId, // For backward compat
-          professionalUserId: professional.userId,
+          // New fields (preferred)
+          serviceProviderId: saved.serviceProviderId,
+          providerUserId,
+          providerType,
+          // Backward compatibility
+          professionalId: saved.serviceProviderId,
           rating: saved.rating,
           comment: saved.comment,
           moderatorId,

@@ -1,4 +1,4 @@
-import { RequestStatus } from '@prisma/client';
+import { RequestStatus, ProviderType } from '@prisma/client';
 import { DomainEvent } from '../../../shared/domain/events/domain-event';
 
 export type RequestStatusChangedPayload = {
@@ -6,8 +6,18 @@ export type RequestStatusChangedPayload = {
   requestTitle: string;
   clientId: string;
   clientName: string;
+  /** @deprecated Use serviceProviderId instead */
   professionalId: string | null;
+  /** @deprecated Use providerName instead */
   professionalName: string | null;
+  /** The ServiceProvider ID (if assigned) */
+  serviceProviderId?: string | null;
+  /** The userId of the provider */
+  providerUserId?: string | null;
+  /** The type of provider */
+  providerType?: ProviderType | null;
+  /** Display name of the provider */
+  providerName?: string | null;
   fromStatus: RequestStatus;
   toStatus: RequestStatus;
   changedByUserId: string;
