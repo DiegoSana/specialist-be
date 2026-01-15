@@ -157,10 +157,13 @@ A daily job deletes notifications older than:
 
 | Type | Trigger | Recipients |
 |------|---------|------------|
-| `REQUEST_STATUS_CHANGED` | Request status update | Client & Professional |
-| `REQUEST_INTEREST_EXPRESSED` | Professional shows interest | Client |
-| `REQUEST_PROFESSIONAL_ASSIGNED` | Professional assigned | Professional |
-| `REVIEW_APPROVED` | Admin approves review | Professional |
+| `REQUEST_STATUS_CHANGED` | Request status update | Client & Service Provider |
+| `REQUEST_INTEREST_EXPRESSED` | Provider shows interest | Client |
+| `REQUEST_PROFESSIONAL_ASSIGNED` | Provider assigned | Service Provider |
+| `REVIEW_APPROVED` | Admin approves review | Service Provider |
+
+> **Note**: Service Provider can be either a Professional (individual) or a Company.
+> The notification system uses `providerUserId` to send notifications to the correct user.
 
 ---
 
@@ -172,18 +175,37 @@ Notifications are created via domain events:
 // When a review is approved
 await this.eventBus.publish(new ReviewApprovedEvent({
   reviewId: review.id,
-  professionalId: review.professionalId,
-  // ...
+  serviceProviderId: review.serviceProviderId,
+  providerUserId: provider.userId,       // For direct notification
+  providerType: ProviderType.PROFESSIONAL, // or COMPANY
+  // Backward compat
+  professionalId: review.serviceProviderId,
 }));
 
-// Handler creates the notification
+// Handler creates the notification using providerUserId directly
 @OnEvent(ReviewApprovedEvent.EVENT_NAME)
 async handleReviewApproved(event: ReviewApprovedEvent) {
   await this.notifications.createForUser({
-    userId: professionalUserId,
+    userId: event.payload.providerUserId,
     type: 'REVIEW_APPROVED',
     title: '¡Tenés una nueva reseña!',
     includeExternal: true,
+    data: {
+      serviceProviderId: event.payload.serviceProviderId,
+      providerType: event.payload.providerType,
+    },
   });
 }
 ```
+
+### Event Payload Structure
+
+All provider-related events include:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `serviceProviderId` | string | The ServiceProvider ID |
+| `providerUserId` | string | The user ID to notify |
+| `providerType` | `PROFESSIONAL` \| `COMPANY` | Type of provider |
+| `providerName` | string | Display name for notifications |
+| `professionalId` | string | (Deprecated) Backward compatibility |

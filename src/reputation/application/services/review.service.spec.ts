@@ -8,6 +8,7 @@ import {
 import { ReviewService } from './review.service';
 import { REVIEW_REPOSITORY } from '../../domain/repositories/review.repository';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { CompanyService } from '../../../profiles/application/services/company.service';
 import { RequestService } from '../../../requests/application/services/request.service';
 import { UserService } from '../../../identity/application/services/user.service';
 import {
@@ -40,6 +41,7 @@ describe('ReviewService', () => {
   let service: ReviewService;
   let mockReviewRepository: any;
   let mockProfessionalService: any;
+  let mockCompanyService: any;
   let mockRequestService: any;
   let mockUserService: any;
   let mockEventBus: any;
@@ -63,6 +65,10 @@ describe('ReviewService', () => {
       updateRating: jest.fn(),
     };
 
+    mockCompanyService = {
+      findByServiceProviderId: jest.fn(),
+    };
+
     mockRequestService = {
       findById: jest.fn(),
     };
@@ -81,6 +87,7 @@ describe('ReviewService', () => {
         ReviewService,
         { provide: REVIEW_REPOSITORY, useValue: mockReviewRepository },
         { provide: ProfessionalService, useValue: mockProfessionalService },
+        { provide: CompanyService, useValue: mockCompanyService },
         { provide: RequestService, useValue: mockRequestService },
         { provide: UserService, useValue: mockUserService },
         { provide: EVENT_BUS, useValue: mockEventBus },

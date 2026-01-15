@@ -20,7 +20,7 @@ import {
   RequestAuthContext,
 } from '../../domain/entities/request.entity';
 import { ExpressInterestDto } from '../dto/express-interest.dto';
-import { RequestStatus } from '@prisma/client';
+import { RequestStatus, ProviderType } from '@prisma/client';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { RequestInterestExpressedEvent } from '../../domain/events/request-interest-expressed.event';
 import { RequestProfessionalAssignedEvent } from '../../domain/events/request-professional-assigned.event';
@@ -139,15 +139,23 @@ export class RequestInterestService {
       message: dto.message || null,
     });
 
+    const providerName = professional.user
+      ? `${professional.user.firstName} ${professional.user.lastName}`
+      : 'Especialista';
+
     await this.eventBus.publish(
       new RequestInterestExpressedEvent({
         requestId,
         requestTitle: request.title,
         clientId: request.clientId,
+        // New fields (preferred)
+        serviceProviderId: professional.serviceProviderId,
+        providerUserId: ctx.userId,
+        providerType: ProviderType.PROFESSIONAL,
+        providerName,
+        // Backward compatibility
         professionalId: ctx.professionalId!,
-        professionalName: professional.user
-          ? `${professional.user.firstName} ${professional.user.lastName}`
-          : 'Especialista',
+        professionalName: providerName,
       }),
     );
 
@@ -294,21 +302,34 @@ export class RequestInterestService {
         requestTitle: updatedRequest.title,
         clientId: updatedRequest.clientId,
         clientName,
+        // New fields (preferred)
+        serviceProviderId: professional.serviceProviderId,
+        providerUserId: professional.userId,
+        providerType: ProviderType.PROFESSIONAL,
+        // Backward compatibility
         professionalId,
       }),
     );
 
     if (updatedRequest.status !== fromStatus) {
+      const providerName = prof?.user
+        ? `${prof.user.firstName} ${prof.user.lastName}`
+        : null;
+      
       await this.eventBus.publish(
         new RequestStatusChangedEvent({
           requestId: updatedRequest.id,
           requestTitle: updatedRequest.title,
           clientId: updatedRequest.clientId,
           clientName,
-          professionalId: updatedRequest.providerId, // For backward compat
-          professionalName: prof?.user
-            ? `${prof.user.firstName} ${prof.user.lastName}`
-            : null,
+          // New fields
+          serviceProviderId: professional.serviceProviderId,
+          providerUserId: professional.userId,
+          providerType: ProviderType.PROFESSIONAL,
+          providerName,
+          // Backward compat
+          professionalId: updatedRequest.providerId,
+          professionalName: providerName,
           fromStatus,
           toStatus: updatedRequest.status,
           changedByUserId: ctx.userId,

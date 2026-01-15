@@ -1,6 +1,6 @@
 # 🔧 Tareas Pendientes - Specialist Backend
 
-> Última actualización: 2026-01-13 (actualizado)
+> Última actualización: 2026-01-15
 
 ---
 
@@ -11,10 +11,10 @@
 | Requests | ✅ | ✅ | ⬜ |
 | Request Interest | ✅ | ✅ | ⬜ |
 | Reviews | ✅ | ✅ | ⬜ |
-| Notifications | ✅ | ✅ | ⬜ |
+| Notifications | ✅ | ✅ | ✅ |
 | Profiles | ✅ | ✅ | ⬜ |
 | Identity | ✅ | ✅ | ⬜ |
-| **Companies** | ⬜ | ⬜ | ⬜ |
+| **Companies** | ✅ | ✅ | ⬜ |
 
 ---
 
@@ -550,22 +550,18 @@ model Company {
 
 #### 2.6 Notifications
 
-- [ ] Actualizar handlers para soportar Company como provider
-- [ ] Notificaciones cuando empresa recibe interés/asignación
+- [x] Actualizar handlers para soportar Company como provider
+- [x] Notificaciones cuando empresa recibe interés/asignación
+- [x] Actualizar eventos con `serviceProviderId`, `providerUserId`, `providerType`
+- [x] Documentar cambios en `docs/guides/NOTIFICATIONS.md`
 
 ---
 
-### ⬜ Fase 3: Testing
+### ✅ Fase 3: Testing
 
-**NOTA**: Hay 31 errores de TypeScript en archivos de tests que necesitan actualizarse
-para el nuevo schema de ServiceProvider. Esto incluye:
-- `request.service.spec.ts` - actualizar a `providerId`
-- `request-interest.service.spec.ts` - actualizar a `serviceProviderId`
-- Otros tests que usan `professionalId` en contextos de Request/Review
-
-- [ ] Actualizar tests existentes para nuevo schema (31 errores)
-- [ ] Tests unitarios para `ServiceProviderEntity`
-- [ ] Tests unitarios para `CompanyEntity`
+- [x] Actualizar tests existentes para nuevo schema (completado)
+- [x] Tests unitarios para `ServiceProviderEntity` (20 tests)
+- [x] Tests unitarios para `CompanyEntity` (31 tests)
 - [ ] Tests de integración para migración
 - [ ] Tests E2E para flujo completo de empresa
 
