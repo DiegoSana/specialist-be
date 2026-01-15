@@ -11,7 +11,7 @@ The API is organized around REST principles and follows a bounded context archit
 | Context | Prefix | Description |
 |---------|--------|-------------|
 | **Identity** | `/auth`, `/users` | Authentication & user management |
-| **Profiles** | `/professionals`, `/trades` | Professional profiles & trades catalog |
+| **Profiles** | `/professionals`, `/companies`, `/trades` | Service provider profiles (individual & company) |
 | **Requests** | `/requests` | Service requests & job matching |
 | **Reputation** | `/reviews` | Reviews & ratings (with moderation) |
 | **Notifications** | `/notifications` | In-app & external notifications |
@@ -35,6 +35,8 @@ Authorization: Bearer <token>
 - `GET /auth/google`, `GET /auth/facebook` (OAuth)
 - `GET /professionals` (search)
 - `GET /professionals/:id`
+- `GET /companies` (search)
+- `GET /companies/:id`
 - `GET /trades`
 - `GET /professionals/:id/reviews`
 
@@ -54,7 +56,7 @@ Authorization: Bearer <token>
 | `PATCH` | `/users/me` | Update current user profile | ✅ |
 | `POST` | `/users/me/client-profile` | Activate client profile | ✅ |
 
-### 👷 Profiles (`/professionals`, `/trades`)
+### 👷 Profiles - Professionals (`/professionals`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
@@ -65,9 +67,29 @@ Authorization: Bearer <token>
 | `PATCH` | `/professionals/me` | Update professional profile | ✅ |
 | `POST` | `/professionals/me/gallery` | Add gallery item | ✅ |
 | `DELETE` | `/professionals/me/gallery` | Remove gallery item | ✅ |
+
+### 🏢 Profiles - Companies (`/companies`)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/companies` | Search companies (public) | ❌ |
+| `GET` | `/companies/:id` | Get company details | ❌ |
+| `GET` | `/companies/me/profile` | Get my company profile | ✅ |
+| `POST` | `/companies/me` | Create company profile | ✅ |
+| `PATCH` | `/companies/me` | Update company profile | ✅ |
+| `POST` | `/companies/me/gallery` | Add gallery image | ✅ |
+| `DELETE` | `/companies/me/gallery` | Remove gallery image | ✅ |
+| `POST` | `/companies/:id/verify` | Verify company (Admin) | ✅ Admin |
+
+> **Note**: Companies and Professionals are both "Service Providers". Both can express interest in public requests and be assigned to jobs. See [ADR-004-SERVICE-PROVIDER-ABSTRACTION](./decisions/ADR-004-SERVICE-PROVIDER-ABSTRACTION.md).
+
+### 📦 Profiles - Trades (`/trades`)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
 | `GET` | `/trades` | List all trades | ❌ |
 | `GET` | `/trades/:id` | Get trade by ID | ❌ |
-| `GET` | `/trades/with-professionals` | Trades with active professionals | ❌ |
+| `GET` | `/trades/with-professionals` | Trades with active providers | ❌ |
 
 ### 📋 Requests (`/requests`)
 
@@ -75,17 +97,19 @@ Authorization: Bearer <token>
 |--------|----------|-------------|------|
 | `GET` | `/requests` | Get my requests | ✅ |
 | `POST` | `/requests` | Create new request | ✅ |
-| `GET` | `/requests/available` | Available requests (for professionals) | ✅ |
+| `GET` | `/requests/available` | Available requests (for providers) | ✅ Provider |
 | `GET` | `/requests/:id` | Get request details | ✅ |
 | `PATCH` | `/requests/:id` | Update request (status, quote) | ✅ |
 | `POST` | `/requests/:id/accept` | Accept quote (client) | ✅ |
 | `POST` | `/requests/:id/photos` | Add photo to request | ✅ |
 | `DELETE` | `/requests/:id/photos` | Remove photo from request | ✅ |
-| `POST` | `/requests/:id/interest` | Express interest (professional) | ✅ |
-| `DELETE` | `/requests/:id/interest` | Remove interest | ✅ |
-| `GET` | `/requests/:id/interest` | Check my interest status | ✅ |
-| `GET` | `/requests/:id/interests` | List interested professionals | ✅ |
-| `POST` | `/requests/:id/assign` | Assign professional (client) | ✅ |
+| `POST` | `/requests/:id/interest` | Express interest (provider) | ✅ Provider |
+| `DELETE` | `/requests/:id/interest` | Remove interest | ✅ Provider |
+| `GET` | `/requests/:id/interest` | Check my interest status | ✅ Provider |
+| `GET` | `/requests/:id/interests` | List interested providers | ✅ |
+| `POST` | `/requests/:id/assign` | Assign provider (client) | ✅ |
+
+> **Note**: "Provider" = Professional or Company. Both can view available requests, express interest, and be assigned to jobs.
 
 ### ⭐ Reputation (`/reviews`)
 
@@ -188,10 +212,61 @@ Authorization: Bearer <token>
 
 ---
 
+## Service Providers
+
+The platform supports two types of service providers:
+
+### Professional
+An individual service provider with a personal profile.
+
+```json
+{
+  "id": "uuid",
+  "userId": "uuid",
+  "serviceProviderId": "uuid",
+  "displayName": "Juan Pérez",
+  "city": "Bariloche",
+  "status": "ACTIVE",
+  "trades": [{ "tradeId": "uuid", "name": "Plomería", "isPrimary": true }],
+  "averageRating": 4.5,
+  "reviewCount": 12
+}
+```
+
+### Company
+A business entity providing services.
+
+```json
+{
+  "id": "uuid",
+  "userId": "uuid",
+  "serviceProviderId": "uuid",
+  "companyName": "Construcciones Patagonia S.A.",
+  "legalName": "Construcciones Patagonia S.A.",
+  "taxId": "30-12345678-9",
+  "city": "Bariloche",
+  "status": "ACTIVE",
+  "trades": [{ "tradeId": "uuid", "name": "Construcción", "isPrimary": true }],
+  "averageRating": 4.8,
+  "reviewCount": 45
+}
+```
+
+### Company Status
+
+| Status | Description |
+|--------|-------------|
+| `PENDING` | Newly created, awaiting activation |
+| `ACTIVE` | Active and can operate |
+| `VERIFIED` | Verified by admin (badge displayed) |
+| `SUSPENDED` | Temporarily suspended |
+
+---
+
 ## Request Types
 
 ### Direct Request
-A request sent directly to a specific professional.
+A request sent directly to a specific service provider.
 
 ```json
 {
@@ -202,8 +277,8 @@ A request sent directly to a specific professional.
 }
 ```
 
-### Public Request
-A request visible to all professionals in a trade.
+### Public Request (Job Board)
+A request visible to all service providers in a trade.
 
 ```json
 {
@@ -212,6 +287,35 @@ A request visible to all professionals in a trade.
   "description": "Looking for...",
   "city": "Bariloche",
   "zone": "Centro"
+}
+```
+
+---
+
+## Interest Flow
+
+When a public request is created, service providers (professionals or companies) can express interest:
+
+1. **Client** creates a public request
+2. **Providers** view available requests via `GET /requests/available`
+3. **Provider** expresses interest via `POST /requests/:id/interest`
+4. **Client** views interested providers via `GET /requests/:id/interests`
+5. **Client** assigns a provider via `POST /requests/:id/assign`
+
+```json
+// Express interest request
+{
+  "message": "Estoy interesado en este trabajo. Tengo 10 años de experiencia."
+}
+
+// Interested provider response
+{
+  "serviceProviderId": "uuid",
+  "providerType": "PROFESSIONAL", // or "COMPANY"
+  "displayName": "Juan Pérez",
+  "message": "...",
+  "averageRating": 4.5,
+  "reviewCount": 12
 }
 ```
 

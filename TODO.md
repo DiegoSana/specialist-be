@@ -564,7 +564,16 @@ model Company {
 - [x] Tests unitarios para `ServiceProviderEntity` (20 tests)
 - [x] Tests unitarios para `CompanyEntity` (31 tests)
 - [ ] Tests de integración para migración
-- [ ] Tests E2E para flujo completo de empresa
+- [x] Tests E2E para flujo completo de empresa
+  - [x] `test/test-setup.ts` - Infraestructura y helpers para E2E
+  - [x] `test/companies.e2e-spec.ts` - CRUD, búsqueda, galería, verificación
+  - [x] `test/requests.e2e-spec.ts` - Flujo completo de interest (Professional + Company)
+
+### ✅ Fase 4: Documentación
+
+- [x] Actualizar `docs/API.md` con endpoints de Companies
+- [x] Crear `docs/decisions/ADR-004-SERVICE-PROVIDER-ABSTRACTION.md`
+- [x] Actualizar `docs/README.md` con nueva estructura
 
 ---
 

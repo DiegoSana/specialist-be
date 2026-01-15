@@ -23,6 +23,7 @@
 
 ### Architecture Decision Records (ADRs)
 - [**ADR-001-DUAL-PROFILE-ARCHITECTURE.md**](./decisions/ADR-001-DUAL-PROFILE-ARCHITECTURE.md) - Dual profile system (client + professional)
+- [**ADR-004-SERVICE-PROVIDER-ABSTRACTION.md**](./decisions/ADR-004-SERVICE-PROVIDER-ABSTRACTION.md) - ServiceProvider polymorphic pattern ⭐ NEW
 
 ---
 
@@ -46,14 +47,19 @@ specialist-be/
 │   └── decisions/          # ADRs
 ├── src/
 │   ├── identity/           # Authentication & users
-│   ├── profiles/           # Professionals & trades
-│   ├── requests/           # Service requests
+│   ├── profiles/           # Service providers (professionals, companies, trades)
+│   ├── requests/           # Service requests & interest matching
 │   ├── reputation/         # Reviews & ratings (with moderation)
 │   ├── notifications/      # In-app & email notifications
 │   ├── storage/            # File management
 │   ├── admin/              # Admin operations
 │   ├── contact/            # Contact requests
 │   └── shared/             # Common utilities
+├── test/
+│   ├── jest-e2e.json       # E2E test configuration
+│   ├── test-setup.ts       # E2E test utilities
+│   ├── companies.e2e-spec.ts
+│   └── requests.e2e-spec.ts
 ├── prisma/
 │   └── schema.prisma       # Database schema
 └── README.md               # Project overview
