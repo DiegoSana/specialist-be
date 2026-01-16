@@ -1,6 +1,6 @@
 # 🔧 Tareas Pendientes - Specialist Backend
 
-> Última actualización: 2026-01-15
+> Última actualización: 2026-01-16
 
 ---
 
@@ -578,7 +578,7 @@ model Company {
 
 ---
 
-### ⚠️ Reglas de Negocio Pendientes
+### ✅ Reglas de Negocio - Dual Profile
 
 #### Dual Profile: Professional + Company
 
@@ -591,23 +591,31 @@ model Company {
 - CUIT único (error si ya existe)
 - Company usa mismos flujos que Professional (Job Board, Reviews, Solicitudes)
 
-**Implementación pendiente:**
-- [ ] Lógica de activación/desactivación de perfiles
-- [ ] Validación de CUIT único
+**Implementación Backend ✅:**
+- [x] Lógica de activación/desactivación de perfiles (`ProfileActivationPolicy` + `ProfileToggleService`)
+- [x] Validación de CUIT único (en `CompanyService.createProfile`)
+- [x] Endpoints para toggle de perfil:
+  - `POST /api/professionals/me/activate` - Activar perfil profesional
+  - `POST /api/companies/me/activate` - Activar perfil empresa
+  - `GET /api/users/me/provider-profiles` - Ver estado de ambos perfiles
+- [x] Catálogo unificado con filtro (`GET /api/providers?providerType=ALL|PROFESSIONAL|COMPANY`)
+
+**Pendiente Frontend:**
 - [ ] Toggle de perfil activo en dashboard (FE)
-- [ ] Catálogo con filtro por tipo de proveedor
+- [ ] Filtro "Tipo" en catálogo de especialistas
+- [ ] Badge "Empresa" en tarjetas de proveedor
 
 ---
 
-### ⚠️ Arquitectura de Empresas
+### ✅ Arquitectura de Empresas
 
 > 📖 **Diseño completo:** [docs/architecture/COMPANY_PROFILES.md](./docs/architecture/COMPANY_PROFILES.md)
 
 **MVP (actual):**
 - [x] Company como ServiceProvider
-- [x] Estados: PENDING → ACTIVE → VERIFIED
-- [ ] Validación de CUIT único
-- [ ] Company no opera hasta ACTIVE
+- [x] Estados: PENDING_VERIFICATION → ACTIVE → VERIFIED (+ INACTIVE, REJECTED, SUSPENDED)
+- [x] Validación de CUIT único
+- [x] Company no opera hasta ACTIVE (verificado por admin)
 
 **Post-MVP:**
 - [ ] Multi-usuario por empresa (CompanyMember con roles)

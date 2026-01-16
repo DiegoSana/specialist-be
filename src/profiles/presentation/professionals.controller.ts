@@ -138,4 +138,31 @@ export class ProfessionalsController {
     const entity = await this.professionalService.removeGalleryItem(user, body.url);
     return ProfessionalResponseDto.fromEntity(entity);
   }
+
+  @Post('me/activate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Activate professional profile',
+    description:
+      'Activates the professional profile as the active provider profile. ' +
+      'If user has an active Company profile, it will be deactivated.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Professional profile activated successfully',
+    type: ProfessionalResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Professional cannot be activated (rejected, suspended, etc.)',
+  })
+  @ApiResponse({ status: 404, description: 'Professional profile not found' })
+  async activateProfile(
+    @CurrentUser() user: UserEntity,
+  ): Promise<ProfessionalResponseDto> {
+    const entity = await this.professionalService.activateProfessionalProfile(user.id);
+    return ProfessionalResponseDto.fromEntity(entity);
+  }
 }

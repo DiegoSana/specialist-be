@@ -11,6 +11,7 @@ import { ClientService } from './application/services/client.service';
 import { ProfessionalService } from './application/services/professional.service';
 import { CompanyService } from './application/services/company.service';
 import { TradeService } from './application/services/trade.service';
+import { ProfileToggleService } from './application/services/profile-toggle.service';
 
 // Infrastructure
 import { PrismaClientRepository } from './infrastructure/repositories/prisma-client.repository';
@@ -23,6 +24,7 @@ import { ClientsController } from './presentation/clients.controller';
 import { ProfessionalsController } from './presentation/professionals.controller';
 import { CompaniesController } from './presentation/companies.controller';
 import { TradesController } from './presentation/trades.controller';
+import { ProvidersController } from './presentation/providers.controller';
 
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
@@ -42,12 +44,14 @@ import { RequestsModule } from '../requests/requests.module';
     ProfessionalsController,
     CompaniesController,
     TradesController,
+    ProvidersController,
   ],
   providers: [
     ClientService,
     ProfessionalService,
     CompanyService,
     TradeService,
+    ProfileToggleService,
     {
       provide: CLIENT_REPOSITORY,
       useClass: PrismaClientRepository,
@@ -70,6 +74,7 @@ import { RequestsModule } from '../requests/requests.module';
     ProfessionalService,
     CompanyService,
     TradeService,
+    ProfileToggleService,
     // Note: Repositories are NOT exported - use Services instead (DDD best practice)
   ],
 })

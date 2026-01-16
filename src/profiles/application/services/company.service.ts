@@ -25,6 +25,7 @@ import { SearchCompaniesDto } from '../dto/search-companies.dto';
 import { randomUUID } from 'crypto';
 import { UserService } from '../../../identity/application/services/user.service';
 import { UserEntity } from '../../../identity/domain/entities/user.entity';
+import { ProfileToggleService } from './profile-toggle.service';
 
 @Injectable()
 export class CompanyService {
@@ -35,6 +36,8 @@ export class CompanyService {
     private readonly userService: UserService,
     @Inject(TRADE_REPOSITORY)
     private readonly tradeRepository: TradeRepository,
+    @Inject(forwardRef(() => ProfileToggleService))
+    private readonly profileToggleService: ProfileToggleService,
   ) {}
 
   // ─────────────────────────────────────────────────────────────
@@ -158,6 +161,14 @@ export class CompanyService {
     const existing = await this.companyRepository.findByUserId(userId);
     if (existing) {
       throw new BadRequestException('Company profile already exists');
+    }
+
+    // Validate CUIT uniqueness if provided
+    if (createDto.taxId) {
+      const existingByTaxId = await this.companyRepository.findByTaxId(createDto.taxId);
+      if (existingByTaxId) {
+        throw new BadRequestException('Esta empresa ya está registrada (CUIT duplicado)');
+      }
     }
 
     // Verify all trades exist
@@ -428,6 +439,7 @@ export class CompanyService {
 
   /**
    * Verify company (admin only)
+   * This activates the Company and deactivates any active Professional profile.
    */
   async verifyCompany(actingUser: UserEntity, companyId: string): Promise<CompanyEntity> {
     if (!actingUser.isAdminUser()) {
@@ -436,32 +448,23 @@ export class CompanyService {
 
     const company = await this.getByIdOrFail(companyId);
 
-    return this.companyRepository.save(
-      new CompanyEntity(
-        company.id,
-        company.userId,
-        company.serviceProviderId,
-        company.companyName,
-        company.legalName,
-        company.taxId,
-        company.trades,
-        company.description,
-        company.foundedYear,
-        company.employeeCount,
-        company.website,
-        company.phone,
-        company.email,
-        company.address,
-        company.city,
-        company.zone,
-        CompanyStatus.VERIFIED,
-        company.profileImage,
-        company.gallery,
-        company.active,
-        company.createdAt,
-        new Date(),
-        company.serviceProvider,
-      ),
+    if (!company.isPending()) {
+      throw new BadRequestException('Only pending companies can be verified');
+    }
+
+    // Use ProfileToggleService to handle activation and deactivation
+    const result = await this.profileToggleService.handleCompanyVerification(
+      company.userId,
+      companyId,
     );
+
+    return result.company;
+  }
+
+  /**
+   * Activate company profile (for users who want to switch back to Company)
+   */
+  async activateCompanyProfile(userId: string): Promise<CompanyEntity> {
+    return this.profileToggleService.activateCompanyProfile(userId);
   }
 }

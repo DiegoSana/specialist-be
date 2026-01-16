@@ -54,7 +54,7 @@ describe('Requests & Interest (e2e)', () => {
         description: createDto.description,
         city: createDto.city,
         isPublic: true,
-        status: 'PENDING',
+        status: 'PENDING_VERIFICATION',
       });
       expect(response.body.id).toBeDefined();
     });
@@ -256,7 +256,7 @@ describe('Requests & Interest (e2e)', () => {
         email: 'pending-company@test.com',
         companyName: 'Pending Company',
         tradeId: trade.id,
-        status: 'PENDING',
+        status: 'PENDING_VERIFICATION',
       });
 
       await request(ctx.app.getHttpServer())

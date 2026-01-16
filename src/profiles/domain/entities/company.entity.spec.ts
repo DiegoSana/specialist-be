@@ -178,25 +178,28 @@ describe('CompanyEntity', () => {
     it('should identify verified status', () => {
       const company = createMockCompany({ status: CompanyStatus.VERIFIED });
 
-      expect(company.isVerified()).toBe(true);
+      expect(company.hasVerifiedBadge()).toBe(true);
       expect(company.isPending()).toBe(false);
       expect(company.isRejected()).toBe(false);
+      expect(company.canOperate()).toBe(true);
     });
 
     it('should identify pending status', () => {
       const company = createMockCompany({ status: CompanyStatus.PENDING_VERIFICATION });
 
-      expect(company.isVerified()).toBe(false);
+      expect(company.hasVerifiedBadge()).toBe(false);
       expect(company.isPending()).toBe(true);
       expect(company.isRejected()).toBe(false);
+      expect(company.canOperate()).toBe(false);
     });
 
     it('should identify rejected status', () => {
       const company = createMockCompany({ status: CompanyStatus.REJECTED });
 
-      expect(company.isVerified()).toBe(false);
+      expect(company.hasVerifiedBadge()).toBe(false);
       expect(company.isPending()).toBe(false);
       expect(company.isRejected()).toBe(true);
+      expect(company.canOperate()).toBe(false);
     });
 
     it('should check active status', () => {

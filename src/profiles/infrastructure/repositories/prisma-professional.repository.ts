@@ -75,7 +75,10 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
     if (criteria.active !== undefined) {
       where.active = criteria.active;
       if (criteria.active) {
-        where.status = ProfessionalStatus.VERIFIED;
+        // Show professionals that can operate (ACTIVE or VERIFIED)
+        where.status = {
+          in: [ProfessionalStatus.ACTIVE, ProfessionalStatus.VERIFIED],
+        };
       }
     }
 
@@ -214,6 +217,22 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
     });
 
     return PrismaProfessionalMapper.toDomain(result);
+  }
+
+  /**
+   * Update the status of a professional profile.
+   */
+  async updateStatus(
+    id: string,
+    status: ProfessionalStatus,
+  ): Promise<ProfessionalEntity> {
+    const updated = await this.prisma.professional.update({
+      where: { id },
+      data: { status, updatedAt: new Date() },
+      include: standardIncludes,
+    });
+
+    return PrismaProfessionalMapper.toDomain(updated);
   }
 
   /**

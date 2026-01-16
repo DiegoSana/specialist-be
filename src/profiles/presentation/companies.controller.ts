@@ -174,6 +174,34 @@ export class CompaniesController {
     return CompanyResponseDto.fromEntity(entity);
   }
 
+  @Post('me/activate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Activate company profile',
+    description:
+      'Activates the company profile as the active provider profile. ' +
+      'If user has an active Professional profile, it will be deactivated. ' +
+      'Company must be verified (ACTIVE or VERIFIED status) to be activated.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Company profile activated successfully',
+    type: CompanyResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Company cannot be activated (pending verification, rejected, etc.)',
+  })
+  @ApiResponse({ status: 404, description: 'Company profile not found' })
+  async activateProfile(
+    @CurrentUser() user: UserEntity,
+  ): Promise<CompanyResponseDto> {
+    const entity = await this.companyService.activateCompanyProfile(user.id);
+    return CompanyResponseDto.fromEntity(entity);
+  }
+
   // ==================== ADMIN ENDPOINTS ====================
 
   @Post(':id/verify')

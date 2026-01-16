@@ -27,6 +27,7 @@ import { randomUUID } from 'crypto';
 import { UserService } from '../../../identity/application/services/user.service';
 import { RequestService } from '../../../requests/application/services/request.service';
 import { UserEntity } from '../../../identity/domain/entities/user.entity';
+import { ProfileToggleService } from './profile-toggle.service';
 
 @Injectable()
 export class ProfessionalService {
@@ -39,6 +40,8 @@ export class ProfessionalService {
     private readonly tradeRepository: TradeRepository,
     @Inject(forwardRef(() => RequestService))
     private readonly requestService: RequestService,
+    @Inject(forwardRef(() => ProfileToggleService))
+    private readonly profileToggleService: ProfileToggleService,
   ) {}
 
   // ─────────────────────────────────────────────────────────────
@@ -514,5 +517,13 @@ export class ProfessionalService {
       averageRating,
       totalReviews,
     );
+  }
+
+  /**
+   * Activate professional profile (for users who want to switch from Company)
+   * If user has an active Company profile, it will be deactivated.
+   */
+  async activateProfessionalProfile(userId: string): Promise<ProfessionalEntity> {
+    return this.profileToggleService.activateProfessionalProfile(userId);
   }
 }

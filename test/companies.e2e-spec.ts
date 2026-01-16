@@ -56,7 +56,7 @@ describe('Companies (e2e)', () => {
         companyName: createDto.companyName,
         legalName: createDto.legalName,
         city: createDto.city,
-        status: 'PENDING', // New companies start as PENDING
+        status: 'PENDING_VERIFICATION', // New companies start as PENDING
       });
       expect(response.body.id).toBeDefined();
       expect(response.body.serviceProviderId).toBeDefined();
@@ -218,7 +218,7 @@ describe('Companies (e2e)', () => {
         companyName: 'Empresa Pendiente',
         tradeId: trade.id,
         city: 'Bariloche',
-        status: 'PENDING',
+        status: 'PENDING_VERIFICATION',
       });
     });
 
@@ -382,7 +382,7 @@ describe('Companies (e2e)', () => {
       const company = await createTestCompany(ctx, {
         companyName: 'Company to Verify',
         tradeId: trade.id,
-        status: 'PENDING',
+        status: 'PENDING_VERIFICATION',
       });
 
       const response = await request(ctx.app.getHttpServer())
@@ -398,7 +398,7 @@ describe('Companies (e2e)', () => {
       const company = await createTestCompany(ctx, {
         companyName: 'Company to Verify',
         tradeId: trade.id,
-        status: 'PENDING',
+        status: 'PENDING_VERIFICATION',
       });
 
       await request(ctx.app.getHttpServer())
@@ -411,7 +411,7 @@ describe('Companies (e2e)', () => {
       const company = await createTestCompany(ctx, {
         companyName: 'Self Verify Attempt',
         tradeId: trade.id,
-        status: 'PENDING',
+        status: 'PENDING_VERIFICATION',
       });
 
       await request(ctx.app.getHttpServer())
