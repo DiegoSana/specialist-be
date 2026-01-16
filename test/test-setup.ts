@@ -66,10 +66,12 @@ export async function closeTestApp(ctx: TestContext): Promise<void> {
 export async function cleanDatabase(prisma: PrismaService): Promise<void> {
   // Delete in order respecting foreign key constraints
   await prisma.$transaction([
+    prisma.notificationDelivery.deleteMany(),
     prisma.notification.deleteMany(),
     prisma.notificationPreferences.deleteMany(),
+    prisma.inAppNotification.deleteMany(),
     prisma.review.deleteMany(),
-    prisma.contactRequest.deleteMany(),
+    prisma.contact.deleteMany(),
     prisma.requestInterest.deleteMany(),
     prisma.request.deleteMany(),
     prisma.professionalTrade.deleteMany(),
@@ -98,15 +100,18 @@ export async function createTestUser(
   const email = options.email || `test-${Date.now()}@example.com`;
   const name = options.name || 'Test User';
   const isAdmin = options.isAdmin || false;
+  const [firstName, ...lastNameParts] = name.split(' ');
+  const lastName = lastNameParts.join(' ') || 'User';
 
   const user = await ctx.prisma.user.create({
     data: {
       email,
-      name,
+      firstName,
+      lastName,
       password: '$2a$10$K8G5qjB8Z1bQZ1bQZ1bQZ.', // dummy hash
       status: 'ACTIVE',
-      authProvider: 'EMAIL',
-      role: isAdmin ? 'ADMIN' : 'USER',
+      authProvider: 'LOCAL',
+      isAdmin,
     },
   });
 
@@ -145,7 +150,7 @@ export async function createTestProfessional(
     data: {
       type: 'PROFESSIONAL',
       averageRating: 0,
-      reviewCount: 0,
+      totalReviews: 0,
     },
   });
 
@@ -154,14 +159,14 @@ export async function createTestProfessional(
     data: {
       userId: user.id,
       serviceProviderId: serviceProvider.id,
-      displayName: options.name || 'Test Professional',
+      description: options.name || 'Test Professional',
       city: options.city || 'Bariloche',
       status: 'ACTIVE',
+      experienceYears: 5,
       trades: {
         create: {
           tradeId: options.tradeId,
           isPrimary: true,
-          experienceYears: 5,
         },
       },
     },
@@ -194,7 +199,7 @@ export async function createTestCompany(
     companyName: string;
     tradeId: string;
     city?: string;
-    status?: 'PENDING' | 'ACTIVE' | 'VERIFIED' | 'SUSPENDED';
+    status?: 'PENDING_VERIFICATION' | 'ACTIVE' | 'VERIFIED' | 'INACTIVE' | 'REJECTED' | 'SUSPENDED';
   },
 ): Promise<TestUser & { companyId: string; serviceProviderId: string }> {
   const user = await createTestUser(ctx, { email: options.email, name: options.companyName });
@@ -204,7 +209,7 @@ export async function createTestCompany(
     data: {
       type: 'COMPANY',
       averageRating: 0,
-      reviewCount: 0,
+      totalReviews: 0,
     },
   });
 
@@ -252,8 +257,6 @@ export async function createTestClient(
   options: {
     email?: string;
     name?: string;
-    city?: string;
-    phone?: string;
   } = {},
 ): Promise<TestUser & { clientId: string }> {
   const user = await createTestUser(ctx, { email: options.email, name: options.name });
@@ -262,9 +265,6 @@ export async function createTestClient(
   const client = await ctx.prisma.client.create({
     data: {
       userId: user.id,
-      city: options.city || 'Bariloche',
-      zone: 'Centro',
-      phone: options.phone || '+5492944123456',
     },
   });
 
@@ -298,7 +298,6 @@ export async function getOrCreateTrade(
       data: {
         name,
         description: `${name} services`,
-        icon: 'wrench',
       },
     });
   }

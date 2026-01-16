@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ProfessionalService } from './professional.service';
+import { ProfileToggleService } from './profile-toggle.service';
 import { PROFESSIONAL_REPOSITORY } from '../../domain/repositories/professional.repository';
 import { TRADE_REPOSITORY } from '../../domain/repositories/trade.repository';
 import { UserService } from '../../../identity/application/services/user.service';
@@ -22,6 +23,7 @@ describe('ProfessionalService', () => {
   let mockUserService: any;
   let mockTradeRepository: any;
   let mockRequestService: any;
+  let mockProfileToggleService: any;
 
   beforeEach(async () => {
     mockProfessionalRepository = {
@@ -45,6 +47,13 @@ describe('ProfessionalService', () => {
       findByProfessionalId: jest.fn(),
     };
 
+    mockProfileToggleService = {
+      activateProfessionalProfile: jest.fn(),
+      activateCompanyProfile: jest.fn(),
+      getUserProfiles: jest.fn(),
+      getActiveProfile: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfessionalService,
@@ -55,6 +64,7 @@ describe('ProfessionalService', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: TRADE_REPOSITORY, useValue: mockTradeRepository },
         { provide: RequestService, useValue: mockRequestService },
+        { provide: ProfileToggleService, useValue: mockProfileToggleService },
       ],
     }).compile();
 

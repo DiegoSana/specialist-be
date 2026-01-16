@@ -24,6 +24,7 @@ import { ClientsController } from './presentation/clients.controller';
 import { ProfessionalsController } from './presentation/professionals.controller';
 import { CompaniesController } from './presentation/companies.controller';
 import { TradesController } from './presentation/trades.controller';
+import { ProvidersController } from './presentation/providers.controller';
 
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
@@ -43,6 +44,7 @@ import { RequestsModule } from '../requests/requests.module';
     ProfessionalsController,
     CompaniesController,
     TradesController,
+    ProvidersController,
   ],
   providers: [
     ClientService,

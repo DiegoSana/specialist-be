@@ -1,4 +1,4 @@
-import { PrismaClient, UserStatus, ProfessionalStatus, RequestStatus, AuthProvider, ReviewStatus } from '@prisma/client';
+import { PrismaClient, UserStatus, ProfessionalStatus, CompanyStatus, RequestStatus, AuthProvider, ReviewStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -310,6 +310,179 @@ async function main() {
   await prisma.professionalTrade.create({ data: { professionalId: multioficio.professional!.id, tradeId: tradeElectricista.id, isPrimary: true } });
   await prisma.professionalTrade.create({ data: { professionalId: multioficio.professional!.id, tradeId: tradePlomero.id, isPrimary: false } });
 
+  // Helper function to create a company with their ServiceProvider
+  async function createCompanyWithProvider(data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    company: {
+      companyName: string;
+      legalName?: string;
+      taxId?: string;
+      description: string;
+      foundedYear?: number;
+      employeeCount?: string;
+      website?: string;
+      companyPhone?: string;
+      companyEmail?: string;
+      address?: string;
+      city: string;
+      zone?: string;
+      status: CompanyStatus;
+    };
+    averageRating?: number;
+    totalReviews?: number;
+  }) {
+    const serviceProvider = await prisma.serviceProvider.create({
+      data: {
+        type: 'COMPANY',
+        averageRating: data.averageRating ?? 0,
+        totalReviews: data.totalReviews ?? 0,
+      },
+    });
+
+    return prisma.user.create({
+      data: {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        status: UserStatus.ACTIVE,
+        authProvider: AuthProvider.LOCAL,
+        company: {
+          create: {
+            serviceProviderId: serviceProvider.id,
+            companyName: data.company.companyName,
+            legalName: data.company.legalName,
+            taxId: data.company.taxId,
+            description: data.company.description,
+            foundedYear: data.company.foundedYear,
+            employeeCount: data.company.employeeCount,
+            website: data.company.website,
+            phone: data.company.companyPhone,
+            email: data.company.companyEmail,
+            address: data.company.address,
+            city: data.company.city,
+            zone: data.company.zone,
+            status: data.company.status,
+          },
+        },
+      },
+      include: {
+        company: {
+          include: { serviceProvider: true }
+        }
+      },
+    });
+  }
+
+  // Create Company Users
+  console.log('🏢 Creating company users...');
+  const constructora = await createCompanyWithProvider({
+    email: 'constructora@test.com',
+    password: hashedPassword,
+    firstName: 'Martín',
+    lastName: 'Constructora',
+    phone: '+5492944600001',
+    company: {
+      companyName: 'Constructora del Sur SRL',
+      legalName: 'Constructora del Sur SRL',
+      taxId: '30-71234567-8',
+      description: 'Empresa constructora con 15 años de experiencia en Bariloche. Obras civiles, remodelaciones y ampliaciones.',
+      foundedYear: 2009,
+      employeeCount: '6-20',
+      website: 'https://constructoradelsur.com.ar',
+      companyPhone: '+5492944600001',
+      companyEmail: 'contacto@constructoradelsur.com.ar',
+      address: 'Av. Exequiel Bustillo Km 8',
+      city: 'Bariloche',
+      zone: 'Km 8',
+      status: CompanyStatus.VERIFIED,
+    },
+    averageRating: 4.9,
+    totalReviews: 38,
+  });
+
+  const serviciostecnicos = await createCompanyWithProvider({
+    email: 'serviciostech@test.com',
+    password: hashedPassword,
+    firstName: 'Laura',
+    lastName: 'Servicios',
+    phone: '+5492944600002',
+    company: {
+      companyName: 'Servicios Técnicos Patagonia',
+      legalName: 'Servicios Técnicos Patagonia SA',
+      taxId: '30-71345678-9',
+      description: 'Instalaciones eléctricas, climatización y automatización para hogares y empresas.',
+      foundedYear: 2015,
+      employeeCount: '6-20',
+      website: 'https://stpatagonia.com.ar',
+      companyPhone: '+5492944600002',
+      companyEmail: 'info@stpatagonia.com.ar',
+      address: 'Onelli 450',
+      city: 'Bariloche',
+      zone: 'Centro',
+      status: CompanyStatus.ACTIVE,
+    },
+    averageRating: 4.6,
+    totalReviews: 22,
+  });
+
+  const pinturasnorte = await createCompanyWithProvider({
+    email: 'pinturasnorte@test.com',
+    password: hashedPassword,
+    firstName: 'Jorge',
+    lastName: 'Pinturas',
+    phone: '+5492944600003',
+    company: {
+      companyName: 'Pinturas del Norte',
+      legalName: 'Pinturas del Norte SAS',
+      taxId: '30-71456789-0',
+      description: 'Pintura industrial y residencial. Trabajos en altura. Impermeabilización.',
+      foundedYear: 2018,
+      employeeCount: '1-5',
+      companyPhone: '+5492944600003',
+      companyEmail: 'pinturasnorte@gmail.com',
+      address: 'Moreno 890',
+      city: 'Bariloche',
+      zone: 'Centro',
+      status: CompanyStatus.ACTIVE,
+    },
+    averageRating: 4.4,
+    totalReviews: 15,
+  });
+
+  const empresapendiente = await createCompanyWithProvider({
+    email: 'empresapendiente@test.com',
+    password: hashedPassword,
+    firstName: 'Ricardo',
+    lastName: 'Empresa',
+    phone: '+5492944600004',
+    company: {
+      companyName: 'Remodelaciones Express',
+      description: 'Remodelaciones rápidas y de calidad. Presupuestos sin cargo.',
+      employeeCount: '1-5',
+      companyPhone: '+5492944600004',
+      city: 'Bariloche',
+      zone: 'Alto',
+      status: CompanyStatus.PENDING_VERIFICATION,
+    },
+  });
+
+  // Create company trades
+  console.log('🔗 Linking trades to companies...');
+  await prisma.companyTrade.create({ data: { companyId: constructora.company!.id, tradeId: tradeAlbañil.id, isPrimary: true } });
+  await prisma.companyTrade.create({ data: { companyId: constructora.company!.id, tradeId: tradeCarpintero.id, isPrimary: false } });
+  await prisma.companyTrade.create({ data: { companyId: constructora.company!.id, tradeId: tradePintor.id, isPrimary: false } });
+  await prisma.companyTrade.create({ data: { companyId: serviciostecnicos.company!.id, tradeId: tradeElectricista.id, isPrimary: true } });
+  await prisma.companyTrade.create({ data: { companyId: serviciostecnicos.company!.id, tradeId: tradeAire.id, isPrimary: false } });
+  await prisma.companyTrade.create({ data: { companyId: pinturasnorte.company!.id, tradeId: tradePintor.id, isPrimary: true } });
+  await prisma.companyTrade.create({ data: { companyId: empresapendiente.company!.id, tradeId: tradeAlbañil.id, isPrimary: true } });
+  await prisma.companyTrade.create({ data: { companyId: empresapendiente.company!.id, tradeId: tradePintor.id, isPrimary: false } });
+
   // Create Direct Requests (using providerId from ServiceProvider)
   console.log('📋 Creating direct requests...');
   const request1 = await prisma.request.create({
@@ -392,43 +565,101 @@ async function main() {
 
   // Create Public Requests (no provider assigned)
   console.log('📢 Creating public requests...');
-  await prisma.request.create({
+  const publicRequest1 = await prisma.request.create({
     data: {
       clientId: cliente1.id,
       tradeId: tradePintor.id,
       isPublic: true,
       title: 'Pintar departamento completo',
-      description: 'Necesito pintar un departamento de 3 ambientes.',
+      description: 'Necesito pintar un departamento de 3 ambientes. Paredes y techos en color blanco.',
       address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'A partir del próximo mes',
       status: RequestStatus.PENDING,
     },
   });
 
-  await prisma.request.create({
+  const publicRequest2 = await prisma.request.create({
     data: {
       clientId: cliente3.id,
       tradeId: tradeAlbañil.id,
       isPublic: true,
       title: 'Reparación de pared húmeda',
-      description: 'Tengo humedad en una pared que necesita reparación.',
+      description: 'Tengo humedad en una pared que necesita reparación urgente. Se está cayendo el revoque.',
       address: 'Los Ñires 123, Melipal, Bariloche',
       availability: 'Lo antes posible',
       status: RequestStatus.PENDING,
     },
   });
 
-  await prisma.request.create({
+  const publicRequest3 = await prisma.request.create({
     data: {
       clientId: cliente4.id,
       tradeId: tradeJardinero.id,
       isPublic: true,
       title: 'Mantenimiento de jardín',
-      description: 'Busco jardinero para mantenimiento mensual.',
+      description: 'Busco jardinero para mantenimiento mensual de jardín de 500m2.',
       address: 'Palacios 789, Alto, Bariloche',
       availability: 'Fines de semana preferentemente',
       status: RequestStatus.PENDING,
     },
+  });
+
+  const publicRequest4 = await prisma.request.create({
+    data: {
+      clientId: cliente2.id,
+      tradeId: tradeElectricista.id,
+      isPublic: true,
+      title: 'Instalación eléctrica completa',
+      description: 'Necesito hacer la instalación eléctrica de una casa en construcción. Incluye tablero y toda la distribución.',
+      address: 'Barrio Privado Las Cartas, Bariloche',
+      availability: 'A coordinar',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  const publicRequest5 = await prisma.request.create({
+    data: {
+      clientId: cliente1.id,
+      tradeId: tradeGasista.id,
+      isPublic: true,
+      title: 'Instalación de calefacción central',
+      description: 'Presupuesto para sistema de calefacción central a gas para casa de 150m2.',
+      address: 'Av. Bustillo Km 3.5, Bariloche',
+      availability: 'Antes del invierno',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  // Request assigned to a Company
+  const requestToCompany = await prisma.request.create({
+    data: {
+      clientId: cliente3.id,
+      providerId: constructora.company!.serviceProviderId,
+      isPublic: false,
+      title: 'Ampliación de casa',
+      description: 'Necesito agregar un cuarto de 4x4m a mi casa. Con baño incluido.',
+      address: 'Los Ñires 123, Melipal, Bariloche',
+      availability: 'Enero-Febrero',
+      status: RequestStatus.IN_PROGRESS,
+    },
+  });
+
+  // Create Request Interests (providers interested in public requests)
+  console.log('🙋 Creating request interests...');
+  await prisma.requestInterest.createMany({
+    data: [
+      // Multiple providers interested in painting request
+      { requestId: publicRequest1.id, serviceProviderId: pintor.professional!.serviceProviderId, message: 'Hola, tengo disponibilidad inmediata. Trabajo prolijo y limpio.' },
+      { requestId: publicRequest1.id, serviceProviderId: pinturasnorte.company!.serviceProviderId, message: 'Buenos días, podemos encargarnos. Tenemos equipo de 3 personas.' },
+      // Providers interested in wall repair
+      { requestId: publicRequest2.id, serviceProviderId: constructora.company!.serviceProviderId, message: 'Nos especializamos en reparación de humedad. Garantía de 2 años.' },
+      // Providers interested in electrical work
+      { requestId: publicRequest4.id, serviceProviderId: electricista.professional!.serviceProviderId, message: 'Electricista matriculado. Hago presupuesto sin cargo.' },
+      { requestId: publicRequest4.id, serviceProviderId: serviciostecnicos.company!.serviceProviderId, message: 'Realizamos instalaciones completas. Certificamos ante EPEN.' },
+      { requestId: publicRequest4.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer el trabajo completo.' },
+      // Provider interested in gas installation
+      { requestId: publicRequest5.id, serviceProviderId: gasista.professional!.serviceProviderId, message: 'Gasista matriculado. Experiencia en calefacción central.' },
+    ],
   });
 
   // Create Reviews (using serviceProviderId)
@@ -439,7 +670,7 @@ async function main() {
       serviceProviderId: electricista.professional!.serviceProviderId,
       requestId: request5.id,
       rating: 5,
-      comment: 'Excelente trabajo, muy profesional y puntual.',
+      comment: 'Excelente trabajo, muy profesional y puntual. Resolvió el problema de inmediato.',
       status: ReviewStatus.APPROVED,
     },
   });
@@ -450,7 +681,69 @@ async function main() {
       serviceProviderId: carpintero.professional!.serviceProviderId,
       requestId: request4.id,
       rating: 5,
-      comment: 'El mueble quedó perfecto, tal como lo pedí.',
+      comment: 'El mueble quedó perfecto, tal como lo pedí. Gran calidad de trabajo.',
+      status: ReviewStatus.APPROVED,
+    },
+  });
+
+  // Create a completed request for company to have a review
+  const requestCompanyDone = await prisma.request.create({
+    data: {
+      clientId: cliente2.id,
+      providerId: serviciostecnicos.company!.serviceProviderId,
+      isPublic: false,
+      title: 'Instalación de aire acondicionado split',
+      description: 'Instalación de equipo split 3000 frigorías en dormitorio principal.',
+      address: 'Moreno 456, Centro, Bariloche',
+      availability: 'Completado',
+      status: RequestStatus.DONE,
+    },
+  });
+
+  await prisma.review.create({
+    data: {
+      reviewerId: cliente2.id,
+      serviceProviderId: serviciostecnicos.company!.serviceProviderId,
+      requestId: requestCompanyDone.id,
+      rating: 5,
+      comment: 'Muy buen trabajo. El equipo llegó puntual y dejaron todo limpio. El aire funciona perfecto.',
+      status: ReviewStatus.APPROVED,
+    },
+  });
+
+  // Review for constructora
+  await prisma.review.create({
+    data: {
+      reviewerId: cliente3.id,
+      serviceProviderId: constructora.company!.serviceProviderId,
+      requestId: requestToCompany.id,
+      rating: 4,
+      comment: 'Buen avance de obra. Cumplen con los plazos. La ampliación va quedando muy bien.',
+      status: ReviewStatus.PENDING, // Pending because request is still in progress
+    },
+  });
+
+  // Review for multioficio
+  const requestMultioficioDone = await prisma.request.create({
+    data: {
+      clientId: cliente1.id,
+      providerId: multioficio.professional!.serviceProviderId,
+      isPublic: false,
+      title: 'Reparación eléctrica y sanitaria',
+      description: 'Arreglo de corto circuito y cambio de canilla.',
+      address: 'Av. Bustillo Km 3.5, Bariloche',
+      availability: 'Completado',
+      status: RequestStatus.DONE,
+    },
+  });
+
+  await prisma.review.create({
+    data: {
+      reviewerId: cliente1.id,
+      serviceProviderId: multioficio.professional!.serviceProviderId,
+      requestId: requestMultioficioDone.id,
+      rating: 5,
+      comment: 'Excelente que pueda hacer ambos trabajos. Muy práctico y buen precio.',
       status: ReviewStatus.APPROVED,
     },
   });
@@ -468,18 +761,27 @@ async function main() {
   console.log('✅ Seed completed successfully!');
   console.log('');
   console.log('📋 Summary:');
-  console.log(`   - ${10} trades created`);
+  console.log(`   - 10 trades created`);
   console.log(`   - 1 admin user`);
   console.log(`   - 4 client users`);
   console.log(`   - 6 professional users (with ServiceProvider)`);
-  console.log(`   - 9 requests (6 direct, 3 public)`);
-  console.log(`   - 2 reviews`);
+  console.log(`   - 4 company users (with ServiceProvider)`);
+  console.log(`   - 14 requests (8 direct, 6 public)`);
+  console.log(`   - 7 request interests`);
+  console.log(`   - 6 reviews`);
   console.log(`   - 3 contacts`);
   console.log('');
   console.log('🔑 Test credentials:');
-  console.log('   Admin: admin@specialist.com / Test1234!');
-  console.log('   Client: cliente1@test.com / Test1234!');
+  console.log('   Admin:        admin@specialist.com / Test1234!');
+  console.log('   Client:       cliente1@test.com / Test1234!');
   console.log('   Professional: electricista@test.com / Test1234!');
+  console.log('   Company:      constructora@test.com / Test1234!');
+  console.log('');
+  console.log('🏢 Companies:');
+  console.log('   - Constructora del Sur SRL (VERIFIED) - constructora@test.com');
+  console.log('   - Servicios Técnicos Patagonia (ACTIVE) - serviciostech@test.com');
+  console.log('   - Pinturas del Norte (ACTIVE) - pinturasnorte@test.com');
+  console.log('   - Remodelaciones Express (PENDING) - empresapendiente@test.com');
 }
 
 main()
