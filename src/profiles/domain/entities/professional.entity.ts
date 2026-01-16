@@ -68,7 +68,10 @@ export class ProfessionalEntity {
   // Status Methods
   // ─────────────────────────────────────────────────────────────
 
-  isVerified(): boolean {
+  /**
+   * Check if professional has the VERIFIED status (special badge)
+   */
+  hasVerifiedBadge(): boolean {
     return this.status === ProfessionalStatus.VERIFIED;
   }
 
@@ -76,8 +79,60 @@ export class ProfessionalEntity {
     return this.status === ProfessionalStatus.PENDING_VERIFICATION;
   }
 
+  isRejected(): boolean {
+    return this.status === ProfessionalStatus.REJECTED;
+  }
+
+  isSuspended(): boolean {
+    return this.status === ProfessionalStatus.SUSPENDED;
+  }
+
+  isInactive(): boolean {
+    return this.status === ProfessionalStatus.INACTIVE;
+  }
+
+  /**
+   * Check if the professional can operate (express interest, receive requests, etc.)
+   * Only ACTIVE or VERIFIED status allows operation.
+   */
+  canOperate(): boolean {
+    return this.active && 
+           (this.status === ProfessionalStatus.ACTIVE || 
+            this.status === ProfessionalStatus.VERIFIED);
+  }
+
+  /**
+   * Check if the professional can be activated.
+   * Can activate from PENDING, INACTIVE, or re-activate from ACTIVE/VERIFIED.
+   */
+  canBeActivated(): boolean {
+    return this.status === ProfessionalStatus.PENDING_VERIFICATION ||
+           this.status === ProfessionalStatus.INACTIVE ||
+           this.status === ProfessionalStatus.ACTIVE ||
+           this.status === ProfessionalStatus.VERIFIED;
+  }
+
+  /**
+   * Check if the professional can be deactivated.
+   * Only ACTIVE or VERIFIED can be deactivated.
+   */
+  canBeDeactivated(): boolean {
+    return this.status === ProfessionalStatus.ACTIVE ||
+           this.status === ProfessionalStatus.VERIFIED;
+  }
+
+  /**
+   * @deprecated Use hasVerifiedBadge() instead
+   */
+  isVerified(): boolean {
+    return this.hasVerifiedBadge();
+  }
+
+  /**
+   * @deprecated Use canOperate() instead
+   */
   isActive(): boolean {
-    return this.active && this.isVerified();
+    return this.canOperate();
   }
 
   // ─────────────────────────────────────────────────────────────

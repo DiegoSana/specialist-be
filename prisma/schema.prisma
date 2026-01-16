@@ -133,7 +133,7 @@ model Company {
   // Company info
   companyName   String
   legalName     String?
-  taxId         String? // CUIT/RUT
+  taxId         String?  @unique // CUIT/RUT - must be unique if provided
   description   String?
   foundedYear   Int?
   employeeCount String? // "1-5", "6-20", "21-50", "50+"
@@ -178,9 +178,12 @@ model CompanyTrade {
 }
 
 enum CompanyStatus {
-  PENDING_VERIFICATION
-  VERIFIED
-  REJECTED
+  PENDING_VERIFICATION // Awaiting admin verification
+  ACTIVE               // Verified, can operate
+  VERIFIED             // Verified + special badge
+  INACTIVE             // Deactivated (user has Professional active)
+  REJECTED             // Verification failed
+  SUSPENDED            // Admin suspended
 }
 
 model Request {
@@ -372,9 +375,12 @@ enum UserStatus {
 }
 
 enum ProfessionalStatus {
-  PENDING_VERIFICATION
-  VERIFIED
-  REJECTED
+  PENDING_VERIFICATION // Awaiting verification (new accounts)
+  ACTIVE               // Can operate
+  VERIFIED             // Can operate + special badge
+  INACTIVE             // Deactivated (user has Company active)
+  REJECTED             // Verification failed
+  SUSPENDED            // Admin suspended
 }
 
 enum RequestStatus {

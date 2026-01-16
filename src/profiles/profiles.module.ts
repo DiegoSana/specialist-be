@@ -11,6 +11,7 @@ import { ClientService } from './application/services/client.service';
 import { ProfessionalService } from './application/services/professional.service';
 import { CompanyService } from './application/services/company.service';
 import { TradeService } from './application/services/trade.service';
+import { ProfileToggleService } from './application/services/profile-toggle.service';
 
 // Infrastructure
 import { PrismaClientRepository } from './infrastructure/repositories/prisma-client.repository';
@@ -48,6 +49,7 @@ import { RequestsModule } from '../requests/requests.module';
     ProfessionalService,
     CompanyService,
     TradeService,
+    ProfileToggleService,
     {
       provide: CLIENT_REPOSITORY,
       useClass: PrismaClientRepository,
@@ -70,6 +72,7 @@ import { RequestsModule } from '../requests/requests.module';
     ProfessionalService,
     CompanyService,
     TradeService,
+    ProfileToggleService,
     // Note: Repositories are NOT exported - use Services instead (DDD best practice)
   ],
 })

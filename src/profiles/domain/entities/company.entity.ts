@@ -12,12 +12,15 @@ export interface TradeInfo {
 }
 
 /**
- * Company verification status (matches Prisma enum)
+ * Company status (matches Prisma enum)
  */
 export enum CompanyStatus {
-  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
-  VERIFIED = 'VERIFIED',
-  REJECTED = 'REJECTED',
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION', // Awaiting admin verification
+  ACTIVE = 'ACTIVE',                             // Verified, can operate
+  VERIFIED = 'VERIFIED',                         // Verified + special badge
+  INACTIVE = 'INACTIVE',                         // Deactivated (user has Professional active)
+  REJECTED = 'REJECTED',                         // Verification failed
+  SUSPENDED = 'SUSPENDED',                       // Admin suspended
 }
 
 /**
@@ -97,7 +100,10 @@ export class CompanyEntity {
   // Status Methods
   // ─────────────────────────────────────────────────────────────
 
-  isVerified(): boolean {
+  /**
+   * Check if company has the VERIFIED status (special badge)
+   */
+  hasVerifiedBadge(): boolean {
     return this.status === CompanyStatus.VERIFIED;
   }
 
@@ -109,12 +115,56 @@ export class CompanyEntity {
     return this.status === CompanyStatus.REJECTED;
   }
 
+  isSuspended(): boolean {
+    return this.status === CompanyStatus.SUSPENDED;
+  }
+
+  isInactive(): boolean {
+    return this.status === CompanyStatus.INACTIVE;
+  }
+
+  /**
+   * Check if the company profile can operate (express interest, receive requests, etc.)
+   * Only ACTIVE or VERIFIED status allows operation.
+   */
+  canOperate(): boolean {
+    return this.active && 
+           (this.status === CompanyStatus.ACTIVE || 
+            this.status === CompanyStatus.VERIFIED);
+  }
+
+  /**
+   * Check if the company can be activated.
+   * Can activate from PENDING, INACTIVE, or re-activate from ACTIVE/VERIFIED.
+   */
+  canBeActivated(): boolean {
+    return this.status === CompanyStatus.PENDING_VERIFICATION ||
+           this.status === CompanyStatus.INACTIVE ||
+           this.status === CompanyStatus.ACTIVE ||
+           this.status === CompanyStatus.VERIFIED;
+  }
+
+  /**
+   * Check if the company can be deactivated.
+   * Only ACTIVE or VERIFIED can be deactivated.
+   */
+  canBeDeactivated(): boolean {
+    return this.status === CompanyStatus.ACTIVE ||
+           this.status === CompanyStatus.VERIFIED;
+  }
+
+  /**
+   * @deprecated Use canOperate() instead
+   */
   isActive(): boolean {
     return this.active;
   }
 
+  /**
+   * @deprecated Use canOperate() instead
+   */
   isActiveAndVerified(): boolean {
-    return this.active && this.isVerified();
+    return this.canOperate();
   }
 
   // ─────────────────────────────────────────────────────────────

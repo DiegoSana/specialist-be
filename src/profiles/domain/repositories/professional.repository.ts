@@ -1,3 +1,4 @@
+import { ProfessionalStatus } from '@prisma/client';
 import { ProfessionalEntity } from '../entities/professional.entity';
 
 export interface ProfessionalRepository {
@@ -21,6 +22,12 @@ export interface ProfessionalRepository {
    * La implementación se encarga de create vs update.
    */
   save(professional: ProfessionalEntity): Promise<ProfessionalEntity>;
+
+  /**
+   * Update the status of a professional profile.
+   * Used for profile activation/deactivation.
+   */
+  updateStatus(id: string, status: ProfessionalStatus): Promise<ProfessionalEntity>;
 
   /**
    * Update rating on the ServiceProvider associated with this professional.

@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { CompanyStatus as PrismaCompanyStatus } from '@prisma/client';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import {
   CompanyRepository,
   CompanySearchParams,
 } from '../../domain/repositories/company.repository';
-import { CompanyEntity } from '../../domain/entities/company.entity';
+import { CompanyEntity, CompanyStatus } from '../../domain/entities/company.entity';
 import { CompanyPrismaMapper } from '../mappers/company.prisma-mapper';
 
 @Injectable()
@@ -59,15 +60,34 @@ export class PrismaCompanyRepository implements CompanyRepository {
     return CompanyPrismaMapper.toDomain(company);
   }
 
+  async findByTaxId(taxId: string): Promise<CompanyEntity | null> {
+    const company = await this.prisma.company.findUnique({
+      where: { taxId },
+      include: this.fullInclude,
+    });
+
+    if (!company) return null;
+    return CompanyPrismaMapper.toDomain(company);
+  }
+
   async search(params: CompanySearchParams): Promise<CompanyEntity[]> {
     const where: any = {};
 
     if (params.active !== undefined) {
       where.active = params.active;
+      if (params.active) {
+        // Only show companies that can operate (ACTIVE or VERIFIED)
+        where.status = {
+          in: [PrismaCompanyStatus.ACTIVE, PrismaCompanyStatus.VERIFIED],
+        };
+      }
     }
 
     if (params.verified !== undefined) {
-      where.status = params.verified ? 'VERIFIED' : { not: 'VERIFIED' };
+      // Only verified badge filter (separate from active filter)
+      if (params.verified) {
+        where.status = PrismaCompanyStatus.VERIFIED;
+      }
     }
 
     if (params.city) {
@@ -163,6 +183,19 @@ export class PrismaCompanyRepository implements CompanyRepository {
     await this.prisma.serviceProvider.delete({
       where: { id: company.serviceProviderId },
     });
+  }
+
+  /**
+   * Update the status of a company profile.
+   */
+  async updateStatus(id: string, status: CompanyStatus): Promise<CompanyEntity> {
+    const updated = await this.prisma.company.update({
+      where: { id },
+      data: { status: status as PrismaCompanyStatus, updatedAt: new Date() },
+      include: this.fullInclude,
+    });
+
+    return CompanyPrismaMapper.toDomain(updated);
   }
 
   /**
