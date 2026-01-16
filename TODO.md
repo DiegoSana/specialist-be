@@ -568,6 +568,7 @@ model Company {
   - [x] `test/test-setup.ts` - Infraestructura y helpers para E2E
   - [x] `test/companies.e2e-spec.ts` - CRUD, búsqueda, galería, verificación
   - [x] `test/requests.e2e-spec.ts` - Flujo completo de interest (Professional + Company)
+- [ ] Agregar E2E tests al CI pipeline (GitHub Actions con PostgreSQL service)
 
 ### ✅ Fase 4: Documentación
 
@@ -577,14 +578,62 @@ model Company {
 
 ---
 
+### ⚠️ Reglas de Negocio Pendientes
+
+#### Dual Profile: Professional + Company
+- [ ] **Cuando un usuario tiene AMBOS perfiles (Professional y Company):**
+  - Al expresar interés en un request → usar Company como provider (prioridad)
+  - El frontend debe mostrar claramente "actuando como empresa"
+  - Considerar: ¿permitir elegir con qué perfil actuar?
+
+---
+
+### ⚠️ Arquitectura de Empresas (Revisión Necesaria)
+
+#### Registro de Empresas Centralizado
+- [ ] **Crear entidad `CompanyRegistry` separada de `CompanyProfile`**
+  - `CompanyRegistry`: datos legales únicos (CUIT/taxId, razón social, etc.)
+  - `CompanyProfile`: perfil público en la plataforma (vinculado a CompanyRegistry)
+  - Evita duplicación: una empresa legal = un registro, múltiples perfiles posibles
+  
+- [ ] **Validación obligatoria antes de activar perfil**
+  - Status flow: `PENDING` → (validación admin) → `ACTIVE` → `VERIFIED`
+  - Empresa no puede operar (expresar interés, recibir solicitudes) hasta `ACTIVE`
+  - Documentación requerida: CUIT, constancia AFIP, etc.
+
+#### Multi-Usuario por Empresa (Preparar Base)
+- [ ] **Diseñar relación User ↔ Company para múltiples usuarios**
+  - Actual: `Company.userId` (1:1)
+  - Futuro: `CompanyMember` tabla intermedia con roles
+  - Roles posibles: `OWNER`, `ADMIN`, `MEMBER`
+  
+- [ ] **Preparar schema para evolución**
+  ```prisma
+  model CompanyMember {
+    id        String   @id
+    companyId String
+    userId    String
+    role      CompanyRole  // OWNER, ADMIN, MEMBER
+    invitedAt DateTime
+    joinedAt  DateTime?
+  }
+  ```
+
+- [ ] **Owner vs Members**
+  - Owner: quien registra la empresa (único, no transferible inicialmente)
+  - Members: invitados por Owner/Admin
+  - Permisos: Owner > Admin > Member
+
+---
+
 ### Consideraciones Futuras (No MVP)
 
-- [ ] Múltiples empleados por empresa con roles
 - [ ] Dashboard de empresa con métricas
-- [ ] Verificación de empresa (documentos legales)
+- [ ] Verificación de empresa (documentos legales, AFIP)
 - [ ] Planes de suscripción para empresas
 - [ ] Portal de empleados de la empresa
 - [ ] Asignación de solicitudes a empleados específicos
+- [ ] Transferencia de ownership de empresa
 
 ### Prioridad
 
@@ -612,6 +661,18 @@ model Company {
 - [ ] Rate limiting por endpoint
 - [ ] Validación de inputs más estricta
 - [ ] Audit log para acciones administrativas
+
+### Verificación de Usuario (Email & Teléfono)
+- [ ] **Validación de Email**
+  - Google/Facebook OAuth → asumir email verificado automáticamente
+  - Registro por email → implementar flujo de verificación (enviar link)
+  - Agregar campo `emailVerified: boolean` a User
+  
+- [ ] **Validación de Teléfono (WhatsApp)**
+  - Implementar consentimiento explícito para contacto por WhatsApp
+  - Flujo de verificación: enviar código por WhatsApp → usuario confirma
+  - Agregar campos: `phoneVerified: boolean`, `whatsappConsent: boolean`
+  - Considerar: ¿requerir teléfono verificado para crear perfil profesional/empresa?
 
 ### UX
 - [ ] Notificaciones push (web)
