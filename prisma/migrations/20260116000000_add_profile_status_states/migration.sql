@@ -20,14 +20,7 @@ BEGIN
     END IF;
 END $$;
 
--- Migrate existing VERIFIED companies to ACTIVE (they can operate)
--- VERIFIED will now mean ACTIVE + special badge
-UPDATE "companies" 
-SET "status" = 'ACTIVE' 
-WHERE "status" = 'VERIFIED';
-
--- Migrate existing VERIFIED professionals to ACTIVE
-UPDATE "professionals" 
-SET "status" = 'ACTIVE' 
-WHERE "status" = 'VERIFIED';
-
+-- NOTE: Data migration for existing VERIFIED records should be done
+-- in a separate migration after the enum values are committed.
+-- For fresh installs, this is not needed as the seed data will use 
+-- the correct status values.
