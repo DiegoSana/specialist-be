@@ -13,6 +13,7 @@
 - [**ROLES_ARCHITECTURE.md**](./architecture/ROLES_ARCHITECTURE.md) - User roles and permissions
 - [**AUTHORIZATION_PATTERN.md**](./architecture/AUTHORIZATION_PATTERN.md) - Hybrid Service + Domain permission validation ⭐
 - [**STORAGE_IMPLEMENTATION.md**](./architecture/STORAGE_IMPLEMENTATION.md) - File storage system design
+- [**COMPANY_PROFILES.md**](./architecture/COMPANY_PROFILES.md) - Company profiles design & business rules ⭐ NEW
 
 ### Guides
 - [**DOCKER.md**](./guides/DOCKER.md) - Docker setup and commands

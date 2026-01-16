@@ -581,48 +581,38 @@ model Company {
 ### ⚠️ Reglas de Negocio Pendientes
 
 #### Dual Profile: Professional + Company
-- [ ] **Cuando un usuario tiene AMBOS perfiles (Professional y Company):**
-  - Al expresar interés en un request → usar Company como provider (prioridad)
-  - El frontend debe mostrar claramente "actuando como empresa"
-  - Considerar: ¿permitir elegir con qué perfil actuar?
+
+> 📖 **Diseño completo:** [docs/architecture/COMPANY_PROFILES.md](./docs/architecture/COMPANY_PROFILES.md)
+
+**Resumen de decisiones:**
+- Solo UN perfil proveedor activo a la vez (Professional XOR Company)
+- Al verificar Company → Professional se desactiva automáticamente
+- Usuario puede alternar entre perfiles desde dashboard
+- CUIT único (error si ya existe)
+- Company usa mismos flujos que Professional (Job Board, Reviews, Solicitudes)
+
+**Implementación pendiente:**
+- [ ] Lógica de activación/desactivación de perfiles
+- [ ] Validación de CUIT único
+- [ ] Toggle de perfil activo en dashboard (FE)
+- [ ] Catálogo con filtro por tipo de proveedor
 
 ---
 
-### ⚠️ Arquitectura de Empresas (Revisión Necesaria)
+### ⚠️ Arquitectura de Empresas
 
-#### Registro de Empresas Centralizado
-- [ ] **Crear entidad `CompanyRegistry` separada de `CompanyProfile`**
-  - `CompanyRegistry`: datos legales únicos (CUIT/taxId, razón social, etc.)
-  - `CompanyProfile`: perfil público en la plataforma (vinculado a CompanyRegistry)
-  - Evita duplicación: una empresa legal = un registro, múltiples perfiles posibles
-  
-- [ ] **Validación obligatoria antes de activar perfil**
-  - Status flow: `PENDING` → (validación admin) → `ACTIVE` → `VERIFIED`
-  - Empresa no puede operar (expresar interés, recibir solicitudes) hasta `ACTIVE`
-  - Documentación requerida: CUIT, constancia AFIP, etc.
+> 📖 **Diseño completo:** [docs/architecture/COMPANY_PROFILES.md](./docs/architecture/COMPANY_PROFILES.md)
 
-#### Multi-Usuario por Empresa (Preparar Base)
-- [ ] **Diseñar relación User ↔ Company para múltiples usuarios**
-  - Actual: `Company.userId` (1:1)
-  - Futuro: `CompanyMember` tabla intermedia con roles
-  - Roles posibles: `OWNER`, `ADMIN`, `MEMBER`
-  
-- [ ] **Preparar schema para evolución**
-  ```prisma
-  model CompanyMember {
-    id        String   @id
-    companyId String
-    userId    String
-    role      CompanyRole  // OWNER, ADMIN, MEMBER
-    invitedAt DateTime
-    joinedAt  DateTime?
-  }
-  ```
+**MVP (actual):**
+- [x] Company como ServiceProvider
+- [x] Estados: PENDING → ACTIVE → VERIFIED
+- [ ] Validación de CUIT único
+- [ ] Company no opera hasta ACTIVE
 
-- [ ] **Owner vs Members**
-  - Owner: quien registra la empresa (único, no transferible inicialmente)
-  - Members: invitados por Owner/Admin
-  - Permisos: Owner > Admin > Member
+**Post-MVP:**
+- [ ] Multi-usuario por empresa (CompanyMember con roles)
+- [ ] Verificación avanzada (AFIP, documentación)
+- [ ] Transferencia de ownership
 
 ---
 
