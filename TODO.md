@@ -683,6 +683,44 @@ model Company {
   - [ ] Tests de validación: prevenir código si ya está verificado
   - [ ] Tests de invalidación: verificar que se invalida al cambiar teléfono/email
 
+- [ ] **Deployment y Configuración**
+  - [ ] Subir credenciales de Twilio a fly.io (secrets)
+    - `TWILIO_ACCOUNT_SID`
+    - `TWILIO_AUTH_TOKEN`
+    - `TWILIO_VERIFY_SERVICE_SID`
+
+- [ ] **Restricciones de Acciones por Verificación**
+  - [ ] Identificar acciones que requieren email verificado
+  - [ ] Identificar acciones que requieren teléfono/WhatsApp verificado
+  - [ ] Implementar guards/decorators para validar verificación antes de acciones críticas
+  - [ ] Agregar validación en servicios de aplicación
+  - [ ] Retornar error descriptivo cuando falta verificación requerida
+  - [ ] Considerar: ¿crear perfil profesional/empresa requiere teléfono verificado?
+  - [ ] Considerar: ¿expresar interés en solicitud requiere email verificado?
+  - [ ] Considerar: ¿recibir notificaciones por WhatsApp requiere teléfono verificado?
+
+### Notificaciones y Comunicaciones
+- [ ] **Integración de Twilio WhatsApp en Notificaciones**
+  - [ ] Incorporar Twilio al módulo de notificaciones
+  - [ ] Crear adapter para envío de mensajes por WhatsApp usando Twilio API
+  - [ ] Agregar canal `WHATSAPP` a tipos de notificación
+  - [ ] Configurar preferencias de usuario para recibir notificaciones por WhatsApp
+  - [ ] Validar que usuario tenga teléfono verificado antes de enviar por WhatsApp
+  - [ ] Implementar fallback a email si WhatsApp falla
+  - [ ] Agregar tests para envío de notificaciones por WhatsApp
+
+- [ ] **Follow-up Interactivo por WhatsApp**
+  - [ ] Investigar funcionalidad de follow-up automático para Requests
+  - [ ] Definir triggers: tiempo sin actividad después del primer contacto
+  - [ ] Diseñar flujo de preguntas interactivas por WhatsApp
+  - [ ] Implementar webhook endpoint para recibir respuestas de Twilio
+  - [ ] Procesar respuestas y actualizar estado del Request según respuesta
+  - [ ] Crear sistema de templates de mensajes para follow-up
+  - [ ] Agregar configuración de tiempos de follow-up (ej: 3 días, 7 días)
+  - [ ] Implementar lógica para evitar múltiples follow-ups
+  - [ ] Agregar tests para webhook de Twilio y procesamiento de respuestas
+  - [ ] Documentar flujo completo de follow-up interactivo
+
 ### UX
 - [ ] Notificaciones push (web)
 - [ ] Tiempo real con WebSockets
