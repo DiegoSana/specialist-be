@@ -683,6 +683,22 @@ model Company {
   - [ ] Tests de validación: prevenir código si ya está verificado
   - [ ] Tests de invalidación: verificar que se invalida al cambiar teléfono/email
 
+- [ ] **Deployment y Configuración**
+  - [ ] Subir credenciales de Twilio a fly.io (secrets)
+    - `TWILIO_ACCOUNT_SID`
+    - `TWILIO_AUTH_TOKEN`
+    - `TWILIO_VERIFY_SERVICE_SID`
+
+- [ ] **Restricciones de Acciones por Verificación**
+  - [ ] Identificar acciones que requieren email verificado
+  - [ ] Identificar acciones que requieren teléfono/WhatsApp verificado
+  - [ ] Implementar guards/decorators para validar verificación antes de acciones críticas
+  - [ ] Agregar validación en servicios de aplicación
+  - [ ] Retornar error descriptivo cuando falta verificación requerida
+  - [ ] Considerar: ¿crear perfil profesional/empresa requiere teléfono verificado?
+  - [ ] Considerar: ¿expresar interés en solicitud requiere email verificado?
+  - [ ] Considerar: ¿recibir notificaciones por WhatsApp requiere teléfono verificado?
+
 ### UX
 - [ ] Notificaciones push (web)
 - [ ] Tiempo real con WebSockets
