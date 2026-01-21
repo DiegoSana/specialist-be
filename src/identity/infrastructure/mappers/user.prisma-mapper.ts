@@ -27,6 +27,8 @@ export class PrismaUserMapper {
     googleId?: string | null;
     facebookId?: string | null;
     authProvider?: AuthProvider | null;
+    phoneVerified?: boolean | null;
+    emailVerified?: boolean | null;
   }): UserEntity {
     return new UserEntity(
       user.id,
@@ -46,6 +48,8 @@ export class PrismaUserMapper {
       user.googleId || null,
       user.facebookId || null,
       user.authProvider || AuthProvider.LOCAL,
+      user.phoneVerified ?? false,
+      user.emailVerified ?? false,
     );
   }
 
@@ -104,6 +108,8 @@ export class PrismaUserMapper {
     googleId: string | null;
     facebookId: string | null;
     authProvider: AuthProvider;
+    phoneVerified: boolean;
+    emailVerified: boolean;
   } {
     return {
       email: user.email,
@@ -117,6 +123,8 @@ export class PrismaUserMapper {
       googleId: user.googleId,
       facebookId: user.facebookId,
       authProvider: user.authProvider,
+      phoneVerified: user.phoneVerified,
+      emailVerified: user.emailVerified,
     };
   }
 
@@ -129,6 +137,8 @@ export class PrismaUserMapper {
       googleId?: string | null;
       facebookId?: string | null;
       authProvider?: AuthProvider | null;
+      phoneVerified?: boolean;
+      emailVerified?: boolean;
     },
   ): Record<string, unknown> {
     const updateData: Record<string, unknown> = {};
@@ -148,6 +158,10 @@ export class PrismaUserMapper {
       updateData.facebookId = partial.facebookId;
     if (partial.authProvider !== undefined)
       updateData.authProvider = partial.authProvider;
+    if (partial.phoneVerified !== undefined)
+      updateData.phoneVerified = partial.phoneVerified;
+    if (partial.emailVerified !== undefined)
+      updateData.emailVerified = partial.emailVerified;
 
     return updateData;
   }

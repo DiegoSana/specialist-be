@@ -41,6 +41,12 @@ export class UserProfileResponseDto {
   hasCompanyProfile: boolean;
 
   @ApiProperty()
+  phoneVerified: boolean;
+
+  @ApiProperty()
+  emailVerified: boolean;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
@@ -63,6 +69,8 @@ export class UserProfileResponseDto {
     dto.hasClientProfile = user.hasClientProfile;
     dto.hasProfessionalProfile = user.hasProfessionalProfile;
     dto.hasCompanyProfile = user.hasCompanyProfile;
+    dto.phoneVerified = user.phoneVerified;
+    dto.emailVerified = user.emailVerified;
     dto.createdAt = user.createdAt;
     dto.updatedAt = user.updatedAt;
     return dto;

@@ -660,17 +660,28 @@ model Company {
 - [ ] Validación de inputs más estricta
 - [ ] Audit log para acciones administrativas
 
-### Verificación de Usuario (Email & Teléfono)
-- [ ] **Validación de Email**
-  - Google/Facebook OAuth → asumir email verificado automáticamente
-  - Registro por email → implementar flujo de verificación (enviar link)
-  - Agregar campo `emailVerified: boolean` a User
+### Verificación de Usuario (Email & Teléfono) ✅
+- [x] **Validación de Email**
+  - Implementado flujo de verificación usando Twilio Verify
+  - Agregado campo `emailVerified: boolean` a User
+  - Endpoints: `POST /identity/verification/email/request` y `/confirm`
   
-- [ ] **Validación de Teléfono (WhatsApp)**
-  - Implementar consentimiento explícito para contacto por WhatsApp
-  - Flujo de verificación: enviar código por WhatsApp → usuario confirma
-  - Agregar campos: `phoneVerified: boolean`, `whatsappConsent: boolean`
-  - Considerar: ¿requerir teléfono verificado para crear perfil profesional/empresa?
+- [x] **Validación de Teléfono**
+  - Implementado flujo de verificación usando Twilio Verify
+  - Agregado campo `phoneVerified: boolean` a User
+  - Endpoints: `POST /identity/verification/phone/request` y `/confirm`
+  - Validación de formato E.164 para números telefónicos
+  - Invalidación automática cuando cambia el teléfono/email
+
+- [ ] **Tests para Verificación**
+  - [ ] Tests unitarios para `VerificationService` (application layer)
+  - [ ] Tests unitarios para `TwilioVerifyService` (infrastructure layer)
+  - [ ] Tests unitarios para `Phone` value object
+  - [ ] Tests de integración para endpoints de verificación
+  - [ ] Tests E2E para flujo completo de verificación de teléfono
+  - [ ] Tests E2E para flujo completo de verificación de email
+  - [ ] Tests de validación: prevenir código si ya está verificado
+  - [ ] Tests de invalidación: verificar que se invalida al cambiar teléfono/email
 
 ### UX
 - [ ] Notificaciones push (web)

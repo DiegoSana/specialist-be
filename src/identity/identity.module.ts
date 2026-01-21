@@ -5,10 +5,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 // Domain
 import { USER_REPOSITORY } from './domain/repositories/user.repository';
+import {
+  VERIFICATION_SERVICE,
+} from './domain/ports/verification.service';
 
 // Application
 import { AuthenticationService } from './application/services/authentication.service';
 import { UserService } from './application/services/user.service';
+import { VerificationService } from './application/services/verification.service';
 
 // Infrastructure
 import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
@@ -17,10 +21,12 @@ import { LocalStrategy } from './infrastructure/strategies/local.strategy';
 import { GoogleStrategy } from './infrastructure/strategies/google.strategy';
 import { FacebookStrategy } from './infrastructure/strategies/facebook.strategy';
 import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard';
+import { TwilioVerifyService } from './infrastructure/verification/twilio-verify.service';
 
 // Presentation
 import { AuthController } from './presentation/auth.controller';
 import { UsersController } from './presentation/users.controller';
+import { VerificationController } from './presentation/verification.controller';
 
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
@@ -44,10 +50,15 @@ import { ProfilesModule } from '../profiles/profiles.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, UsersController],
+  controllers: [
+    AuthController,
+    UsersController,
+    VerificationController,
+  ],
   providers: [
     AuthenticationService,
     UserService,
+    VerificationService,
     JwtStrategy,
     LocalStrategy,
     GoogleStrategy,
@@ -56,6 +67,10 @@ import { ProfilesModule } from '../profiles/profiles.module';
     {
       provide: USER_REPOSITORY,
       useClass: PrismaUserRepository,
+    },
+    {
+      provide: VERIFICATION_SERVICE,
+      useClass: TwilioVerifyService,
     },
   ],
   exports: [
