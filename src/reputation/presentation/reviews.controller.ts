@@ -69,18 +69,18 @@ export class ReviewsController {
   @ApiOperation({ summary: 'Get review by request ID' })
   @ApiQuery({ name: 'requestId', required: true })
   @ApiResponse({ status: 200, description: 'Review details', type: ReviewResponseDto })
+  @ApiResponse({ status: 200, description: 'No review found', schema: { type: 'null' } })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Review not found' })
   async findByRequestId(
     @Query('requestId') requestId: string,
     @CurrentUser() user: UserEntity,
-  ): Promise<ReviewResponseDto> {
+  ): Promise<ReviewResponseDto | null> {
     const entity = await this.reviewService.findByRequestIdForUser(
       requestId,
       user.id,
     );
     if (!entity) {
-      throw new NotFoundException('Review not found for this request');
+      return null;
     }
     return ReviewResponseDto.fromEntity(entity);
   }
