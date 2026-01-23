@@ -457,37 +457,4 @@ describe('RequestInterestService', () => {
     });
   });
 
-  describe('assignProfessional (deprecated)', () => {
-    it('should delegate to assignProvider via professional serviceProviderId', async () => {
-      const ctx = createAuthContext('client-123', null, null);
-      const publicRequest = createMockRequest({
-        id: 'request-123',
-        clientId: 'client-123',
-        isPublic: true,
-        status: RequestStatus.PENDING,
-      });
-      const professional = createMockProfessional({
-        id: 'prof-123',
-        userId: 'provider-user',
-        serviceProviderId: 'sp-123',
-      });
-      const interest = createMockInterest({ serviceProviderId: 'sp-123' });
-      const updatedRequest = createMockRequest({
-        ...publicRequest,
-        providerId: 'sp-123',
-        status: RequestStatus.ACCEPTED,
-      });
-
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
-      mockRequestRepository.findById.mockResolvedValue(publicRequest);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(interest);
-      mockProfessionalService.findByServiceProviderId.mockResolvedValue(professional);
-      mockRequestRepository.save.mockResolvedValue(updatedRequest);
-
-      const result = await service.assignProfessional('request-123', ctx, 'prof-123');
-
-      expect(mockProfessionalService.getByIdOrFail).toHaveBeenCalledWith('prof-123');
-      expect(result.providerId).toBe('sp-123');
-    });
-  });
 });

@@ -51,6 +51,70 @@ export class RequestProfessionalDto {
 
   @ApiPropertyOptional()
   totalReviews: number;
+
+  @ApiPropertyOptional()
+  whatsapp: string | null;
+}
+
+/**
+ * Nested DTO for company info in request response
+ */
+export class RequestCompanyDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
+  serviceProviderId: string;
+
+  @ApiProperty()
+  companyName: string;
+
+  @ApiPropertyOptional()
+  legalName: string | null;
+
+  @ApiPropertyOptional()
+  taxId: string | null;
+
+  @ApiPropertyOptional()
+  description: string | null;
+
+  @ApiPropertyOptional()
+  phone: string | null;
+
+  @ApiPropertyOptional()
+  email: string | null;
+
+  @ApiPropertyOptional()
+  website: string | null;
+
+  @ApiPropertyOptional()
+  city: string | null;
+
+  @ApiPropertyOptional()
+  zone: string | null;
+
+  @ApiPropertyOptional()
+  averageRating: number;
+
+  @ApiPropertyOptional()
+  totalReviews: number;
+
+  @ApiPropertyOptional()
+  profileImage: string | null;
+
+  @ApiPropertyOptional({ type: RequestUserDto })
+  user: RequestUserDto | null;
+
+  @ApiProperty({ type: [Object] })
+  trades: Array<{
+    id: string;
+    name: string;
+    category: string | null;
+    isPrimary: boolean;
+  }>;
 }
 
 /**
@@ -65,7 +129,10 @@ export class RequestResponseDto {
   clientId: string;
 
   @ApiPropertyOptional()
-  professionalId: string | null;
+  professionalId: string | null; // Deprecated, use providerId
+
+  @ApiPropertyOptional()
+  providerId: string | null; // ServiceProvider ID (Professional or Company)
 
   @ApiPropertyOptional()
   tradeId: string | null;
@@ -110,6 +177,9 @@ export class RequestResponseDto {
   @ApiPropertyOptional({ type: RequestProfessionalDto })
   professional?: RequestProfessionalDto;
 
+  @ApiPropertyOptional({ type: RequestCompanyDto })
+  company?: RequestCompanyDto;
+
   @ApiPropertyOptional({ type: RequestTradeDto })
   trade?: RequestTradeDto;
 
@@ -126,7 +196,8 @@ export class RequestResponseDto {
     // Core fields
     dto.id = entity.id;
     dto.clientId = entity.clientId;
-    dto.professionalId = entity.professionalId;
+    dto.professionalId = entity.professionalId; // Backward compat
+    dto.providerId = entity.providerId;
     dto.tradeId = entity.tradeId;
     dto.isPublic = entity.isPublic;
     dto.title = entity.title;
@@ -166,6 +237,41 @@ export class RequestResponseDto {
           : null,
         averageRating: entityAny.professional.averageRating ?? 0,
         totalReviews: entityAny.professional.totalReviews ?? 0,
+        whatsapp: entityAny.professional.whatsapp ?? null,
+      };
+    }
+
+    if (entityAny.company) {
+      dto.company = {
+        id: entityAny.company.id,
+        userId: entityAny.company.userId,
+        serviceProviderId: entityAny.company.serviceProviderId,
+        companyName: entityAny.company.companyName,
+        legalName: entityAny.company.legalName ?? null,
+        taxId: entityAny.company.taxId ?? null,
+        description: entityAny.company.description ?? null,
+        phone: entityAny.company.phone ?? null,
+        email: entityAny.company.email ?? null,
+        website: entityAny.company.website ?? null,
+        city: entityAny.company.city ?? null,
+        zone: entityAny.company.zone ?? null,
+        averageRating: entityAny.company.averageRating ?? 0,
+        totalReviews: entityAny.company.totalReviews ?? 0,
+        profileImage: entityAny.company.profileImage ?? null,
+        user: entityAny.company.user
+          ? {
+              id: entityAny.company.user.id,
+              firstName: entityAny.company.user.firstName,
+              lastName: entityAny.company.user.lastName,
+              profilePictureUrl: entityAny.company.user.profilePictureUrl ?? null,
+            }
+          : null,
+        trades: (entityAny.company.trades || []).map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          category: t.category,
+          isPrimary: t.isPrimary,
+        })),
       };
     }
 

@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -29,11 +30,11 @@ import { CreateRequestDto } from '../application/dto/create-request.dto';
 import { UpdateRequestDto } from '../application/dto/update-request.dto';
 import {
   ExpressInterestDto,
-  AssignProfessionalDto,
   AssignProviderDto,
 } from '../application/dto/express-interest.dto';
 import { RequestResponseDto } from './dto/request-response.dto';
 import { InterestedProfessionalResponseDto } from './dto/interested-professional-response.dto';
+import { InterestedRequestDto } from './dto/interested-request-response.dto';
 
 @ApiTags('Requests')
 @ApiBearerAuth()
@@ -74,7 +75,8 @@ export class RequestsController {
       entities = await this.requestService.findByClientId(user.id);
     } else if (role === 'professional' || (!role && user.isProfessional())) {
       const professional = await this.professionalService.findByUserId(user.id);
-      entities = await this.requestService.findByProfessionalId(professional.id);
+      // Use serviceProviderId directly instead of findByProfessionalId
+      entities = await this.requestService.findByProviderId(professional.serviceProviderId);
     } else {
       entities = [];
     }
@@ -120,8 +122,48 @@ export class RequestsController {
       user.id,
       user.isAdminUser(),
     );
-    const entity = await this.requestService.findByIdForUser(id, ctx);
-    return RequestResponseDto.fromEntity(entity);
+
+    // Try to get full access first
+    try {
+      const entity = await this.requestService.findByIdForUser(id, ctx);
+      return RequestResponseDto.fromEntity(entity);
+    } catch (error: any) {
+      // If ForbiddenException and user is a provider, check if they expressed interest
+      if (
+        error instanceof ForbiddenException &&
+        ctx.serviceProviderId
+      ) {
+        const interestCtx = await this.requestInterestService.buildAuthContext(
+          user.id,
+          user.isAdminUser(),
+        );
+        const hasInterest =
+          await this.requestInterestService.hasExpressedInterest(
+            id,
+            interestCtx,
+          );
+
+        if (hasInterest) {
+          // User expressed interest but request was assigned to another provider
+          // Return limited information (title, description, status, createdAt)
+          const request = await this.requestService.findById(id);
+          const limitedDto = RequestResponseDto.fromEntity(request);
+          // Remove sensitive information
+          limitedDto.address = null;
+          limitedDto.photos = [];
+          limitedDto.client = undefined;
+          limitedDto.professional = undefined;
+          limitedDto.company = undefined;
+          limitedDto.availability = null;
+          limitedDto.clientRating = null;
+          limitedDto.clientRatingComment = null;
+          return limitedDto;
+        }
+      }
+
+      // Re-throw original error if no interest found
+      throw error;
+    }
   }
 
   @Patch(':id')
@@ -235,6 +277,41 @@ export class RequestsController {
     return { hasInterest };
   }
 
+  @Get('interested')
+  @ApiOperation({
+    summary: 'Get all requests where I expressed interest (provider only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of requests where I expressed interest',
+    type: [InterestedRequestDto],
+  })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  async getMyInterestedRequests(
+    @CurrentUser() user: UserEntity,
+  ): Promise<InterestedRequestDto[]> {
+    const ctx = await this.requestInterestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+
+    if (!ctx.serviceProviderId) {
+      throw new BadRequestException(
+        'Only providers (professionals or companies) can view interested requests',
+      );
+    }
+
+    const interests =
+      await this.requestInterestService.getMyInterestedRequests(
+        ctx.serviceProviderId,
+      );
+
+    return InterestedRequestDto.fromInterestsWithRequests(
+      interests,
+      ctx.serviceProviderId,
+    );
+  }
+
   @Get(':id/interests')
   @ApiOperation({ summary: 'Get all interested providers (client/admin only)' })
   @ApiResponse({ status: 200, description: 'List of interested providers', type: [InterestedProfessionalResponseDto] })
@@ -277,32 +354,24 @@ export class RequestsController {
     return RequestResponseDto.fromEntity(entity);
   }
 
-  /**
-   * @deprecated Use POST /assign-provider instead
-   */
-  @Post(':id/assign')
+  @Post(':id/unassign-provider')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '[Deprecated] Assign a professional - use /assign-provider instead' })
+  @ApiOperation({ summary: 'Unassign provider from request (client/admin only)' })
   @ApiResponse({
     status: 200,
-    description: 'Professional assigned successfully',
+    description: 'Provider unassigned successfully',
     type: RequestResponseDto,
   })
-  @ApiResponse({ status: 403, description: 'Not authorized to assign' })
-  async assignProfessional(
+  @ApiResponse({ status: 403, description: 'Not authorized to unassign' })
+  async unassignProvider(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
-    @Body() dto: AssignProfessionalDto,
   ): Promise<RequestResponseDto> {
     const ctx = await this.requestInterestService.buildAuthContext(
       user.id,
       user.isAdminUser(),
     );
-    const entity = await this.requestInterestService.assignProfessional(
-      id,
-      ctx,
-      dto.professionalId,
-    );
+    const entity = await this.requestInterestService.unassignProvider(id, ctx);
     return RequestResponseDto.fromEntity(entity);
   }
 

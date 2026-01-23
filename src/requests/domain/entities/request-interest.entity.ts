@@ -5,15 +5,17 @@ export class RequestInterestEntity {
     public readonly serviceProviderId: string,
     public readonly message: string | null,
     public readonly createdAt: Date,
-    // Optional: attached provider info for display
-    public readonly provider?: {
-      id: string;
-      type: 'PROFESSIONAL' | 'COMPANY';
-      displayName: string;
-      profileImage: string | null;
-      averageRating: number;
-      totalReviews: number;
-    },
+      // Optional: attached provider info for display
+      public readonly provider?: {
+        id: string;
+        type: 'PROFESSIONAL' | 'COMPANY';
+        displayName: string;
+        profileImage: string | null;
+        averageRating: number;
+        totalReviews: number;
+        whatsapp: string | null;
+        phone: string | null;
+      },
   ) {}
 
   /**

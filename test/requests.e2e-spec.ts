@@ -323,7 +323,7 @@ describe('Requests & Interest (e2e)', () => {
     });
   });
 
-  describe('POST /api/requests/:id/assign - Assign provider', () => {
+  describe('POST /api/requests/:id/assign-provider - Assign provider', () => {
     it('should allow client to assign a professional', async () => {
       const client = await createTestClient(ctx, { email: 'assign-client@test.com' });
       const professional = await createTestProfessional(ctx, {
@@ -353,7 +353,7 @@ describe('Requests & Interest (e2e)', () => {
 
       // Client assigns professional
       const response = await request(ctx.app.getHttpServer())
-        .post(`/api/requests/${requestId}/assign`)
+        .post(`/api/requests/${requestId}/assign-provider`)
         .set(...authHeader(client.token))
         .send({ serviceProviderId: professional.serviceProviderId })
         .expect(200);
@@ -393,7 +393,7 @@ describe('Requests & Interest (e2e)', () => {
 
       // Client assigns company
       const response = await request(ctx.app.getHttpServer())
-        .post(`/api/requests/${requestId}/assign`)
+        .post(`/api/requests/${requestId}/assign-provider`)
         .set(...authHeader(client.token))
         .send({ serviceProviderId: company.serviceProviderId })
         .expect(200);
@@ -424,7 +424,7 @@ describe('Requests & Interest (e2e)', () => {
 
       // Try to assign without interest - should fail
       await request(ctx.app.getHttpServer())
-        .post(`/api/requests/${requestId}/assign`)
+        .post(`/api/requests/${requestId}/assign-provider`)
         .set(...authHeader(client.token))
         .send({ serviceProviderId: professional.serviceProviderId })
         .expect(400);

@@ -248,6 +248,19 @@ export class RequestEntity {
     return this.canAssignProviderBy(ctx);
   }
 
+  /**
+   * Determines if a user can unassign the provider from this request.
+   * Rules:
+   * - Only the client owner can unassign
+   * - Request must have a provider assigned
+   * - Request status must be ACCEPTED (not yet started)
+   */
+  canUnassignProviderBy(ctx: RequestAuthContext): boolean {
+    if (ctx.isAdmin) return true;
+    if (!this.isClient(ctx)) return false;
+    return !!this.providerId && this.isAccepted();
+  }
+
   withChanges(changes: {
     providerId?: string | null;
     tradeId?: string | null;
