@@ -51,21 +51,32 @@ export class RequestService {
 
     const isPublic = createDto.isPublic === true;
 
-    // For direct requests, validate professional and get serviceProviderId
+    // For direct requests, validate provider (professional or company) and get serviceProviderId
     let providerId: string | null = null;
     if (!isPublic) {
-      if (!createDto.professionalId) {
+      if (!createDto.professionalId && !createDto.companyId) {
         throw new BadRequestException(
-          'professionalId is required for direct requests',
+          'professionalId or companyId is required for direct requests',
         );
       }
-      const professional = await this.professionalService.getByIdOrFail(
-        createDto.professionalId,
-      );
-      if (!professional.isActive()) {
-        throw new BadRequestException('Professional is not active');
+      
+      if (createDto.professionalId) {
+        const professional = await this.professionalService.getByIdOrFail(
+          createDto.professionalId,
+        );
+        if (!professional.isActive()) {
+          throw new BadRequestException('Professional is not active');
+        }
+        providerId = professional.serviceProviderId;
+      } else if (createDto.companyId) {
+        const company = await this.companyService.getByIdOrFail(
+          createDto.companyId,
+        );
+        if (!company.isActive()) {
+          throw new BadRequestException('Company is not active');
+        }
+        providerId = company.serviceProviderId;
       }
-      providerId = professional.serviceProviderId;
     }
 
     // For public requests, validate trade
@@ -166,13 +177,6 @@ export class RequestService {
     return this.requestRepository.findByProviderId(providerId);
   }
 
-  /**
-   * Find requests for a professional (by their serviceProviderId)
-   */
-  async findByProfessionalId(professionalId: string): Promise<RequestEntity[]> {
-    const professional = await this.professionalService.getByIdOrFail(professionalId);
-    return this.requestRepository.findByProviderId(professional.serviceProviderId);
-  }
 
   async findPublicRequests(tradeIds?: string[]): Promise<RequestEntity[]> {
     return this.requestRepository.findPublicRequests(tradeIds);
