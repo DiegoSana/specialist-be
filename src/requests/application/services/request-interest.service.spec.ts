@@ -377,7 +377,8 @@ describe('RequestInterestService', () => {
 
       expect(result.providerId).toBe('sp-123');
       expect(result.status).toBe(RequestStatus.ACCEPTED);
-      expect(mockRequestInterestRepository.removeAllByRequestId).toHaveBeenCalledWith('request-123');
+      // Interests are kept when assigning a provider (not deleted)
+      expect(mockRequestInterestRepository.removeAllByRequestId).not.toHaveBeenCalled();
       expect(mockEventBus.publish).toHaveBeenCalled();
     });
 
