@@ -695,9 +695,16 @@ model Company {
   - [ ] Implementar guards/decorators para validar verificación antes de acciones críticas
   - [ ] Agregar validación en servicios de aplicación
   - [ ] Retornar error descriptivo cuando falta verificación requerida
-  - [ ] Considerar: ¿crear perfil profesional/empresa requiere teléfono verificado?
-  - [ ] Considerar: ¿expresar interés en solicitud requiere email verificado?
-  - [ ] Considerar: ¿recibir notificaciones por WhatsApp requiere teléfono verificado?
+  
+  **Acciones que requieren teléfono verificado:**
+  - [ ] Expresar interés en una solicitud (`POST /requests/:id/interest`)
+  - [ ] Activar perfil especialista (`POST /professionals/me/activate`)
+  - [ ] Activar perfil empresa (`POST /companies/me/activate`) - Si quieres tener tu perfil activo, debes verificar el teléfono
+  - [ ] Aceptar una solicitud (cambiar estado a ACCEPTED)
+  - [ ] Crear una solicitud (`POST /requests`)
+  
+  **Acciones que requieren email verificado:**
+  - [ ] (Por definir según necesidades del negocio)
 
 ### Notificaciones y Comunicaciones
 - [ ] **Integración de Twilio WhatsApp en Notificaciones**
@@ -710,8 +717,16 @@ model Company {
   - [ ] Agregar tests para envío de notificaciones por WhatsApp
 
 - [ ] **Follow-up Interactivo por WhatsApp**
+  - [ ] **Tracking de clicks en botón de WhatsApp**
+    - [ ] Crear endpoint para registrar click en botón de contacto por WhatsApp
+    - [ ] Modelo de datos para almacenar eventos de click (RequestContactClick)
+      - Campos: requestId, clickedByUserId, providerId (quien fue contactado), timestamp, source (client/professional)
+    - [ ] Integrar tracking en frontend: llamar endpoint cuando se hace click en botón WhatsApp
+    - [ ] Agregar tracking tanto para clicks desde cliente hacia provider como viceversa
+    - [ ] Considerar usar eventos de dominio para desacoplar tracking del flujo principal
   - [ ] Investigar funcionalidad de follow-up automático para Requests
   - [ ] Definir triggers: tiempo sin actividad después del primer contacto
+  - [ ] Usar datos de tracking para determinar cuándo hacer follow-up (ej: si hubo click pero no respuesta)
   - [ ] Diseñar flujo de preguntas interactivas por WhatsApp
   - [ ] Implementar webhook endpoint para recibir respuestas de Twilio
   - [ ] Procesar respuestas y actualizar estado del Request según respuesta
@@ -719,12 +734,29 @@ model Company {
   - [ ] Agregar configuración de tiempos de follow-up (ej: 3 días, 7 días)
   - [ ] Implementar lógica para evitar múltiples follow-ups
   - [ ] Agregar tests para webhook de Twilio y procesamiento de respuestas
+  - [ ] Agregar tests para tracking de clicks
   - [ ] Documentar flujo completo de follow-up interactivo
 
 ### UX
 - [ ] Notificaciones push (web)
 - [ ] Tiempo real con WebSockets
 - [ ] Búsqueda avanzada de especialistas
+
+### Soporte y Chat
+- [ ] **Chat con Administrador en Request**
+  - [ ] Agregar botón de chat con administrador en pantalla de detalle de request
+  - [ ] Botón visible tanto para clientes como para especialistas
+  - [ ] Implementar sistema de chat/mensajería con administradores
+  - [ ] Considerar opciones:
+    - Integración con servicio de chat externo (Intercom, Crisp, etc.)
+    - Chat interno con notificaciones a administradores
+    - Sistema de tickets de soporte
+  - [ ] Contexto del chat debe incluir información del request (ID, título, estado)
+  - [ ] Permitir que usuarios reporten problemas específicos del request
+  - [ ] Notificaciones a administradores cuando hay nuevos mensajes
+  - [ ] Panel de administración para gestionar conversaciones de soporte
+  - [ ] Agregar tests para funcionalidad de chat
+  - [ ] Documentar flujo de soporte
 
 ---
 
