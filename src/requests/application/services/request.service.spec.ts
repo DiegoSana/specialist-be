@@ -711,23 +711,6 @@ describe('RequestService', () => {
     });
   });
 
-  describe('findByProfessionalId', () => {
-    it('should return all requests for a professional', async () => {
-      const professional = createMockProfessional({ id: 'prof-123' });
-      const requests = [createMockRequest()];
-
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
-      mockRequestRepository.findByProviderId.mockResolvedValue(requests);
-
-      const result = await service.findByProfessionalId('prof-123');
-
-      expect(result).toHaveLength(1);
-      expect(mockProfessionalService.getByIdOrFail).toHaveBeenCalledWith('prof-123');
-      expect(mockRequestRepository.findByProviderId).toHaveBeenCalledWith(
-        'service-provider-123',
-      );
-    });
-  });
 
   describe('findPublicRequests', () => {
     it('should return public requests', async () => {

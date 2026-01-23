@@ -177,6 +177,7 @@ export class AuthenticationService {
           UserEntity.createOAuth({
             id: randomUUID(),
             email: googleUser.email,
+            emailVerified: true,
             firstName: googleUser.firstName,
             lastName: googleUser.lastName,
             profilePictureUrl: googleUser.profilePictureUrl,

@@ -39,6 +39,8 @@ export class InterestedProfessionalResponseDto {
       profileImage: { type: 'string', nullable: true },
       averageRating: { type: 'number' },
       totalReviews: { type: 'number' },
+      whatsapp: { type: 'string', nullable: true },
+      phone: { type: 'string', nullable: true },
     },
   })
   provider?: {
@@ -48,6 +50,8 @@ export class InterestedProfessionalResponseDto {
     profileImage: string | null;
     averageRating: number;
     totalReviews: number;
+    whatsapp: string | null;
+    phone: string | null;
   };
 
   /**
@@ -71,6 +75,8 @@ export class InterestedProfessionalResponseDto {
         profileImage: entity.provider.profileImage,
         averageRating: entity.provider.averageRating,
         totalReviews: entity.provider.totalReviews,
+        whatsapp: entity.provider.whatsapp || null,
+        phone: entity.provider.phone || null,
       };
     }
 

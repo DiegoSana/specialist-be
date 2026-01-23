@@ -177,8 +177,8 @@ export class ProfessionalService {
     }
 
     // Get completed requests for this professional
-    const completedRequests = await this.requestService.findByProfessionalId(
-      professional.id,
+    const completedRequests = await this.requestService.findByProviderId(
+      professional.serviceProviderId,
     );
     const doneRequests = completedRequests.filter(
       (req) => req.status === RequestStatus.DONE,
@@ -217,8 +217,8 @@ export class ProfessionalService {
     }
 
     // For the professional viewing their own profile, include photos from their completed work
-    const completedRequests = await this.requestService.findByProfessionalId(
-      professional.id,
+    const completedRequests = await this.requestService.findByProviderId(
+      professional.serviceProviderId,
     );
     const doneRequests = completedRequests.filter(
       (req) => req.status === RequestStatus.DONE,

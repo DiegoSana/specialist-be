@@ -45,6 +45,8 @@ export class PrismaRequestInterestRepository
           profileImage: prof.profileImage || user?.profilePictureUrl || null,
           averageRating: sp.averageRating,
           totalReviews: sp.totalReviews,
+          whatsapp: prof.whatsapp || null,
+          phone: prof.phone || null,
         };
       } else if (sp.type === ProviderType.COMPANY && sp.company) {
         providerInfo = {
@@ -54,6 +56,8 @@ export class PrismaRequestInterestRepository
           profileImage: sp.company.profileImage || null,
           averageRating: sp.averageRating,
           totalReviews: sp.totalReviews,
+          whatsapp: null,
+          phone: sp.company.phone || null,
         };
       }
     }

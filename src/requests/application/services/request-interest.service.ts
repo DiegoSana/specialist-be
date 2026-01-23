@@ -268,6 +268,39 @@ export class RequestInterestService {
   }
 
   /**
+   * Get all requests where the current provider expressed interest.
+   * Returns limited information if request was assigned to another provider.
+   */
+  async getMyInterestedRequests(
+    serviceProviderId: string,
+  ): Promise<RequestInterestEntity[]> {
+    // Get all interests for this provider
+    const interests =
+      await this.requestInterestRepository.findByServiceProviderId(
+        serviceProviderId,
+      );
+
+    // For each interest, fetch the request to determine if it was assigned to this provider
+    const interestsWithRequests = await Promise.all(
+      interests.map(async (interest) => {
+        const request = await this.requestRepository.findById(
+          interest.requestId,
+        );
+        return { interest, request };
+      }),
+    );
+
+    // Return interests with attached request info
+    return interestsWithRequests.map(({ interest, request }) => {
+      if (request) {
+        // Attach request info to interest entity
+        (interest as any).request = request;
+      }
+      return interest;
+    });
+  }
+
+  /**
    * Client assigns a provider to the request.
    * Uses domain entity's canAssignProviderBy for permission validation.
    */
@@ -337,6 +370,7 @@ export class RequestInterestService {
 
     // Assign the provider and change status to ACCEPTED
     // Also mark as no longer public
+    // Note: We keep interests in DB so providers can see requests they were interested in
     const fromStatus = request.status;
     const updatedRequest = await this.requestRepository.save(
       request.withChanges({
@@ -346,8 +380,8 @@ export class RequestInterestService {
       }),
     );
 
-    // Clean up all interests for this request
-    await this.requestInterestRepository.removeAllByRequestId(requestId);
+    // Keep interests in DB - providers can still see they expressed interest
+    // even if request was assigned to someone else
 
     // Get client name for notifications
     const client = (updatedRequest as any).client;
@@ -394,15 +428,108 @@ export class RequestInterestService {
   }
 
   /**
-   * @deprecated Use assignProvider instead
+   * Client unassigns the provider from a request.
+   * Changes status back to PENDING and makes request public again.
    */
-  async assignProfessional(
+  async unassignProvider(
     requestId: string,
     ctx: InterestAuthContext,
-    professionalId: string,
   ): Promise<RequestEntity> {
-    // Get professional to find their serviceProviderId
-    const professional = await this.professionalService.getByIdOrFail(professionalId);
-    return this.assignProvider(requestId, ctx, professional.serviceProviderId);
+    const request = await this.requestRepository.findById(requestId);
+    if (!request) {
+      throw new NotFoundException('Request not found');
+    }
+
+    // Convert InterestAuthContext to RequestAuthContext for domain validation
+    const requestCtx: RequestAuthContext = {
+      userId: ctx.userId,
+      serviceProviderId: null,
+      isAdmin: ctx.isAdmin,
+    };
+
+    // Validate using domain logic
+    if (!request.canUnassignProviderBy(requestCtx)) {
+      if (request.clientId !== ctx.userId && !ctx.isAdmin) {
+        throw new ForbiddenException(
+          'Only the request owner can unassign a provider',
+        );
+      }
+      if (!request.providerId) {
+        throw new BadRequestException('Request has no provider assigned');
+      }
+      if (!request.isAccepted()) {
+        throw new BadRequestException(
+          'Can only unassign provider from accepted requests',
+        );
+      }
+      throw new ForbiddenException('Cannot unassign provider from this request');
+    }
+
+    const fromStatus = request.status;
+    const fromProviderId = request.providerId;
+
+    // Unassign provider, change status to PENDING, and make public again
+    const updatedRequest = await this.requestRepository.save(
+      request.withChanges({
+        providerId: null,
+        status: RequestStatus.PENDING,
+        isPublic: true,
+      }),
+    );
+
+    // Get client name for notifications
+    const client = (updatedRequest as any).client;
+    const clientName = client
+      ? `${client.firstName} ${client.lastName}`
+      : 'Cliente';
+
+    // Get provider info for notifications
+    let providerUserId: string | null = null;
+    let providerType: ProviderType | null = null;
+    let providerName: string | null = null;
+
+    if (fromProviderId) {
+      // Try Professional first
+      const professional = await this.professionalService.findByServiceProviderId(fromProviderId);
+      if (professional) {
+        providerUserId = professional.userId;
+        providerType = ProviderType.PROFESSIONAL;
+        providerName = (professional as any).user
+          ? `${(professional as any).user.firstName} ${(professional as any).user.lastName}`
+          : 'Especialista';
+      } else {
+        // Try Company
+        const company = await this.companyService.findByServiceProviderId(fromProviderId);
+        if (company) {
+          providerUserId = company.userId;
+          providerType = ProviderType.COMPANY;
+          providerName = company.companyName;
+        }
+      }
+    }
+
+    // Publish status change event
+    if (updatedRequest.status !== fromStatus) {
+      await this.eventBus.publish(
+        new RequestStatusChangedEvent({
+          requestId: updatedRequest.id,
+          requestTitle: updatedRequest.title,
+          clientId: updatedRequest.clientId,
+          clientName,
+          serviceProviderId: null,
+          providerUserId,
+          providerType,
+          providerName,
+          // Backward compat
+          professionalId: null,
+          professionalName: providerName,
+          fromStatus,
+          toStatus: updatedRequest.status,
+          changedByUserId: ctx.userId,
+        }),
+      );
+    }
+
+    return updatedRequest;
   }
 }

@@ -26,13 +26,6 @@ export class AssignProviderDto {
 }
 
 /**
- * @deprecated Use AssignProviderDto instead
+ * @deprecated Removed - Use AssignProviderDto instead
+ * This DTO was removed in favor of AssignProviderDto which works for both Professionals and Companies.
  */
-export class AssignProfessionalDto {
-  @ApiProperty({
-    example: 'uuid-of-professional',
-    description: 'The Professional ID to assign (deprecated, use serviceProviderId)',
-  })
-  @IsString()
-  professionalId: string;
-}
