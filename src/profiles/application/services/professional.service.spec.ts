@@ -44,7 +44,7 @@ describe('ProfessionalService', () => {
     };
 
     mockRequestService = {
-      findByProfessionalId: jest.fn(),
+      findByProviderId: jest.fn(),
     };
 
     mockProfileToggleService = {
@@ -190,7 +190,7 @@ describe('ProfessionalService', () => {
       ];
 
       mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
-      mockRequestService.findByProfessionalId.mockResolvedValue(
+      mockRequestService.findByProviderId.mockResolvedValue(
         completedRequests,
       );
 
