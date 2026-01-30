@@ -22,6 +22,11 @@
 - [**NOTIFICATIONS.md**](./guides/NOTIFICATIONS.md) - Email notifications & preferences
 - [**REVIEW_MODERATION.md**](./guides/REVIEW_MODERATION.md) - Review approval workflow
 
+### WhatsApp Follow-up System
+- [**WhatsApp Follow-up**](./guides/whatsapp/README.md) - Sistema de follow-up automático vía WhatsApp
+  - [**Setup**](./guides/whatsapp/SETUP.md) - Configuración inicial completa
+  - [**Testing**](./guides/whatsapp/TESTING.md) - Guía completa de testing
+
 ### Architecture Decision Records (ADRs)
 - [**ADR-001-DUAL-PROFILE-ARCHITECTURE.md**](./decisions/ADR-001-DUAL-PROFILE-ARCHITECTURE.md) - Dual profile system (client + professional)
 - [**ADR-004-SERVICE-PROVIDER-ABSTRACTION.md**](./decisions/ADR-004-SERVICE-PROVIDER-ABSTRACTION.md) - ServiceProvider polymorphic pattern ⭐ NEW

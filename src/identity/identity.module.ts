@@ -30,6 +30,7 @@ import { VerificationController } from './presentation/verification.controller';
 
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
+import { MessagingModule } from '../shared/infrastructure/messaging/messaging.module';
 
 // Cross-context dependency - will be properly injected via forwardRef
 import { ProfilesModule } from '../profiles/profiles.module';
@@ -37,6 +38,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
 @Module({
   imports: [
     PrismaModule,
+    MessagingModule,
     forwardRef(() => ProfilesModule),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

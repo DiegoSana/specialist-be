@@ -14,8 +14,14 @@ export class InMemoryEventBus implements EventBus {
   private readonly logger = new Logger(InMemoryEventBus.name);
 
   async publish(event: DomainEvent): Promise<void> {
+    this.logger.debug(`Publishing event: ${event.name}`);
+    const listenerCount = this.emitter.listenerCount(event.name);
+    this.logger.debug(`Event ${event.name} has ${listenerCount} listener(s)`);
+    
     this.emitter.emit(event.name, event);
     this.emitter.emit('*', event);
+    
+    this.logger.debug(`Event ${event.name} emitted successfully`);
   }
 
   // Note: not part of the EventBus port yet; kept for infra wiring/tests.

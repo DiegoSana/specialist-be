@@ -1,0 +1,43 @@
+{
+  "follow_up_3_days": {
+    "es": "Hola! 👋 Hace 3 días te asignamos la solicitud \"{title}\". ¿Ya empezaste el trabajo? Responde 'sí' si ya comenzaste o 'no' si aún no.",
+    "en": "Hi! 👋 We assigned you the request \"{title}\" 3 days ago. Have you started the work? Reply 'yes' if you've started or 'no' if not yet."
+  },
+  "follow_up_7_days": {
+    "es": "Hola! Recordatorio: tienes la solicitud \"{title}\" pendiente desde hace 7 días. ¿Necesitas ayuda o información adicional?",
+    "en": "Hi! Reminder: you have the request \"{title}\" pending from 7 days ago. Do you need help or additional information?"
+  },
+  "follow_up_5_days_in_progress": {
+    "es": "Hola! 👋 ¿Cómo va el trabajo de \"{title}\"? Hace 5 días que empezaste. Responde 'terminé' cuando esté listo o 'necesito ayuda' si tienes dudas.",
+    "en": "Hi! 👋 How's the work going for \"{title}\"? You started 5 days ago. Reply 'done' when finished or 'need help' if you have questions."
+  },
+  "follow_up_10_days_in_progress": {
+    "es": "Hola! Notamos que el trabajo de \"{title}\" lleva 10 días en progreso. ¿Necesitás ayuda o hay algún problema? Estamos acá para ayudarte.",
+    "en": "Hi! We noticed the work for \"{title}\" has been in progress for 10 days. Do you need help or is there a problem? We're here to help."
+  },
+  "follow_up_review_1_day": {
+    "es": "¡Hola! El trabajo de \"{title}\" fue completado ayer. ¿Podrías dejar una reseña? Tu opinión nos ayuda mucho. Responde 'sí' para dejar tu reseña.",
+    "en": "Hi! The work for \"{title}\" was completed yesterday. Could you leave a review? Your opinion helps us a lot. Reply 'yes' to leave your review."
+  },
+  "status_update_confirmed": {
+    "es": "✅ Confirmado! Actualizamos el estado de tu solicitud. Gracias por responder.",
+    "en": "✅ Confirmed! We've updated your request status. Thanks for responding."
+  },
+  "status_update_started": {
+    "es": "✅ Perfecto! Marcamos que empezaste el trabajo. ¡Mucha suerte!",
+    "en": "✅ Perfect! We've marked that you started the work. Good luck!"
+  },
+  "status_update_completed": {
+    "es": "✅ Excelente! Marcamos el trabajo como completado. El cliente será notificado.",
+    "en": "✅ Excellent! We've marked the work as completed. The client will be notified."
+  },
+  "status_update_cancelled": {
+    "es": "✅ Entendido. Hemos cancelado la solicitud según tu indicación.",
+    "en": "✅ Understood. We've cancelled the request as you indicated."
+  },
+  "unknown_response": {
+    "es": "Gracias por tu mensaje. Si querés confirmar que empezaste, responde 'sí'. Si terminaste, responde 'terminé'. Si necesitás ayuda, responde 'ayuda'.",
+    "en": "Thanks for your message. If you want to confirm you started, reply 'yes'. If you finished, reply 'done'. If you need help, reply 'help'."
+  }
+}
+

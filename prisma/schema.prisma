@@ -82,7 +82,7 @@ model ServiceProvider {
 
   professional Professional?
   company      Company?
-  requests     Request[]          @relation("Provider")
+  requests     Request[]         @relation("Provider")
   reviews      Review[]
   interests    RequestInterest[]
 
@@ -136,7 +136,7 @@ model Company {
   // Company info
   companyName   String
   legalName     String?
-  taxId         String?  @unique // CUIT/RUT - must be unique if provided
+  taxId         String? @unique // CUIT/RUT - must be unique if provided
   description   String?
   foundedYear   Int?
   employeeCount String? // "1-5", "6-20", "21-50", "50+"
@@ -182,11 +182,11 @@ model CompanyTrade {
 
 enum CompanyStatus {
   PENDING_VERIFICATION // Awaiting admin verification
-  ACTIVE               // Verified, can operate
-  VERIFIED             // Verified + special badge
-  INACTIVE             // Deactivated (user has Professional active)
-  REJECTED             // Verification failed
-  SUSPENDED            // Admin suspended
+  ACTIVE // Verified, can operate
+  VERIFIED // Verified + special badge
+  INACTIVE // Deactivated (user has Professional active)
+  REJECTED // Verification failed
+  SUSPENDED // Admin suspended
 }
 
 model Request {
@@ -209,11 +209,12 @@ model Request {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  client    User              @relation("Client", fields: [clientId], references: [id], onDelete: Cascade)
-  provider  ServiceProvider?  @relation("Provider", fields: [providerId], references: [id], onDelete: Cascade)
-  trade     Trade?            @relation(fields: [tradeId], references: [id])
-  review    Review?
-  interests RequestInterest[]
+  client       User                 @relation("Client", fields: [clientId], references: [id], onDelete: Cascade)
+  provider     ServiceProvider?     @relation("Provider", fields: [providerId], references: [id], onDelete: Cascade)
+  trade        Trade?               @relation(fields: [tradeId], references: [id])
+  review       Review?
+  interests    RequestInterest[]
+  interactions RequestInteraction[]
 
   @@map("requests")
 }
@@ -221,8 +222,8 @@ model Request {
 model RequestInterest {
   id                String          @id @default(uuid())
   requestId         String
-  serviceProviderId String          // Can be Professional or Company
-  message           String?         // Optional message from provider
+  serviceProviderId String // Can be Professional or Company
+  message           String? // Optional message from provider
   createdAt         DateTime        @default(now())
   request           Request         @relation(fields: [requestId], references: [id], onDelete: Cascade)
   serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
@@ -379,11 +380,11 @@ enum UserStatus {
 
 enum ProfessionalStatus {
   PENDING_VERIFICATION // Awaiting verification (new accounts)
-  ACTIVE               // Can operate
-  VERIFIED             // Can operate + special badge
-  INACTIVE             // Deactivated (user has Company active)
-  REJECTED             // Verification failed
-  SUSPENDED            // Admin suspended
+  ACTIVE // Can operate
+  VERIFIED // Can operate + special badge
+  INACTIVE // Deactivated (user has Company active)
+  REJECTED // Verification failed
+  SUSPENDED // Admin suspended
 }
 
 enum RequestStatus {
@@ -403,4 +404,61 @@ enum AuthProvider {
 enum ProviderType {
   PROFESSIONAL
   COMPANY
+}
+
+model RequestInteraction {
+  id               String               @id @default(uuid())
+  requestId        String
+  interactionType  InteractionType
+  status           InteractionStatus    @default(PENDING)
+  direction        InteractionDirection
+  channel          String               @default("WHATSAPP") // WHATSAPP | EMAIL
+  messageTemplate  String
+  messageContent   String
+  responseContent  String?
+  responseIntent   ResponseIntent?
+  scheduledFor     DateTime
+  sentAt           DateTime?
+  deliveredAt      DateTime?
+  respondedAt      DateTime?
+  twilioMessageSid String?              @unique
+  twilioStatus     String?
+  metadata         Json?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  request Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+  @@index([status, scheduledFor])
+  @@index([twilioMessageSid])
+  @@map("request_interactions")
+}
+
+enum InteractionType {
+  FOLLOW_UP
+  RESPONSE
+  STATUS_UPDATE
+}
+
+enum InteractionStatus {
+  PENDING
+  SENT
+  DELIVERED
+  RESPONDED
+  FAILED
+}
+
+enum InteractionDirection {
+  TO_CLIENT
+  TO_PROVIDER
+}
+
+enum ResponseIntent {
+  CONFIRMED
+  STARTED
+  COMPLETED
+  CANCELLED
+  NEEDS_INFO
+  UNKNOWN
 }
