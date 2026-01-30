@@ -3,55 +3,37 @@ import { ConfigService } from '@nestjs/config';
 import {
   VerificationService,
 } from '../../domain/ports/verification.service';
+import { TwilioClientService } from '../../../shared/infrastructure/messaging/twilio-client.service';
 
 /**
  * Twilio Verify service adapter.
  * Implements phone and email verification using Twilio Verify API.
+ * Uses the shared TwilioClientService to avoid duplicating client initialization.
  *
  * Environment variables required:
- * - TWILIO_ACCOUNT_SID
- * - TWILIO_AUTH_TOKEN
+ * - TWILIO_ACCOUNT_SID (shared via TwilioClientService)
+ * - TWILIO_AUTH_TOKEN (shared via TwilioClientService)
  * - TWILIO_VERIFY_SERVICE_SID
  */
 @Injectable()
 export class TwilioVerifyService implements VerificationService {
   private readonly logger = new Logger(TwilioVerifyService.name);
-  private twilioClient: any;
 
-  constructor(private readonly config: ConfigService) {
-    this.initializeTwilio();
-  }
-
-  private initializeTwilio(): void {
-    const accountSid = this.config.get<string>('TWILIO_ACCOUNT_SID');
-    const authToken = this.config.get<string>('TWILIO_AUTH_TOKEN');
-
-    if (!accountSid || !authToken) {
-      this.logger.warn(
-        'Twilio credentials not configured. Verification will fail.',
-      );
-      return;
-    }
-
-    try {
-      // Dynamic import to avoid requiring twilio at build time if not installed
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const twilio = require('twilio');
-      this.twilioClient = twilio(accountSid, authToken);
-    } catch (error) {
-      this.logger.error('Failed to initialize Twilio client', error);
-    }
-  }
+  constructor(
+    private readonly config: ConfigService,
+    private readonly twilioClientService: TwilioClientService,
+  ) {}
 
   async requestPhoneVerification(phone: string): Promise<string> {
-    if (!this.twilioClient) {
+    const twilioClient = this.twilioClientService.getClient();
+    if (!twilioClient) {
       throw new Error('Twilio client is not initialized. Please configure TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.');
     }
 
     const serviceSid = this.getServiceSidOrThrow();
 
     try {
-      const verification = await this.twilioClient.verify.v2
+      const verification = await twilioClient.verify.v2
         .services(serviceSid)
         .verifications.create({
           to: phone,
@@ -93,7 +75,8 @@ export class TwilioVerifyService implements VerificationService {
     phone: string,
     code: string,
   ): Promise<boolean> {
-    if (!this.twilioClient) {
+    const twilioClient = this.twilioClientService.getClient();
+    if (!twilioClient) {
       this.logger.error('Twilio client is not initialized');
       return false;
     }
@@ -101,7 +84,7 @@ export class TwilioVerifyService implements VerificationService {
     const serviceSid = this.getServiceSidOrThrow();
 
     try {
-      const verificationCheck = await this.twilioClient.verify.v2
+      const verificationCheck = await twilioClient.verify.v2
         .services(serviceSid)
         .verificationChecks.create({
           to: phone,
@@ -128,14 +111,15 @@ export class TwilioVerifyService implements VerificationService {
   }
 
   async requestEmailVerification(email: string): Promise<string> {
-    if (!this.twilioClient) {
+    const twilioClient = this.twilioClientService.getClient();
+    if (!twilioClient) {
       throw new Error('Twilio client is not initialized. Please configure TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.');
     }
 
     const serviceSid = this.getServiceSidOrThrow();
 
     try {
-      const verification = await this.twilioClient.verify.v2
+      const verification = await twilioClient.verify.v2
         .services(serviceSid)
         .verifications.create({
           to: email,
@@ -174,7 +158,8 @@ export class TwilioVerifyService implements VerificationService {
   }
 
   async confirmEmailVerification(email: string, code: string): Promise<boolean> {
-    if (!this.twilioClient) {
+    const twilioClient = this.twilioClientService.getClient();
+    if (!twilioClient) {
       this.logger.error('Twilio client is not initialized');
       return false;
     }
@@ -182,7 +167,7 @@ export class TwilioVerifyService implements VerificationService {
     const serviceSid = this.getServiceSidOrThrow();
 
     try {
-      const verificationCheck = await this.twilioClient.verify.v2
+      const verificationCheck = await twilioClient.verify.v2
         .services(serviceSid)
         .verificationChecks.create({
           to: email,
