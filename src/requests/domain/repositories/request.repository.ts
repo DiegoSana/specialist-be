@@ -1,4 +1,5 @@
 import { RequestEntity } from '../entities/request.entity';
+import { RequestStatus } from '@prisma/client';
 
 export interface RequestRepository {
   findById(id: string): Promise<RequestEntity | null>;
@@ -9,6 +10,15 @@ export interface RequestRepository {
     tradeIds: string[],
     city?: string,
     zone?: string,
+  ): Promise<RequestEntity[]>;
+
+  /**
+   * Find requests by status that were updated before a certain date.
+   * Useful for finding requests that need follow-ups.
+   */
+  findByStatusAndUpdatedBefore(
+    status: RequestStatus,
+    updatedBefore: Date,
   ): Promise<RequestEntity[]>;
 
   /**
