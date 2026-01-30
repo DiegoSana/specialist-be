@@ -34,6 +34,9 @@ RUN npm ci --only=production
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
+# Copy message templates JSON file (not included in dist by default)
+COPY --from=builder /app/src/shared/infrastructure/messaging/message-templates.json ./dist/shared/infrastructure/messaging/message-templates.json
+
 # Copy Prisma generated files
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
