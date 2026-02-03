@@ -101,4 +101,22 @@ export class AdminController {
   ) {
     return this.adminService.updateProfessionalStatus(id, updateDto, user);
   }
+
+  @Get('requests')
+  @ApiOperation({ summary: 'Get all requests (Admin only)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DONE', 'CANCELLED'] })
+  @ApiResponse({ status: 200, description: 'Requests retrieved successfully' })
+  async getAllRequests(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.adminService.getAllRequests(
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 10,
+      status as any,
+    );
+  }
 }
