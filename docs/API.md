@@ -145,11 +145,12 @@ Authorization: Bearer <token>
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/admin/users` | List all users |
+| `GET` | `/admin/users` | List all users (paginated) |
 | `GET` | `/admin/users/:id` | Get user by ID |
 | `PUT` | `/admin/users/:id/status` | Update user status |
-| `GET` | `/admin/professionals` | List all professionals |
+| `GET` | `/admin/professionals` | List all professionals (paginated) |
 | `PUT` | `/admin/professionals/:id/status` | Update professional status |
+| `GET` | `/admin/requests` | List all requests (paginated, optional status filter) |
 
 ### 📁 Storage (`/storage`)
 
