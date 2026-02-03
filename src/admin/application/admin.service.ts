@@ -6,6 +6,7 @@ import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service
 import { UserService } from '../../identity/application/services/user.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
+import { RequestStatus } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -125,5 +126,55 @@ export class AdminService {
       updateDto.status,
       user,
     );
+  }
+
+  async getAllRequests(page: number = 1, limit: number = 10, status?: RequestStatus) {
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+
+    const [requests, total] = await Promise.all([
+      this.prisma.request.findMany({
+        skip,
+        take: limit,
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          client: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          provider: {
+            select: {
+              id: true,
+            },
+          },
+          trade: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }),
+      this.prisma.request.count({ where }),
+    ]);
+
+    return {
+      data: requests,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

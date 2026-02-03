@@ -27,6 +27,10 @@
   - [**Setup**](./guides/whatsapp/SETUP.md) - Configuración inicial completa
   - [**Testing**](./guides/whatsapp/TESTING.md) - Guía completa de testing
 
+### Implementation Plans
+- [**WhatsApp Follow-up Plan**](./plans/whatsapp-followup-plan.md) - Plan completo de implementación del sistema de follow-up
+- [**Admin Portal Plan**](./plans/admin-portal-plan.md) - Plan de implementación del portal de administración ⭐ NEW
+
 ### Architecture Decision Records (ADRs)
 - [**ADR-001-DUAL-PROFILE-ARCHITECTURE.md**](./decisions/ADR-001-DUAL-PROFILE-ARCHITECTURE.md) - Dual profile system (client + professional)
 - [**ADR-004-SERVICE-PROVIDER-ABSTRACTION.md**](./decisions/ADR-004-SERVICE-PROVIDER-ABSTRACTION.md) - ServiceProvider polymorphic pattern ⭐ NEW

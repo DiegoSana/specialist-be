@@ -15,7 +15,7 @@ The application follows DDD principles organized in bounded contexts:
 | **Requests** | Service requests, interests, assignments |
 | **Reputation** | Reviews and ratings |
 | **Storage** | File uploads and media |
-| **Admin** | Administrative operations |
+| **Admin** | Administrative operations (see [Admin Portal Plan](./docs/plans/admin-portal-plan.md)) |
 | **Contact** | Contact requests between users |
 
 Each context follows the layered architecture:
