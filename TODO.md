@@ -742,6 +742,33 @@ model Company {
 - [ ] Tiempo real con WebSockets
 - [ ] Búsqueda avanzada de especialistas
 
+### Portal de Administración
+
+> 📖 **Plan completo:** [docs/plans/admin-portal-plan.md](./docs/plans/admin-portal-plan.md)
+
+**Estado:** Planificación - Pendiente decidir stack tecnológico FE/UI
+
+**Decisiones pendientes:**
+- [ ] Decidir stack tecnológico frontend (Next.js, React Admin, AdminJS, Shadcn UI)
+- [ ] Decidir UI framework/component library
+- [ ] Definir funcionalidades básicas MVP
+- [ ] Crear mockups/wireframes básicos
+
+**Funcionalidades MVP planificadas:**
+- [ ] Dashboard con métricas y KPIs
+- [ ] Gestión de usuarios (listar, ver, editar, cambiar estado)
+- [ ] Gestión de solicitudes (listar, ver, acciones administrativas)
+- [ ] Gestión de perfiles profesionales y empresas (verificar, suspender)
+- [ ] Moderación de reviews pendientes
+- [ ] Gestión de notificaciones (estadísticas, reenviar fallidas)
+
+**Fases de implementación:**
+- [ ] Fase 1: Setup y Autenticación
+- [ ] Fase 2: Dashboard y Gestión de Usuarios
+- [ ] Fase 3: Gestión de Solicitudes y Perfiles
+- [ ] Fase 4: Moderación y Notificaciones
+- [ ] Fase 5: Polish y Mejoras
+
 ### Soporte y Chat
 - [ ] **Chat con Administrador en Request**
   - [ ] Agregar botón de chat con administrador en pantalla de detalle de request
