@@ -4,6 +4,7 @@
  * This test validates DDD architectural rules:
  * - Repositories must not be imported from other bounded contexts
  * - Cross-context communication should happen through Services only
+ * - PrismaService must only be imported in infrastructure repositories
  *
  * See ADR-002-REPOSITORY-ENCAPSULATION.md for details
  */
@@ -93,6 +94,104 @@ function findCrossContextRepositoryImports(
   });
 
   return violations;
+}
+
+/**
+ * Check if a file imports PrismaService
+ */
+function findPrismaServiceImports(filePath: string): {
+  file: string;
+  line: number;
+  lineContent: string;
+}[] {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split('\n');
+  const violations: {
+    file: string;
+    line: number;
+    lineContent: string;
+  }[] = [];
+
+  // Pattern to match PrismaService imports (exact word boundary match)
+  // Matches: import { PrismaService } from '...'
+  // Matches: import PrismaService from '...'
+  // Matches: import { Something, PrismaService } from '...'
+  const prismaImportPattern =
+    /import\s+(?:{[\s\S]*?\bPrismaService\b[\s\S]*?}|\*\s+as\s+PrismaService|PrismaService)\s+from\s+['"]/;
+  
+  // Pattern to match PrismaService type annotation in constructor/injection
+  const prismaConstructorPattern =
+    /(?:private|public|protected)\s+(?:readonly\s+)?\w+:\s*PrismaService\b/;
+  const prismaInjectionPattern =
+    /@Inject\([^)]*\bPrismaService\b/;
+  
+  // Pattern to match this.prisma usage (indicates PrismaService dependency)
+  const prismaUsagePattern =
+    /this\.prisma\./;
+
+  lines.forEach((line, index) => {
+    // Skip comments
+    const trimmedLine = line.trim();
+    if (trimmedLine.startsWith('//') || trimmedLine.startsWith('*')) {
+      return;
+    }
+
+    const hasImport = prismaImportPattern.test(line);
+    const hasConstructor = prismaConstructorPattern.test(line);
+    const hasInjection = prismaInjectionPattern.test(line);
+    const hasUsage = prismaUsagePattern.test(line);
+
+    // Only flag if it's a real PrismaService import/usage
+    // Use word boundary to avoid false positives like "PrismaServiceProviderMapper"
+    if (hasImport || hasConstructor || hasInjection || hasUsage) {
+      // Additional check: ensure it's actually PrismaService, not a substring
+      const isRealPrismaService =
+        /\bPrismaService\b/.test(line) &&
+        !line.match(/PrismaService\w+/) && // Not followed by more word chars
+        !line.match(/\w+PrismaService/); // Not preceded by word chars
+
+      if (isRealPrismaService || hasUsage) {
+        violations.push({
+          file: filePath,
+          line: index + 1,
+          lineContent: trimmedLine,
+        });
+      }
+    }
+  });
+
+  return violations;
+}
+
+/**
+ * Check if a file is allowed to import PrismaService
+ */
+function isAllowedPrismaImport(filePath: string): boolean {
+  // Allow PrismaService in infrastructure repositories
+  if (filePath.includes('/infrastructure/repositories/')) {
+    return true;
+  }
+
+  // Allow PrismaService in the PrismaService/PrismaModule itself
+  if (
+    filePath.includes('/shared/infrastructure/prisma/prisma.service.ts') ||
+    filePath.includes('/shared/infrastructure/prisma/prisma.module.ts')
+  ) {
+    return true;
+  }
+
+  // Allow in health checks (they might need direct DB access)
+  if (filePath.includes('/health/')) {
+    return true;
+  }
+
+  // Allow in jobs (they might need direct DB access for batch operations)
+  if (filePath.includes('/application/jobs/')) {
+    return true;
+  }
+
+  // Block everywhere else (application services, domain, presentation, etc.)
+  return false;
 }
 
 describe('Architecture Fitness Functions', () => {
@@ -211,6 +310,70 @@ describe('Architecture Fitness Functions', () => {
         throw new Error(errorMessage);
       }
       expect(violations.length).toBe(0);
+    });
+  });
+
+  describe('PrismaService Encapsulation', () => {
+    it('should only import PrismaService in infrastructure repositories', () => {
+      const allViolations: {
+        file: string;
+        line: number;
+        lineContent: string;
+      }[] = [];
+
+      // Check all TypeScript files in src
+      const srcPath = path.join(process.cwd(), 'src');
+      const allFiles = getAllTsFiles(srcPath);
+
+      for (const file of allFiles) {
+        // Skip test files
+        if (file.includes('.spec.') || file.includes('__tests__')) {
+          continue;
+        }
+
+        // Check if file imports PrismaService
+        const prismaImports = findPrismaServiceImports(file);
+
+        // If file has PrismaService imports, check if it's allowed
+        if (prismaImports.length > 0 && !isAllowedPrismaImport(file)) {
+          allViolations.push(...prismaImports);
+        }
+      }
+
+      // Format violations for error message
+      const errorMessage =
+        allViolations.length > 0
+          ? [
+              '\n\n🚨 PRISMA SERVICE ENCAPSULATION VIOLATION DETECTED 🚨',
+              '',
+              'The following files import PrismaService outside of infrastructure repositories.',
+              'This violates DDD layering principles.',
+              '',
+              '❌ PrismaService should only be used in:',
+              '   - Infrastructure repositories (infrastructure/repositories/)',
+              '   - Application jobs (application/jobs/)',
+              '   - Health checks (health/)',
+              '',
+              '✅ Instead of using PrismaService directly, use:',
+              '   - Repository interfaces in domain layer',
+              '   - Service methods in application layer',
+              '',
+              'Violations found:',
+              '',
+              ...allViolations.map(
+                (v) =>
+                  `  📁 ${v.file}:${v.line}\n     Line: ${v.lineContent}\n`,
+              ),
+              '',
+              '📚 See PERSISTENCE_BOUNDARIES.md for more details.',
+              '',
+            ].join('\n')
+          : '';
+
+      if (allViolations.length > 0) {
+        throw new Error(errorMessage);
+      }
+      expect(allViolations.length).toBe(0);
     });
   });
 
