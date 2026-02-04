@@ -107,3 +107,4 @@ export class PrismaCompanyQueryRepository implements CompanyQueryRepository {
   }
 }
 
+

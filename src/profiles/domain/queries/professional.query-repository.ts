@@ -81,3 +81,4 @@ export interface ProfessionalQueryRepository {
 // Token for dependency injection
 export const PROFESSIONAL_QUERY_REPOSITORY = Symbol('ProfessionalQueryRepository');
 
+
