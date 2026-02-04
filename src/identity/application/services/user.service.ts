@@ -8,6 +8,10 @@ import {
   UserRepository,
   USER_REPOSITORY,
 } from '../../domain/repositories/user.repository';
+import {
+  UserQueryRepository,
+  USER_QUERY_REPOSITORY,
+} from '../../domain/queries/user.query-repository';
 import { UserEntity, UserAuthContext } from '../../domain/entities/user.entity';
 
 /**
@@ -19,6 +23,8 @@ import { UserEntity, UserAuthContext } from '../../domain/entities/user.entity';
 export class UserService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    @Inject(USER_QUERY_REPOSITORY)
+    private readonly userQueryRepository: UserQueryRepository,
   ) {}
 
   // ─────────────────────────────────────────────────────────────
@@ -224,5 +230,38 @@ export class UserService {
 
     const next = targetUser.withStatus(status);
     return this.userRepository.save(next);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Statistics methods (for admin dashboard)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Get user statistics for admin dashboard
+   * @returns User statistics
+   */
+  async getUserStats() {
+    return this.userQueryRepository.getUserStats();
+  }
+
+  /**
+   * Get all users for admin (paginated)
+   */
+  async getAllUsersForAdmin(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const { users, total } = await this.userQueryRepository.findAllForAdmin({
+      skip,
+      take: limit,
+    });
+
+    return {
+      data: users,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

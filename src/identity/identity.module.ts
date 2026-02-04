@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 // Domain
 import { USER_REPOSITORY } from './domain/repositories/user.repository';
+import { USER_QUERY_REPOSITORY } from './domain/queries/user.query-repository';
 import {
   VERIFICATION_SERVICE,
 } from './domain/ports/verification.service';
@@ -16,6 +17,7 @@ import { VerificationService } from './application/services/verification.service
 
 // Infrastructure
 import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
+import { PrismaUserQueryRepository } from './infrastructure/queries/prisma-user.query-repository';
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
 import { LocalStrategy } from './infrastructure/strategies/local.strategy';
 import { GoogleStrategy } from './infrastructure/strategies/google.strategy';
@@ -69,6 +71,10 @@ import { ProfilesModule } from '../profiles/profiles.module';
     {
       provide: USER_REPOSITORY,
       useClass: PrismaUserRepository,
+    },
+    {
+      provide: USER_QUERY_REPOSITORY,
+      useClass: PrismaUserQueryRepository,
     },
     {
       provide: VERIFICATION_SERVICE,
