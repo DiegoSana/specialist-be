@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { RequestService } from './request.service';
 import { REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
+import { REQUEST_QUERY_REPOSITORY } from '../../domain/queries/request.query-repository';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { CompanyService } from '../../../profiles/application/services/company.service';
 import { UserService } from '../../../identity/application/services/user.service';
@@ -21,6 +22,7 @@ import { RequestAuthContext } from '../../domain/entities/request.entity';
 describe('RequestService', () => {
   let service: RequestService;
   let mockRequestRepository: any;
+  let mockRequestQueryRepository: any;
   let mockProfessionalService: any;
   let mockCompanyService: any;
   let mockUserService: any;
@@ -47,6 +49,11 @@ describe('RequestService', () => {
       findAvailableForProfessional: jest.fn(),
     };
 
+    mockRequestQueryRepository = {
+      getRequestStats: jest.fn(),
+      findAllForAdmin: jest.fn(),
+    };
+
     mockProfessionalService = {
       getByIdOrFail: jest.fn(),
       findByUserId: jest.fn(),
@@ -69,6 +76,7 @@ describe('RequestService', () => {
       providers: [
         RequestService,
         { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
+        { provide: REQUEST_QUERY_REPOSITORY, useValue: mockRequestQueryRepository },
         { provide: EVENT_BUS, useValue: mockEventBus },
         { provide: ProfessionalService, useValue: mockProfessionalService },
         { provide: CompanyService, useValue: mockCompanyService },

@@ -3,7 +3,8 @@ import { NotFoundException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { UserService } from '../../identity/application/services/user.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
-import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
+import { CompanyService } from '../../profiles/application/services/company.service';
+import { RequestService } from '../../requests/application/services/request.service';
 import {
   createMockUser,
   createMockProfessional,
@@ -14,7 +15,8 @@ describe('AdminService', () => {
   let service: AdminService;
   let mockUserService: any;
   let mockProfessionalService: any;
-  let mockPrismaService: any;
+  let mockCompanyService: any;
+  let mockRequestService: any;
 
   beforeEach(async () => {
     mockUserService = {
@@ -23,22 +25,28 @@ describe('AdminService', () => {
       update: jest.fn(),
       findByIdForUser: jest.fn(),
       updateStatusForUser: jest.fn(),
+      getAllUsersForAdmin: jest.fn(),
+      getUserStats: jest.fn(),
     };
 
     mockProfessionalService = {
       findById: jest.fn(),
       updateStatus: jest.fn(),
+      getAllProfessionalsForAdmin: jest.fn(),
+      getProfessionalByIdForAdmin: jest.fn(),
+      getProfessionalStats: jest.fn(),
     };
 
-    mockPrismaService = {
-      user: {
-        findMany: jest.fn(),
-        count: jest.fn(),
-      },
-      professional: {
-        findMany: jest.fn(),
-        count: jest.fn(),
-      },
+    mockCompanyService = {
+      getAllCompaniesForAdmin: jest.fn(),
+      getCompanyByIdForAdmin: jest.fn(),
+      updateStatus: jest.fn(),
+      getCompanyStats: jest.fn(),
+    };
+
+    mockRequestService = {
+      getAllRequestsForAdmin: jest.fn(),
+      getRequestStats: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -46,7 +54,8 @@ describe('AdminService', () => {
         AdminService,
         { provide: UserService, useValue: mockUserService },
         { provide: ProfessionalService, useValue: mockProfessionalService },
-        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: CompanyService, useValue: mockCompanyService },
+        { provide: RequestService, useValue: mockRequestService },
       ],
     }).compile();
 
@@ -82,8 +91,15 @@ describe('AdminService', () => {
         },
       ];
 
-      mockPrismaService.user.findMany.mockResolvedValue(users);
-      mockPrismaService.user.count.mockResolvedValue(15);
+      mockUserService.getAllUsersForAdmin.mockResolvedValue({
+        data: users,
+        meta: {
+          total: 15,
+          page: 1,
+          limit: 10,
+          totalPages: 2,
+        },
+      });
 
       const result = await service.getAllUsers(1, 10);
 
@@ -92,11 +108,19 @@ describe('AdminService', () => {
       expect(result.meta.page).toBe(1);
       expect(result.meta.limit).toBe(10);
       expect(result.meta.totalPages).toBe(2);
+      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(1, 10);
     });
 
     it('should handle empty results', async () => {
-      mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.user.count.mockResolvedValue(0);
+      mockUserService.getAllUsersForAdmin.mockResolvedValue({
+        data: [],
+        meta: {
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 0,
+        },
+      });
 
       const result = await service.getAllUsers(1, 10);
 
@@ -106,31 +130,35 @@ describe('AdminService', () => {
     });
 
     it('should apply pagination correctly', async () => {
-      mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.user.count.mockResolvedValue(25);
+      mockUserService.getAllUsersForAdmin.mockResolvedValue({
+        data: [],
+        meta: {
+          total: 25,
+          page: 3,
+          limit: 5,
+          totalPages: 5,
+        },
+      });
 
       await service.getAllUsers(3, 5);
 
-      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          skip: 10,
-          take: 5,
-        }),
-      );
+      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(3, 5);
     });
 
     it('should use default pagination values', async () => {
-      mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.user.count.mockResolvedValue(0);
+      mockUserService.getAllUsersForAdmin.mockResolvedValue({
+        data: [],
+        meta: {
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 0,
+        },
+      });
 
       await service.getAllUsers();
 
-      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          skip: 0,
-          take: 10,
-        }),
-      );
+      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(1, 10);
     });
   });
 
@@ -214,8 +242,15 @@ describe('AdminService', () => {
         },
       ];
 
-      mockPrismaService.professional.findMany.mockResolvedValue(professionals);
-      mockPrismaService.professional.count.mockResolvedValue(5);
+      mockProfessionalService.getAllProfessionalsForAdmin.mockResolvedValue({
+        data: professionals,
+        meta: {
+          total: 5,
+          page: 1,
+          limit: 10,
+          totalPages: 1,
+        },
+      });
 
       const result = await service.getAllProfessionals(1, 10);
 
@@ -224,11 +259,22 @@ describe('AdminService', () => {
       expect(result.meta.page).toBe(1);
       expect(result.meta.limit).toBe(10);
       expect(result.meta.totalPages).toBe(1);
+      expect(mockProfessionalService.getAllProfessionalsForAdmin).toHaveBeenCalledWith(
+        1,
+        10,
+      );
     });
 
     it('should handle empty results', async () => {
-      mockPrismaService.professional.findMany.mockResolvedValue([]);
-      mockPrismaService.professional.count.mockResolvedValue(0);
+      mockProfessionalService.getAllProfessionalsForAdmin.mockResolvedValue({
+        data: [],
+        meta: {
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 0,
+        },
+      });
 
       const result = await service.getAllProfessionals(1, 10);
 
@@ -237,16 +283,21 @@ describe('AdminService', () => {
     });
 
     it('should apply pagination correctly', async () => {
-      mockPrismaService.professional.findMany.mockResolvedValue([]);
-      mockPrismaService.professional.count.mockResolvedValue(30);
+      mockProfessionalService.getAllProfessionalsForAdmin.mockResolvedValue({
+        data: [],
+        meta: {
+          total: 30,
+          page: 2,
+          limit: 15,
+          totalPages: 2,
+        },
+      });
 
       await service.getAllProfessionals(2, 15);
 
-      expect(mockPrismaService.professional.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          skip: 15,
-          take: 15,
-        }),
+      expect(mockProfessionalService.getAllProfessionalsForAdmin).toHaveBeenCalledWith(
+        2,
+        15,
       );
     });
   });
