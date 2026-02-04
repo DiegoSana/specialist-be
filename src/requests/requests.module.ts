@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 
 // Domain
 import { REQUEST_REPOSITORY } from './domain/repositories/request.repository';
+import { REQUEST_QUERY_REPOSITORY } from './domain/queries/request.query-repository';
 import { REQUEST_INTEREST_REPOSITORY } from './domain/repositories/request-interest.repository';
 import {
   REQUEST_INTERACTION_REPOSITORY,
@@ -20,6 +21,7 @@ import { RequestInteractionRespondedHandler } from './application/handlers/reque
 
 // Infrastructure
 import { PrismaRequestRepository } from './infrastructure/repositories/prisma-request.repository';
+import { PrismaRequestQueryRepository } from './infrastructure/queries/prisma-request.query-repository';
 import { PrismaRequestInterestRepository } from './infrastructure/repositories/prisma-request-interest.repository';
 import { PrismaRequestInteractionRepository } from './infrastructure/repositories/prisma-request-interaction.repository';
 import { TwilioWhatsAppAdapter } from './infrastructure/adapters/twilio-whatsapp.adapter';
@@ -60,6 +62,10 @@ import { ProfilesModule } from '../profiles/profiles.module';
     {
       provide: REQUEST_REPOSITORY,
       useClass: PrismaRequestRepository,
+    },
+    {
+      provide: REQUEST_QUERY_REPOSITORY,
+      useClass: PrismaRequestQueryRepository,
     },
     {
       provide: REQUEST_INTEREST_REPOSITORY,

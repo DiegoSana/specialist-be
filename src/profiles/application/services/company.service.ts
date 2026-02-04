@@ -11,6 +11,10 @@ import {
   COMPANY_REPOSITORY,
 } from '../../domain/repositories/company.repository';
 import {
+  CompanyQueryRepository,
+  COMPANY_QUERY_REPOSITORY,
+} from '../../domain/queries/company.query-repository';
+import {
   TradeRepository,
   TRADE_REPOSITORY,
 } from '../../domain/repositories/trade.repository';
@@ -32,6 +36,8 @@ export class CompanyService {
   constructor(
     @Inject(COMPANY_REPOSITORY)
     private readonly companyRepository: CompanyRepository,
+    @Inject(COMPANY_QUERY_REPOSITORY)
+    private readonly companyQueryRepository: CompanyQueryRepository,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
     @Inject(TRADE_REPOSITORY)
@@ -466,5 +472,67 @@ export class CompanyService {
    */
   async activateCompanyProfile(userId: string): Promise<CompanyEntity> {
     return this.profileToggleService.activateCompanyProfile(userId);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Statistics methods (for admin dashboard)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Get company statistics for admin dashboard
+   * @returns Company statistics
+   */
+  async getCompanyStats() {
+    return this.companyQueryRepository.getCompanyStats();
+  }
+
+  /**
+   * Get all companies for admin (paginated)
+   */
+  async getAllCompaniesForAdmin(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const { companies, total } = await this.companyQueryRepository.findAllForAdmin({
+      skip,
+      take: limit,
+    });
+
+    return {
+      data: companies,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Get company by ID for admin (with full details)
+   */
+  async getCompanyByIdForAdmin(companyId: string) {
+    const company = await this.companyQueryRepository.findByIdForAdmin(companyId);
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+    return company;
+  }
+
+  /**
+   * Update company status (admin only)
+   */
+  async updateStatus(
+    companyId: string,
+    status: CompanyStatus,
+    user: UserEntity,
+  ): Promise<CompanyEntity> {
+    const ctx = this.buildAuthContext(user);
+    const company = await this.getByIdOrFail(companyId);
+
+    if (!company.canChangeStatusBy(ctx)) {
+      throw new ForbiddenException('Only admins can change company status');
+    }
+
+    return this.companyRepository.updateStatus(companyId, status);
   }
 }

@@ -6,6 +6,7 @@
 
 ### API Reference
 - [**API.md**](./API.md) - REST API endpoints reference
+- [**API_STRUCTURE.md**](./API_STRUCTURE.md) - Estructura de endpoints, autenticación y clientes ⭐ NEW
 
 ### Architecture
 - [**ARCHITECTURE.md**](./architecture/ARCHITECTURE.md) - System architecture and bounded contexts
