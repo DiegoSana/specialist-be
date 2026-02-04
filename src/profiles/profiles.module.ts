@@ -3,7 +3,9 @@ import { Module, forwardRef } from '@nestjs/common';
 // Domain
 import { CLIENT_REPOSITORY } from './domain/repositories/client.repository';
 import { PROFESSIONAL_REPOSITORY } from './domain/repositories/professional.repository';
+import { PROFESSIONAL_QUERY_REPOSITORY } from './domain/queries/professional.query-repository';
 import { COMPANY_REPOSITORY } from './domain/repositories/company.repository';
+import { COMPANY_QUERY_REPOSITORY } from './domain/queries/company.query-repository';
 import { TRADE_REPOSITORY } from './domain/repositories/trade.repository';
 
 // Application
@@ -16,7 +18,9 @@ import { ProfileToggleService } from './application/services/profile-toggle.serv
 // Infrastructure
 import { PrismaClientRepository } from './infrastructure/repositories/prisma-client.repository';
 import { PrismaProfessionalRepository } from './infrastructure/repositories/prisma-professional.repository';
+import { PrismaProfessionalQueryRepository } from './infrastructure/queries/prisma-professional.query-repository';
 import { PrismaCompanyRepository } from './infrastructure/repositories/prisma-company.repository';
+import { PrismaCompanyQueryRepository } from './infrastructure/queries/prisma-company.query-repository';
 import { PrismaTradeRepository } from './infrastructure/repositories/prisma-trade.repository';
 
 // Presentation
@@ -61,8 +65,16 @@ import { RequestsModule } from '../requests/requests.module';
       useClass: PrismaProfessionalRepository,
     },
     {
+      provide: PROFESSIONAL_QUERY_REPOSITORY,
+      useClass: PrismaProfessionalQueryRepository,
+    },
+    {
       provide: COMPANY_REPOSITORY,
       useClass: PrismaCompanyRepository,
+    },
+    {
+      provide: COMPANY_QUERY_REPOSITORY,
+      useClass: PrismaCompanyQueryRepository,
     },
     {
       provide: TRADE_REPOSITORY,

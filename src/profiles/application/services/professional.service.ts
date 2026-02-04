@@ -11,6 +11,10 @@ import {
   PROFESSIONAL_REPOSITORY,
 } from '../../domain/repositories/professional.repository';
 import {
+  ProfessionalQueryRepository,
+  PROFESSIONAL_QUERY_REPOSITORY,
+} from '../../domain/queries/professional.query-repository';
+import {
   ProfessionalEntity,
   ProfessionalAuthContext,
 } from '../../domain/entities/professional.entity';
@@ -34,6 +38,8 @@ export class ProfessionalService {
   constructor(
     @Inject(PROFESSIONAL_REPOSITORY)
     private readonly professionalRepository: ProfessionalRepository,
+    @Inject(PROFESSIONAL_QUERY_REPOSITORY)
+    private readonly professionalQueryRepository: ProfessionalQueryRepository,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
     @Inject(TRADE_REPOSITORY)
@@ -525,5 +531,49 @@ export class ProfessionalService {
    */
   async activateProfessionalProfile(userId: string): Promise<ProfessionalEntity> {
     return this.profileToggleService.activateProfessionalProfile(userId);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Statistics methods (for admin dashboard)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Get professional statistics for admin dashboard
+   * @returns Professional statistics
+   */
+  async getProfessionalStats() {
+    return this.professionalQueryRepository.getProfessionalStats();
+  }
+
+  /**
+   * Get all professionals for admin (paginated)
+   */
+  async getAllProfessionalsForAdmin(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const { professionals, total } = await this.professionalQueryRepository.findAllForAdmin({
+      skip,
+      take: limit,
+    });
+
+    return {
+      data: professionals,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Get professional by ID for admin (with full details)
+   */
+  async getProfessionalByIdForAdmin(professionalId: string) {
+    const professional = await this.professionalQueryRepository.findByIdForAdmin(professionalId);
+    if (!professional) {
+      throw new NotFoundException('Professional not found');
+    }
+    return professional;
   }
 }
