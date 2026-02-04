@@ -172,6 +172,11 @@ function isAllowedPrismaImport(filePath: string): boolean {
     return true;
   }
 
+  // Allow PrismaService in infrastructure query repositories
+  if (filePath.includes('/infrastructure/queries/')) {
+    return true;
+  }
+
   // Allow PrismaService in the PrismaService/PrismaModule itself
   if (
     filePath.includes('/shared/infrastructure/prisma/prisma.service.ts') ||
@@ -351,6 +356,7 @@ describe('Architecture Fitness Functions', () => {
               '',
               '❌ PrismaService should only be used in:',
               '   - Infrastructure repositories (infrastructure/repositories/)',
+              '   - Infrastructure query repositories (infrastructure/queries/)',
               '   - Application jobs (application/jobs/)',
               '   - Health checks (health/)',
               '',

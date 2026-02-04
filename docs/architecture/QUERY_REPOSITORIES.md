@@ -256,3 +256,4 @@ export class UserService {
 - ADR-002-DDD-PERSISTENCE-BOUNDARIES.md: "Some read-heavy operations remain as query methods in repositories until a dedicated read-model/query repository is introduced."
 - ProfessionalRepository comentario: "En una separación más estricta, esto viviría en un 'ProfessionalQueryRepository' fuera del contrato de aggregate."
 
+

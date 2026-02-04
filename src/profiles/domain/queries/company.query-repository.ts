@@ -90,3 +90,4 @@ export interface CompanyQueryRepository {
 // Token for dependency injection
 export const COMPANY_QUERY_REPOSITORY = Symbol('CompanyQueryRepository');
 
+

@@ -7,6 +7,7 @@ import {
 import { ProfessionalService } from './professional.service';
 import { ProfileToggleService } from './profile-toggle.service';
 import { PROFESSIONAL_REPOSITORY } from '../../domain/repositories/professional.repository';
+import { PROFESSIONAL_QUERY_REPOSITORY } from '../../domain/queries/professional.query-repository';
 import { TRADE_REPOSITORY } from '../../domain/repositories/trade.repository';
 import { UserService } from '../../../identity/application/services/user.service';
 import { RequestService } from '../../../requests/application/services/request.service';
@@ -20,6 +21,7 @@ import { RequestStatus, UserStatus } from '@prisma/client';
 describe('ProfessionalService', () => {
   let service: ProfessionalService;
   let mockProfessionalRepository: any;
+  let mockProfessionalQueryRepository: any;
   let mockUserService: any;
   let mockTradeRepository: any;
   let mockRequestService: any;
@@ -32,6 +34,12 @@ describe('ProfessionalService', () => {
       findByUserId: jest.fn(),
       save: jest.fn(),
       updateRating: jest.fn(),
+    };
+
+    mockProfessionalQueryRepository = {
+      getProfessionalStats: jest.fn(),
+      findAllForAdmin: jest.fn(),
+      findByIdForAdmin: jest.fn(),
     };
 
     mockUserService = {
@@ -60,6 +68,10 @@ describe('ProfessionalService', () => {
         {
           provide: PROFESSIONAL_REPOSITORY,
           useValue: mockProfessionalRepository,
+        },
+        {
+          provide: PROFESSIONAL_QUERY_REPOSITORY,
+          useValue: mockProfessionalQueryRepository,
         },
         { provide: UserService, useValue: mockUserService },
         { provide: TRADE_REPOSITORY, useValue: mockTradeRepository },

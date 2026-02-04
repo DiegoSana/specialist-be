@@ -44,3 +44,4 @@ export interface UserQueryRepository {
 // Token for dependency injection
 export const USER_QUERY_REPOSITORY = Symbol('UserQueryRepository');
 
+
