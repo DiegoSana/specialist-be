@@ -11,6 +11,10 @@ import {
   REQUEST_REPOSITORY,
 } from '../../domain/repositories/request.repository';
 import {
+  RequestQueryRepository,
+  REQUEST_QUERY_REPOSITORY,
+} from '../../domain/queries/request.query-repository';
+import {
   RequestEntity,
   RequestAuthContext,
 } from '../../domain/entities/request.entity';
@@ -31,6 +35,8 @@ export class RequestService {
   constructor(
     @Inject(REQUEST_REPOSITORY)
     private readonly requestRepository: RequestRepository,
+    @Inject(REQUEST_QUERY_REPOSITORY)
+    private readonly requestQueryRepository: RequestQueryRepository,
     @Inject(EVENT_BUS)
     private readonly eventBus: EventBus,
     @Inject(forwardRef(() => ProfessionalService))
@@ -374,5 +380,43 @@ export class RequestService {
         clientRatingComment: comment || null,
       }),
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Statistics methods (for admin dashboard)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Get request statistics for admin dashboard
+   * @returns Request statistics
+   */
+  async getRequestStats() {
+    return this.requestQueryRepository.getRequestStats();
+  }
+
+  /**
+   * Get all requests for admin (paginated, with optional status filter)
+   */
+  async getAllRequestsForAdmin(
+    page: number = 1,
+    limit: number = 10,
+    status?: RequestStatus,
+  ) {
+    const skip = (page - 1) * limit;
+    const { requests, total } = await this.requestQueryRepository.findAllForAdmin({
+      skip,
+      take: limit,
+      status,
+    });
+
+    return {
+      data: requests,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }
