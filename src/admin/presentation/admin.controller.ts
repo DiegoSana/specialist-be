@@ -19,6 +19,7 @@ import {
 import { AdminService } from '../application/admin.service';
 import { UpdateUserStatusDto } from '../application/dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from '../application/dto/update-professional-status.dto';
+import { UpdateCompanyStatusDto } from '../application/dto/update-company-status.dto';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
@@ -87,6 +88,17 @@ export class AdminController {
     );
   }
 
+  @Get('professionals/:id')
+  @ApiOperation({ summary: 'Get professional by ID (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Professional profile retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Professional not found' })
+  async getProfessionalById(@Param('id') id: string) {
+    return this.adminService.getProfessionalById(id);
+  }
+
   @Put('professionals/:id/status')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update professional status (Admin only)' })
@@ -118,5 +130,56 @@ export class AdminController {
       limit ? parseInt(limit) : 10,
       status as any,
     );
+  }
+
+  @Get('companies')
+  @ApiOperation({ summary: 'Get all companies (Admin only)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Companies retrieved successfully',
+  })
+  async getAllCompanies(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.adminService.getAllCompanies(
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 10,
+    );
+  }
+
+  @Get('companies/:id')
+  @ApiOperation({ summary: 'Get company by ID (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Company retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Company not found' })
+  async getCompanyById(@Param('id') id: string) {
+    return this.adminService.getCompanyById(id);
+  }
+
+  @Put('companies/:id/status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update company status (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Company status updated successfully',
+  })
+  async updateCompanyStatus(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateCompanyStatusDto,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.adminService.updateCompanyStatus(id, updateDto, user);
+  }
+
+  @Get('dashboard/stats')
+  @ApiOperation({ summary: 'Get dashboard statistics (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Dashboard statistics retrieved successfully' })
+  async getDashboardStats() {
+    return this.adminService.getDashboardStats();
   }
 }
