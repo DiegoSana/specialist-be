@@ -91,3 +91,4 @@ export interface CompanyQueryRepository {
 export const COMPANY_QUERY_REPOSITORY = Symbol('CompanyQueryRepository');
 
 
+

@@ -257,3 +257,4 @@ export class UserService {
 - ProfessionalRepository comentario: "En una separación más estricta, esto viviría en un 'ProfessionalQueryRepository' fuera del contrato de aggregate."
 
 
+

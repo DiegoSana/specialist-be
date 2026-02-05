@@ -15,6 +15,10 @@ primary_region = 'gru'
 [env]
   NODE_ENV = 'production'
   PORT = '8080'
+  CORS_ORIGINS = 'http://localhost:3000,http://localhost:3001,http://127.0.0.1:3001,https://specialist-admin.vercel.app,https://specialist-fe.vercel.app'
+  FRONTEND_URL = 'https://specialist-fe.vercel.app'
+  NOTIFICATIONS_DISPATCH_ENABLED = 'true'
+  NOTIFICATIONS_SMTP_PORT = '587'
 
 [http_service]
   internal_port = 8080

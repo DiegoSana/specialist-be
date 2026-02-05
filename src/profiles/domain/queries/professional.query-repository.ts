@@ -82,3 +82,4 @@ export interface ProfessionalQueryRepository {
 export const PROFESSIONAL_QUERY_REPOSITORY = Symbol('ProfessionalQueryRepository');
 
 
+
