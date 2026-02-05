@@ -55,6 +55,7 @@ services:
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
       FACEBOOK_CALLBACK_URL: ${FACEBOOK_CALLBACK_URL}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://127.0.0.1:3001,https://specialist-admin.vercel.app,https://specialist-fe.vercel.app}
       # Email provider: 'smtp' | 'mailgun' (default: smtp)
       EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp}
       # Notifications SMTP (for smtp provider or mailpit local)
