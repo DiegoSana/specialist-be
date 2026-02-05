@@ -108,3 +108,4 @@ export class PrismaProfessionalQueryRepository implements ProfessionalQueryRepos
 }
 
 
+
