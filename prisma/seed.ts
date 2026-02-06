@@ -141,7 +141,6 @@ async function main() {
       zone: string;
       city: string;
       address: string;
-      whatsapp: string;
     };
     averageRating?: number;
     totalReviews?: number;
@@ -174,7 +173,6 @@ async function main() {
             zone: data.professional.zone,
             city: data.professional.city,
             address: data.professional.address,
-            whatsapp: data.professional.whatsapp,
           },
         },
       },
@@ -201,7 +199,6 @@ async function main() {
       zone: 'Centro',
       city: 'Bariloche',
       address: 'Av. San Martín 500',
-      whatsapp: '+5492944500001',
     },
     averageRating: 4.8,
     totalReviews: 25,
@@ -220,7 +217,6 @@ async function main() {
       zone: 'Melipal',
       city: 'Bariloche',
       address: 'Rolando 123',
-      whatsapp: '+5492944500002',
     },
     averageRating: 4.5,
     totalReviews: 18,
@@ -239,7 +235,6 @@ async function main() {
       zone: 'Las Victorias',
       city: 'Bariloche',
       address: 'Gallardo 456',
-      whatsapp: '+5492944500003',
     },
     averageRating: 4.9,
     totalReviews: 32,
@@ -258,7 +253,6 @@ async function main() {
       zone: 'Km 5',
       city: 'Bariloche',
       address: 'Km 5.5 Av. Bustillo',
-      whatsapp: '+5492944500004',
     },
     averageRating: 5.0,
     totalReviews: 12,
@@ -277,7 +271,6 @@ async function main() {
       zone: 'Centro',
       city: 'Bariloche',
       address: 'Onelli 789',
-      whatsapp: '+5492944500005',
     },
   });
 
@@ -294,7 +287,6 @@ async function main() {
       zone: 'Alto',
       city: 'Bariloche',
       address: 'Brown 321',
-      whatsapp: '+5492944500006',
     },
     averageRating: 4.7,
     totalReviews: 45,
@@ -325,8 +317,6 @@ async function main() {
       foundedYear?: number;
       employeeCount?: string;
       website?: string;
-      companyPhone?: string;
-      companyEmail?: string;
       address?: string;
       city: string;
       zone?: string;
@@ -362,8 +352,6 @@ async function main() {
             foundedYear: data.company.foundedYear,
             employeeCount: data.company.employeeCount,
             website: data.company.website,
-            phone: data.company.companyPhone,
-            email: data.company.companyEmail,
             address: data.company.address,
             city: data.company.city,
             zone: data.company.zone,
@@ -395,8 +383,6 @@ async function main() {
       foundedYear: 2009,
       employeeCount: '6-20',
       website: 'https://constructoradelsur.com.ar',
-      companyPhone: '+5492944600001',
-      companyEmail: 'contacto@constructoradelsur.com.ar',
       address: 'Av. Exequiel Bustillo Km 8',
       city: 'Bariloche',
       zone: 'Km 8',
@@ -420,8 +406,6 @@ async function main() {
       foundedYear: 2015,
       employeeCount: '6-20',
       website: 'https://stpatagonia.com.ar',
-      companyPhone: '+5492944600002',
-      companyEmail: 'info@stpatagonia.com.ar',
       address: 'Onelli 450',
       city: 'Bariloche',
       zone: 'Centro',
@@ -444,8 +428,6 @@ async function main() {
       description: 'Pintura industrial y residencial. Trabajos en altura. Impermeabilización.',
       foundedYear: 2018,
       employeeCount: '1-5',
-      companyPhone: '+5492944600003',
-      companyEmail: 'pinturasnorte@gmail.com',
       address: 'Moreno 890',
       city: 'Bariloche',
       zone: 'Centro',
@@ -465,7 +447,6 @@ async function main() {
       companyName: 'Remodelaciones Express',
       description: 'Remodelaciones rápidas y de calidad. Presupuestos sin cargo.',
       employeeCount: '1-5',
-      companyPhone: '+5492944600004',
       city: 'Bariloche',
       zone: 'Alto',
       status: CompanyStatus.PENDING_VERIFICATION,
