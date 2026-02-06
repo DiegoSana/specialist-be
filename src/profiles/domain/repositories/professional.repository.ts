@@ -14,7 +14,10 @@ export interface ProfessionalRepository {
   search(criteria: {
     search?: string;
     tradeId?: string;
-    active?: boolean;
+    /** When true, only return professionals that can operate (status ACTIVE or VERIFIED). */
+    canOperate?: boolean;
+    /** When true, only return professionals whose user has emailVerified and phoneVerified (catalog "active" provider). */
+    userVerified?: boolean;
   }): Promise<ProfessionalEntity[]>;
 
   /**

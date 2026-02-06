@@ -72,15 +72,12 @@ export class CompanyService {
       company.foundedYear,
       company.employeeCount,
       null, // website - requires active request
-      null, // phone - requires active request
-      null, // email - requires active request
       null, // address - requires active request
       company.city,
       company.zone,
       company.status,
       company.profileImage,
       company.gallery,
-      company.active,
       company.createdAt,
       company.updatedAt,
       company.serviceProvider,
@@ -94,14 +91,19 @@ export class CompanyService {
 
   /**
    * Search companies (public endpoint)
+   * @param options.onlyActiveInCatalog When true, only companies whose user has email and phone verified (for unified catalog).
    */
-  async search(searchDto: SearchCompaniesDto): Promise<CompanyEntity[]> {
+  async search(
+    searchDto: SearchCompaniesDto,
+    options?: { onlyActiveInCatalog?: boolean },
+  ): Promise<CompanyEntity[]> {
     const companies = await this.companyRepository.search({
       search: searchDto.search,
       tradeId: searchDto.tradeId,
       city: searchDto.city,
       verified: searchDto.verified,
-      active: true, // Only show active companies
+      canOperate: true, // Only show companies that can operate (status ACTIVE or VERIFIED)
+      userVerified: options?.onlyActiveInCatalog ?? false,
     });
 
     // Sanitize contact info for public display
@@ -217,15 +219,12 @@ export class CompanyService {
         createDto.foundedYear || null,
         createDto.employeeCount || null,
         createDto.website || null,
-        createDto.phone || null,
-        createDto.email || null,
         createDto.address || null,
         createDto.city || 'Bariloche',
         createDto.zone || null,
         CompanyStatus.PENDING_VERIFICATION,
         createDto.profileImage || null,
         createDto.gallery || [],
-        true, // active
         now,
         now,
       ),
@@ -322,15 +321,12 @@ export class CompanyService {
         updateDto.foundedYear !== undefined ? updateDto.foundedYear : company.foundedYear,
         updateDto.employeeCount !== undefined ? updateDto.employeeCount : company.employeeCount,
         updateDto.website !== undefined ? updateDto.website : company.website,
-        updateDto.phone !== undefined ? updateDto.phone : company.phone,
-        updateDto.email !== undefined ? updateDto.email : company.email,
         updateDto.address !== undefined ? updateDto.address : company.address,
         updateDto.city !== undefined ? updateDto.city : company.city,
         updateDto.zone !== undefined ? updateDto.zone : company.zone,
         company.status,
         updateDto.profileImage !== undefined ? updateDto.profileImage : company.profileImage,
         updateDto.gallery !== undefined ? updateDto.gallery : company.gallery,
-        company.active,
         company.createdAt,
         now,
         company.serviceProvider,
@@ -373,15 +369,12 @@ export class CompanyService {
         company.foundedYear,
         company.employeeCount,
         company.website,
-        company.phone,
-        company.email,
         company.address,
         company.city,
         company.zone,
         company.status,
         company.profileImage,
         updatedGallery,
-        company.active,
         company.createdAt,
         new Date(),
         company.serviceProvider,
@@ -420,15 +413,12 @@ export class CompanyService {
         company.foundedYear,
         company.employeeCount,
         company.website,
-        company.phone,
-        company.email,
         company.address,
         company.city,
         company.zone,
         company.status,
         company.profileImage,
         updatedGallery,
-        company.active,
         company.createdAt,
         new Date(),
         company.serviceProvider,

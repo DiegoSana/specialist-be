@@ -28,15 +28,12 @@ const createMockCompany = (overrides?: Partial<CompanyEntity>): CompanyEntity =>
     foundedYear: 2020,
     employeeCount: '6-20',
     website: 'https://test.com',
-    phone: '+1234567890',
-    email: 'contact@test.com',
     address: '123 Test St',
     city: 'Buenos Aires',
     zone: 'Palermo',
     status: CompanyStatus.VERIFIED,
     profileImage: 'https://test.com/logo.png',
     gallery: ['https://test.com/img1.png', 'https://test.com/img2.png'],
-    active: true,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-15'),
   };
@@ -53,15 +50,12 @@ const createMockCompany = (overrides?: Partial<CompanyEntity>): CompanyEntity =>
     overrides?.foundedYear ?? defaults.foundedYear,
     overrides?.employeeCount ?? defaults.employeeCount,
     overrides?.website ?? defaults.website,
-    overrides?.phone ?? defaults.phone,
-    overrides?.email ?? defaults.email,
     overrides?.address ?? defaults.address,
     overrides?.city ?? defaults.city,
     overrides?.zone ?? defaults.zone,
     overrides?.status ?? defaults.status,
     overrides?.profileImage ?? defaults.profileImage,
     overrides?.gallery ?? defaults.gallery,
-    overrides?.active ?? defaults.active,
     overrides?.createdAt ?? defaults.createdAt,
     overrides?.updatedAt ?? defaults.updatedAt,
     overrides?.serviceProvider,
@@ -85,15 +79,12 @@ describe('CompanyEntity', () => {
       expect(company.foundedYear).toBe(2020);
       expect(company.employeeCount).toBe('6-20');
       expect(company.website).toBe('https://test.com');
-      expect(company.phone).toBe('+1234567890');
-      expect(company.email).toBe('contact@test.com');
       expect(company.address).toBe('123 Test St');
       expect(company.city).toBe('Buenos Aires');
       expect(company.zone).toBe('Palermo');
       expect(company.status).toBe(CompanyStatus.VERIFIED);
       expect(company.profileImage).toBe('https://test.com/logo.png');
       expect(company.gallery).toHaveLength(2);
-      expect(company.active).toBe(true);
     });
   });
 
@@ -202,31 +193,30 @@ describe('CompanyEntity', () => {
       expect(company.canOperate()).toBe(false);
     });
 
-    it('should check active status', () => {
-      const activeCompany = createMockCompany({ active: true });
-      const inactiveCompany = createMockCompany({ active: false });
+    it('should check canOperate (isActive) from status', () => {
+      const activeCompany = createMockCompany({ status: CompanyStatus.VERIFIED });
+      const inactiveCompany = createMockCompany({ status: CompanyStatus.INACTIVE });
 
+      expect(activeCompany.canOperate()).toBe(true);
       expect(activeCompany.isActive()).toBe(true);
+      expect(inactiveCompany.canOperate()).toBe(false);
       expect(inactiveCompany.isActive()).toBe(false);
     });
 
     it('should check active and verified status', () => {
       const activeVerified = createMockCompany({
-        active: true,
         status: CompanyStatus.VERIFIED,
       });
-      const activePending = createMockCompany({
-        active: true,
+      const pending = createMockCompany({
         status: CompanyStatus.PENDING_VERIFICATION,
       });
-      const inactiveVerified = createMockCompany({
-        active: false,
-        status: CompanyStatus.VERIFIED,
+      const inactive = createMockCompany({
+        status: CompanyStatus.INACTIVE,
       });
 
       expect(activeVerified.isActiveAndVerified()).toBe(true);
-      expect(activePending.isActiveAndVerified()).toBe(false);
-      expect(inactiveVerified.isActiveAndVerified()).toBe(false);
+      expect(pending.isActiveAndVerified()).toBe(false);
+      expect(inactive.isActiveAndVerified()).toBe(false);
     });
   });
 

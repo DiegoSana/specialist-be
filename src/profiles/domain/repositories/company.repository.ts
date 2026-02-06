@@ -5,7 +5,10 @@ export interface CompanySearchParams {
   tradeId?: string;
   city?: string;
   verified?: boolean;
-  active?: boolean;
+  /** When true, only return companies that can operate (status ACTIVE or VERIFIED). */
+  canOperate?: boolean;
+  /** When true, only return companies whose user has emailVerified and phoneVerified (catalog "active" provider). */
+  userVerified?: boolean;
 }
 
 export interface CompanyRepository {

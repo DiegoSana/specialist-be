@@ -31,9 +31,12 @@ export const createMockUser = (
     updatedAt: Date;
     hasClientProfile: boolean;
     hasProfessionalProfile: boolean;
+    hasCompanyProfile: boolean;
     googleId: string | null;
     facebookId: string | null;
     authProvider: AuthProvider;
+    phoneVerified: boolean;
+    emailVerified: boolean;
   }> = {},
 ): UserEntity => {
   const defaults = {
@@ -54,6 +57,8 @@ export const createMockUser = (
     googleId: null,
     facebookId: null,
     authProvider: AuthProvider.LOCAL,
+    phoneVerified: false,
+    emailVerified: false,
     ...overrides,
   };
 
@@ -75,6 +80,8 @@ export const createMockUser = (
     defaults.googleId,
     defaults.facebookId,
     defaults.authProvider,
+    defaults.phoneVerified,
+    defaults.emailVerified,
   );
 };
 
@@ -91,13 +98,11 @@ export const createMockProfessional = (
     zone: string | null;
     city: string;
     address: string | null;
-    whatsapp: string | null;
     website: string | null;
     averageRating: number;
     totalReviews: number;
     profileImage: string | null;
     gallery: string[];
-    active: boolean;
     createdAt: Date;
     updatedAt: Date;
   }> = {},
@@ -121,11 +126,9 @@ export const createMockProfessional = (
     zone: 'Centro',
     city: 'Bariloche',
     address: 'Main Street 123',
-    whatsapp: '+5491155551234',
     website: 'https://professional.com',
     profileImage: null,
     gallery: [],
-    active: true,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -142,11 +145,9 @@ export const createMockProfessional = (
     defaults.zone,
     defaults.city,
     defaults.address,
-    defaults.whatsapp,
     defaults.website,
     defaults.profileImage,
     defaults.gallery,
-    defaults.active,
     defaults.createdAt,
     defaults.updatedAt,
   );

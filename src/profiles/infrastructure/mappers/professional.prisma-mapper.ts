@@ -26,11 +26,9 @@ export class PrismaProfessionalMapper {
     zone: string | null;
     city: string;
     address: string | null;
-    whatsapp: string | null;
     website: string | null;
     profileImage: string | null;
     gallery: string[];
-    active: boolean;
     createdAt: Date;
     updatedAt: Date;
     user?: unknown;
@@ -67,11 +65,9 @@ export class PrismaProfessionalMapper {
       professional.zone,
       professional.city,
       professional.address,
-      professional.whatsapp,
       professional.website,
       professional.profileImage,
       professional.gallery,
-      professional.active,
       professional.createdAt,
       professional.updatedAt,
       serviceProvider,
@@ -95,11 +91,9 @@ export class PrismaProfessionalMapper {
     zone: string | null;
     city: string;
     address: string | null;
-    whatsapp: string | null;
     website: string | null;
     profileImage: string | null;
     gallery: string[];
-    active: boolean;
   }): Record<string, unknown> {
     return {
       userId: input.userId,
@@ -110,11 +104,9 @@ export class PrismaProfessionalMapper {
       zone: input.zone,
       city: input.city,
       address: input.address,
-      whatsapp: input.whatsapp,
       website: input.website,
       profileImage: input.profileImage,
       gallery: input.gallery,
-      active: input.active,
       trades: {
         create: input.tradeIds.map((tradeId, index) => ({
           tradeId,
@@ -138,13 +130,11 @@ export class PrismaProfessionalMapper {
       ...(partial.zone !== undefined && { zone: partial.zone }),
       ...(partial.city !== undefined && { city: partial.city }),
       ...(partial.address !== undefined && { address: partial.address }),
-      ...(partial.whatsapp !== undefined && { whatsapp: partial.whatsapp }),
       ...(partial.website !== undefined && { website: partial.website }),
       ...(partial.profileImage !== undefined && {
         profileImage: partial.profileImage,
       }),
       ...(partial.gallery !== undefined && { gallery: partial.gallery }),
-      ...(partial.active !== undefined && { active: partial.active }),
     };
   }
 

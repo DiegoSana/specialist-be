@@ -25,6 +25,7 @@ export class PrismaCompanyRepository implements CompanyRepository {
         firstName: true,
         lastName: true,
         email: true,
+        phone: true,
         profilePictureUrl: true,
       },
     },
@@ -73,14 +74,10 @@ export class PrismaCompanyRepository implements CompanyRepository {
   async search(params: CompanySearchParams): Promise<CompanyEntity[]> {
     const where: any = {};
 
-    if (params.active !== undefined) {
-      where.active = params.active;
-      if (params.active) {
-        // Only show companies that can operate (ACTIVE or VERIFIED)
-        where.status = {
-          in: [PrismaCompanyStatus.ACTIVE, PrismaCompanyStatus.VERIFIED],
-        };
-      }
+    if (params.canOperate !== undefined && params.canOperate) {
+      where.status = {
+        in: [PrismaCompanyStatus.ACTIVE, PrismaCompanyStatus.VERIFIED],
+      };
     }
 
     if (params.verified !== undefined) {
@@ -109,8 +106,18 @@ export class PrismaCompanyRepository implements CompanyRepository {
       };
     }
 
+    // Catalog "active" = profile can operate + user email and phone verified
+    const finalWhere = params.userVerified
+      ? {
+          AND: [
+            { user: { emailVerified: true, phoneVerified: true } },
+            where,
+          ],
+        }
+      : where;
+
     const companies = await this.prisma.company.findMany({
-      where,
+      where: finalWhere,
       include: this.fullInclude,
       orderBy: [
         { status: 'asc' }, // VERIFIED first

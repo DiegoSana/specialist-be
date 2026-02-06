@@ -74,6 +74,7 @@ export class ProfessionalResponseDto {
   @ApiPropertyOptional()
   address: string | null;
 
+  /** Contact phone (from user; used for WhatsApp). */
   @ApiPropertyOptional()
   whatsapp: string | null;
 
@@ -92,6 +93,7 @@ export class ProfessionalResponseDto {
   @ApiProperty({ type: [String] })
   gallery: string[];
 
+  /** True when status is ACTIVE or VERIFIED (can operate). */
   @ApiProperty()
   active: boolean;
 
@@ -132,13 +134,13 @@ export class ProfessionalResponseDto {
     dto.zone = entity.zone;
     dto.city = entity.city;
     dto.address = entity.address;
-    dto.whatsapp = entity.whatsapp;
+    dto.whatsapp = (entity as any).user?.phone ?? null;
     dto.website = entity.website;
     dto.averageRating = entity.averageRating;
     dto.totalReviews = entity.totalReviews;
     dto.profileImage = entity.profileImage;
     dto.gallery = entity.gallery;
-    dto.active = entity.active;
+    dto.active = entity.canOperate();
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;
 
@@ -252,7 +254,7 @@ export class ProfessionalSearchResultDto {
     dto.totalReviews = entity.totalReviews;
     dto.profileImage = entity.profileImage;
     dto.gallery = entity.gallery;
-    dto.active = entity.active;
+    dto.active = entity.canOperate();
 
     // Computed property
     dto.primaryTrade = entity.primaryTrade

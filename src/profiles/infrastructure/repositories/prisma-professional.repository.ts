@@ -18,6 +18,7 @@ const standardIncludes = {
       firstName: true,
       lastName: true,
       email: true,
+      phone: true,
       profilePictureUrl: true,
     },
   },
@@ -68,18 +69,15 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
   async search(criteria: {
     search?: string;
     tradeId?: string;
-    active?: boolean;
+    canOperate?: boolean;
+    userVerified?: boolean;
   }): Promise<ProfessionalEntity[]> {
     const where: any = {};
 
-    if (criteria.active !== undefined) {
-      where.active = criteria.active;
-      if (criteria.active) {
-        // Show professionals that can operate (ACTIVE or VERIFIED)
-        where.status = {
-          in: [ProfessionalStatus.ACTIVE, ProfessionalStatus.VERIFIED],
-        };
-      }
+    if (criteria.canOperate !== undefined && criteria.canOperate) {
+      where.status = {
+        in: [ProfessionalStatus.ACTIVE, ProfessionalStatus.VERIFIED],
+      };
     }
 
     // Filter by trade ID if provided
@@ -127,8 +125,18 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
       }
     }
 
+    // Catalog "active" = profile can operate + user email and phone verified
+    const finalWhere = criteria.userVerified
+      ? {
+          AND: [
+            { user: { emailVerified: true, phoneVerified: true } },
+            where,
+          ],
+        }
+      : where;
+
     const professionals = await this.prisma.professional.findMany({
-      where,
+      where: finalWhere,
       include: standardIncludes,
       orderBy: { serviceProvider: { averageRating: 'desc' } },
     });
@@ -168,11 +176,9 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
             zone: professional.zone,
             city: professional.city,
             address: professional.address,
-            whatsapp: professional.whatsapp,
             website: professional.website,
             profileImage: professional.profileImage,
             gallery: professional.gallery,
-            active: professional.active,
             trades: PrismaProfessionalMapper.toPersistenceTrades(tradeIds),
           },
           include: standardIncludes,
@@ -189,11 +195,9 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
           zone: professional.zone,
           city: professional.city,
           address: professional.address,
-          whatsapp: professional.whatsapp,
           website: professional.website,
           profileImage: professional.profileImage,
           gallery: professional.gallery,
-          active: professional.active,
         },
       });
 

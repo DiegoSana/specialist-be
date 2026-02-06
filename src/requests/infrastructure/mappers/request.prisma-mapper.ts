@@ -57,13 +57,11 @@ export class PrismaRequestMapper {
           zone: professional.zone,
           city: professional.city,
           address: professional.address,
-          whatsapp: professional.whatsapp,
           website: professional.website,
           averageRating: provider.averageRating,
           totalReviews: provider.totalReviews,
           profileImage: professional.profileImage,
           gallery: professional.gallery || [],
-          active: professional.active,
           user: professional.user,
         };
       }
@@ -90,8 +88,6 @@ export class PrismaRequestMapper {
           foundedYear: company.foundedYear,
           employeeCount: company.employeeCount,
           website: company.website,
-          phone: company.phone,
-          email: company.email,
           address: company.address,
           city: company.city,
           zone: company.zone,
@@ -100,7 +96,6 @@ export class PrismaRequestMapper {
           totalReviews: provider.totalReviews,
           profileImage: company.profileImage,
           gallery: company.gallery || [],
-          active: company.active,
           trades,
           user: company.user,
         };

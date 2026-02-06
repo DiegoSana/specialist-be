@@ -392,17 +392,13 @@ export class RequestInteractionService {
         return null;
       }
 
-      // Try to get professional first
+      // Try to get professional first (contact phone = user.phone)
       try {
         const professional =
           await this.professionalService.findByServiceProviderId(
             request.providerId,
           );
         if (professional) {
-          if (professional.whatsapp) {
-            return professional.whatsapp;
-          }
-          // Fallback to user phone if professional doesn't have whatsapp
           const user = await this.userService.findById(professional.userId);
           if (user?.phone && user.phoneVerified) {
             return user.phone;
@@ -412,16 +408,12 @@ export class RequestInteractionService {
         // Professional not found, try company
       }
 
-      // Try to get company
+      // Try to get company (contact phone = user.phone)
       try {
         const company = await this.companyService.findByServiceProviderId(
           request.providerId,
         );
         if (company) {
-          if (company.phone) {
-            return company.phone;
-          }
-          // Fallback to user phone if company doesn't have phone
           const user = await this.userService.findById(company.userId);
           if (user?.phone && user.phoneVerified) {
             return user.phone;

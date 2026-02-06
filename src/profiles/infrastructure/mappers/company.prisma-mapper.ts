@@ -39,15 +39,12 @@ export class CompanyPrismaMapper {
       company.foundedYear,
       company.employeeCount,
       company.website,
-      company.phone,
-      company.email,
       company.address,
       company.city,
       company.zone,
       company.status as CompanyStatus,
       company.profileImage,
       company.gallery as string[],
-      company.active,
       company.createdAt,
       company.updatedAt,
       serviceProvider,
@@ -67,15 +64,12 @@ export class CompanyPrismaMapper {
       foundedYear: entity.foundedYear,
       employeeCount: entity.employeeCount,
       website: entity.website,
-      phone: entity.phone,
-      email: entity.email,
       address: entity.address,
       city: entity.city,
       zone: entity.zone,
       status: entity.status as PrismaCompanyStatus,
       profileImage: entity.profileImage,
       gallery: entity.gallery,
-      active: entity.active,
     };
   }
 
@@ -88,15 +82,12 @@ export class CompanyPrismaMapper {
       foundedYear: entity.foundedYear,
       employeeCount: entity.employeeCount,
       website: entity.website,
-      phone: entity.phone,
-      email: entity.email,
       address: entity.address,
       city: entity.city,
       zone: entity.zone,
       status: entity.status as PrismaCompanyStatus,
       profileImage: entity.profileImage,
       gallery: entity.gallery,
-      active: entity.active,
     };
   }
 }

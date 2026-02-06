@@ -237,7 +237,7 @@ export class RequestResponseDto {
           : null,
         averageRating: entityAny.professional.averageRating ?? 0,
         totalReviews: entityAny.professional.totalReviews ?? 0,
-        whatsapp: entityAny.professional.whatsapp ?? null,
+        whatsapp: entityAny.professional?.user?.phone ?? null,
       };
     }
 
@@ -250,8 +250,8 @@ export class RequestResponseDto {
         legalName: entityAny.company.legalName ?? null,
         taxId: entityAny.company.taxId ?? null,
         description: entityAny.company.description ?? null,
-        phone: entityAny.company.phone ?? null,
-        email: entityAny.company.email ?? null,
+        phone: entityAny.company?.user?.phone ?? null,
+        email: entityAny.company?.user?.email ?? null,
         website: entityAny.company.website ?? null,
         city: entityAny.company.city ?? null,
         zone: entityAny.company.zone ?? null,
@@ -291,6 +291,35 @@ export class RequestResponseDto {
    */
   static fromEntities(entities: RequestEntity[]): RequestResponseDto[] {
     return entities.map((entity) => RequestResponseDto.fromEntity(entity));
+  }
+
+  /**
+   * Limited view for providers who expressed interest but were not assigned.
+   * Only id, title, description, status, createdAt; all other fields left null/empty.
+   */
+  static fromEntityLimited(entity: RequestEntity): RequestResponseDto {
+    const dto = new RequestResponseDto();
+    dto.id = entity.id;
+    dto.clientId = entity.clientId;
+    dto.professionalId = null;
+    dto.providerId = entity.providerId;
+    dto.tradeId = entity.tradeId;
+    dto.isPublic = entity.isPublic;
+    dto.title = entity.title;
+    dto.description = entity.description;
+    dto.address = null;
+    dto.availability = null;
+    dto.photos = [];
+    dto.status = entity.status;
+    dto.clientRating = null;
+    dto.clientRatingComment = null;
+    dto.createdAt = entity.createdAt;
+    dto.updatedAt = entity.updatedAt;
+    dto.client = undefined;
+    dto.professional = undefined;
+    dto.company = undefined;
+    dto.trade = undefined;
+    return dto;
   }
 }
 

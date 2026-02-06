@@ -48,15 +48,12 @@ export class CompanyEntity {
     public readonly foundedYear: number | null,
     public readonly employeeCount: string | null, // "1-5", "6-20", "21-50", "50+"
     public readonly website: string | null,
-    public readonly phone: string | null,
-    public readonly email: string | null,
     public readonly address: string | null,
     public readonly city: string,
     public readonly zone: string | null,
     public readonly status: CompanyStatus,
     public readonly profileImage: string | null,
     public readonly gallery: string[],
-    public readonly active: boolean,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
     // Optional: the full ServiceProvider entity when needed
@@ -128,9 +125,8 @@ export class CompanyEntity {
    * Only ACTIVE or VERIFIED status allows operation.
    */
   canOperate(): boolean {
-    return this.active && 
-           (this.status === CompanyStatus.ACTIVE || 
-            this.status === CompanyStatus.VERIFIED);
+    return this.status === CompanyStatus.ACTIVE ||
+           this.status === CompanyStatus.VERIFIED;
   }
 
   /**
@@ -157,7 +153,7 @@ export class CompanyEntity {
    * @deprecated Use canOperate() instead
    */
   isActive(): boolean {
-    return this.active;
+    return this.canOperate();
   }
 
   /**
@@ -239,15 +235,12 @@ export class CompanyEntity {
       this.foundedYear,
       this.employeeCount,
       this.website,
-      this.phone,
-      this.email,
       this.address,
       this.city,
       this.zone,
       this.status,
       this.profileImage,
       this.gallery,
-      this.active,
       this.createdAt,
       this.updatedAt,
       serviceProvider,
