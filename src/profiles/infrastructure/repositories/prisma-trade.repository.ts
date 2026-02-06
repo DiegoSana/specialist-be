@@ -44,7 +44,6 @@ export class PrismaTradeRepository implements TradeRepository {
         professionals: {
           some: {
             professional: {
-              active: true,
               status: ProfessionalStatus.VERIFIED,
             },
           },
