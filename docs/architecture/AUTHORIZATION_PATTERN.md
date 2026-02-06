@@ -65,7 +65,7 @@ Centralizamos la **lógica de autorización en el dominio** (entidades), mientra
 |------|-----------------|
 | **Guard** | Autenticación (¿está logueado?) |
 | **Controller** | Extraer usuario, delegar a servicio |
-| **Service** | Construir contexto, validar con dominio, lanzar excepciones |
+| **Service** | Construir contexto (usando [ProfileActivationService](./PROFILE_ACTIVATION_ORCHESTRATION.md) para flags de perfil activo), validar con dominio, lanzar excepciones |
 | **Entity** | Definir reglas de negocio (quién puede hacer qué) |
 
 ---

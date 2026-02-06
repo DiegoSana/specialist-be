@@ -221,7 +221,6 @@ export async function createTestCompany(
       companyName: options.companyName,
       city: options.city || 'Bariloche',
       status: options.status || 'ACTIVE',
-      active: true,
       trades: {
         create: {
           tradeId: options.tradeId,
