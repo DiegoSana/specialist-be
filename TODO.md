@@ -1,6 +1,60 @@
 # 🔧 Tareas Pendientes - Specialist Backend
 
-> Última actualización: 2026-01-16
+> Última actualización: 2026-02-06
+
+> **Nueva sección:** [Perfil activo (MVP): reglas y restricciones](#-perfil-activo-mvp-reglas-y-restricciones) — definición de activo (email + teléfono usuario + confirmación admin), restricciones por perfil activo, y orden de implementación.
+
+---
+
+## 📌 Donde quedamos hoy (recap para seguir mañana)
+
+### ✅ Hecho (2026-02-06): Contacto unificado y solo status en perfiles
+
+- Contacto en User: Company sin phone/email; Professional sin whatsapp. Migración `20260206000000_remove_profile_contact_and_active`.
+- Solo status en perfiles: sin `active`; canOperate = status ACTIVE/VERIFIED. Docs y scripts en MIGRATION_GUIDE.
+
+### ✅ Hecho anteriormente
+
+1. **Servicio de orquestación “perfil activo”**
+   - **ProfileActivationService** (`src/profiles/application/services/profile-activation.service.ts`): único punto que define `hasActiveClientProfile` y `hasActiveProviderProfile` (componiendo User + Professional/Company + `isFullyVerified` / `canOperate`).
+   - Ningún otro servicio llama a `user.isFullyVerified()` para permisos; todos usan este servicio.
+
+2. **RequestAuthContext**
+   - Añadido `hasActiveClientProfile`; ya existía `hasActiveProviderProfile`. Ambos se rellenan desde la orquestación.
+   - Ver `src/requests/domain/entities/request.entity.ts`.
+
+3. **RequestService**
+   - **create():** usa `profileActivationService.getActivationStatus(clientId).hasActiveClientProfile` en lugar de `user.isFullyVerified()`.
+   - **buildAuthContext():** llama a `getActivationStatus(userId)` y devuelve `hasActiveClientProfile`, `hasActiveProviderProfile` y `serviceProviderId`.
+
+4. **RequestInterestService**
+   - **buildAuthContext():** usa `profileActivationService.getActivationStatus(userId)` para `hasActiveProviderProfile`; se quitó la composición inline y la dependencia de UserService.
+
+5. **Documentación**
+   - **PROFILE_ACTIVATION_ORCHESTRATION.md** (`docs/architecture/`): diseño del servicio, uso en AuthContexts, auditoría de endpoints, orden de implementación.
+   - **PERMISSIONS_BY_ROLE.md** y **AUTHORIZATION_PATTERN.md**: referencias al servicio de orquestación.
+
+6. **Tests**
+   - Request y RequestInterest specs actualizados (mock de ProfileActivationService). **291 tests pasando.**
+
+### ✅ Hecho además (controller y restricciones)
+
+- **RequestsController:** Company en findMyRequests/findAvailable; vista limitada → `findByIdForInterestedProvider` + `fromEntityLimited`; TODOs de excepciones eliminados; **RateClientDto** (rating 1–5, comment opcional).
+- **Restricciones:** `canAssignProviderBy` exige `hasActiveClientProfile`; expresar interés exige `hasActiveProviderProfile`. Ver lista de requests disponibles (job board) no exige perfil activo; sí lo exige el listado de proveedores (GET /providers) para aparecer en catálogo.
+
+### ⬜ Siguiente (cuando retomes)
+- **Fase A:** GET /providers ya filtra por usuario verificado + perfil activo. A.4 hecho: contacto solo en User (sin phone/email en Company, sin whatsapp en Professional).
+- **Tests:** opcional spec para `ProfileActivationService`; opcional test "assign rechazado si cliente no activo".
+- **Frontend / Admin:** B.3 mensajes al rechazar por perfil no activo; Fase D pantalla moderación de reviews.
+
+### Archivos clave para seguir
+
+| Qué | Dónde |
+|-----|--------|
+| Orquestación | `src/profiles/application/services/profile-activation.service.ts` |
+| Diseño y auditoría | `docs/architecture/PROFILE_ACTIVATION_ORCHESTRATION.md` |
+| Contexto Request | `src/requests/domain/entities/request.entity.ts` (RequestAuthContext) |
+| Uso en create/buildAuthContext | `request.service.ts`, `request-interest.service.ts` |
 
 ---
 
@@ -265,12 +319,80 @@ Controller → Request DTO → Service → Domain Entity → Response DTO → Cl
 
 ---
 
+## 🟢 Perfil activo (MVP): reglas y restricciones
+
+> **Objetivo:** Redefinir “activo” para Cliente, Profesional y Empresa: email y teléfono del **usuario** verificados + perfil confirmado (manual por admin). Solo perfiles activos pueden: aparecer en listado de proveedores, crear solicitudes (cliente), expresar interés (proveedor).
+
+### Definición de “perfil activo”
+
+Para **todos** los perfiles (Cliente, Profesional, Empresa):
+
+- **Usuario:** `emailVerified === true` y `phoneVerified === true` (datos del **User**, no del perfil).
+- **Perfil:** confirmado manualmente por admin (teléfono, email y perfil pueden ser confirmados/override por admin).
+- **MVP:** Solo se usan teléfono y email del **usuario**. En perfiles (Professional/Company) los campos de contacto se consideran no requeridos y se pueden ocultar en el FE.
+- **Empresa:** además tendrá validaciones extra (por definir; ej. CUIT, documentación).
+
+**Requisitos para acciones:**
+
+| Acción | Requisito |
+|--------|-----------|
+| Aparecer en listado de proveedores (`GET /providers`, búsquedas) | Perfil activo (usuario verificado + perfil confirmado por admin) |
+| Cliente: crear solicitudes (`POST /requests`) | Perfil de cliente activo |
+| Proveedor: expresar interés (`POST /requests/:id/interest`) | Perfil proveedor activo |
+
+### Orden de implementación sugerido
+
+#### Fase A: Backend – definición de “activo” y confirmación por admin
+
+- [x] **A.1** Definir en dominio/servicios “usuario con perfil activo”:
+  - [x] `UserEntity.isFullyVerified()` (emailVerified && phoneVerified). Confirmación de perfil por admin queda para más adelante.
+- [x] **A.2** Admin puede confirmar manualmente:
+  - [x] Endpoint: marcar teléfono del usuario como verificado (override) — `PUT /admin/users/:id/verification` con `{ phoneVerified?: boolean }`.
+  - [x] Endpoint: marcar email del usuario como verificado (override) — mismo endpoint con `{ emailVerified?: boolean }`.
+  - [ ] Endpoint: marcar perfil (Professional/Company/Client) como “confirmado” por admin (puede requerir nuevo campo o flag en BD).
+- [x] **A.3** Restricciones por verificación (guards o validación en servicios):
+  - [x] Crear solicitud (`POST /requests`): exigir perfil de cliente activo (ProfileActivationService.hasActiveClientProfile).
+  - [x] Expresar interés (`POST /requests/:id/interest`): exigir perfil proveedor activo (hasActiveProviderProfile).
+  - [x] Asignar proveedor (`POST /requests/:id/assign-provider`): exigir cliente activo (canAssignProviderBy usa hasActiveClientProfile).
+  - [ ] Job board (`GET /requests/available`): no exige perfil activo; solo ver la lista. Expresar interés sí exige perfil activo (canExpressInterestBy).
+  - [x] Listado de proveedores (`GET /providers`): solo incluir perfiles **activos** (usuario verificado + perfil canOperate). Implementado con `userVerified` en repositorios y `onlyActiveInCatalog: true` en ProvidersController. Búsquedas directas `/professionals` y `/companies` siguen mostrando por active+status sin exigir usuario verificado (comportamiento previo).
+- [x] **A.4** Contacto solo en User: eliminados `phone`/`email` de Company y `whatsapp` de Professional. DTOs de creación/actualización ya no incluyen esos campos; contacto se obtiene del User (ver migración `20260206000000_remove_profile_contact_and_active`).
+
+#### Fase B: Frontend
+
+- [ ] **B.1** Ocultar en FE los campos de teléfono/email de **perfil** (Professional/Company) o mostrarlos como no requeridos; usar solo teléfono/email del usuario para verificación y contacto en MVP.
+- [ ] **B.2** Pantalla de especialistas: usar **solo** `GET /providers` (unificado). **Sí, debe usar /providers** en lugar de /professionals para listar; el FE principal ya usa `GET /providers` en la página de profesionales y en crear solicitud. Revisar que no queden llamadas a `/professionals` para el catálogo y migrarlas a `/providers`.
+- [ ] **B.3** Mensajes claros cuando una acción se rechaza por perfil no activo (ej. “Verificá tu email y teléfono para crear una solicitud”).
+
+#### Fase C: Empresa – validaciones extra (por definir)
+
+- [ ] **C.1** Definir qué validaciones extra requiere el perfil de empresa (ej. CUIT, documentación, AFIP). Documentar en TODO o en COMPANY_PROFILES.
+- [ ] **C.2** Implementar cuando estén definidas.
+
+#### Fase D: Admin – moderación de reviews
+
+- [ ] **D.1** **Backend:** Los endpoints de moderación ya existen: `GET /reviews/admin/pending`, `POST /reviews/:id/approve`, `POST /reviews/:id/reject` (con AdminGuard). Verificar que estén documentados en API y en el plan del portal admin.
+- [ ] **D.2** **Admin portal (FE):** Agregar pantalla de moderación de reviews: listar pendientes, aprobar/rechazar. Ver [Portal de Administración](#portal-de-administración) y `docs/plans/admin-portal-plan.md`.
+
+### Resumen rápido
+
+- **Activo** = usuario con email + teléfono verificados (+ perfil confirmado por admin cuando se implemente).
+- **MVP:** Contacto = solo usuario; perfiles sin exigir teléfono/email propios; admin puede confirmar manualmente.
+- **Listado proveedores** = solo perfiles activos.
+- **Crear solicitud** = cliente activo; **expresar interés** = proveedor activo.
+- **Pantalla especialistas** = usar `GET /providers`.
+- **Moderación reviews** = ya en BE; falta pantalla en admin FE.
+
+---
+
 ## 📚 Documentación Pendiente
 
 - [x] Documentar patrón de autorización `AuthContext` + métodos de dominio
   - Creado `docs/architecture/AUTHORIZATION_PATTERN.md`
-- [ ] Actualizar README con nuevos endpoints
-- [ ] Documentar flujos de permisos por rol (Cliente, Especialista, Admin)
+- [x] Actualizar README con nuevos endpoints
+  - Companies, providers, verification, notifications; enlace a API Structure
+- [x] Documentar flujos de permisos por rol (Cliente, Especialista, Admin)
+  - Creado `docs/guides/PERMISSIONS_BY_ROLE.md`
 - [ ] Agregar diagramas de estado de Request
 
 ---
@@ -674,13 +796,13 @@ model Company {
   - Invalidación automática cuando cambia el teléfono/email
 
 - [ ] **Tests para Verificación**
-  - [ ] Tests unitarios para `VerificationService` (application layer)
+  - [x] Tests unitarios para `VerificationService` (application layer)
   - [ ] Tests unitarios para `TwilioVerifyService` (infrastructure layer)
   - [ ] Tests unitarios para `Phone` value object
   - [ ] Tests de integración para endpoints de verificación
   - [ ] Tests E2E para flujo completo de verificación de teléfono
   - [ ] Tests E2E para flujo completo de verificación de email
-  - [ ] Tests de validación: prevenir código si ya está verificado
+  - [x] Tests de validación: prevenir código si ya está verificado (cubierto en VerificationService spec)
   - [ ] Tests de invalidación: verificar que se invalida al cambiar teléfono/email
 
 - [ ] **Deployment y Configuración**
@@ -689,24 +811,15 @@ model Company {
     - `TWILIO_AUTH_TOKEN`
     - `TWILIO_VERIFY_SERVICE_SID`
 
-- [ ] **Restricciones de Acciones por Verificación**
-  - [ ] Identificar acciones que requieren email verificado
-  - [ ] Identificar acciones que requieren teléfono/WhatsApp verificado
-  - [ ] Implementar guards/decorators para validar verificación antes de acciones críticas
-  - [ ] Agregar validación en servicios de aplicación
-  - [ ] Retornar error descriptivo cuando falta verificación requerida
-  
-  **Acciones que requieren teléfono verificado:**
-  - [ ] Expresar interés en una solicitud (`POST /requests/:id/interest`)
-  - [ ] Activar perfil especialista (`POST /professionals/me/activate`)
-  - [ ] Activar perfil empresa (`POST /companies/me/activate`) - Si quieres tener tu perfil activo, debes verificar el teléfono
-  - [ ] Aceptar una solicitud (cambiar estado a ACCEPTED)
-  - [ ] Crear una solicitud (`POST /requests`)
-  
-  **Acciones que requieren email verificado:**
-  - [ ] (Por definir según necesidades del negocio)
+- [ ] **Restricciones de Acciones por Verificación** → Ver sección [Perfil activo (MVP)](#-perfil-activo-mvp-reglas-y-restricciones)
+  - Requisito unificado: **perfil activo** = usuario con email + teléfono verificados (+ perfil confirmado por admin).
+  - Acciones que requieren perfil activo: crear solicitud (cliente), expresar interés (proveedor), aparecer en listado de proveedores.
+  - [ ] Implementar guards/validación en servicios según fases A.2 y A.3 de la sección Perfil activo.
 
 ### Notificaciones y Comunicaciones
+- [ ] **Notificar a clientes cuando un proveedor cambia teléfono o email (mejora)**
+  - Cuando un provider (Professional o Company) actualiza su número de teléfono o email en el usuario, notificar a los clientes de los **requests activos** en los que ese proveedor participa (asignado o con interés expresado).
+  - Permite que el cliente tenga el dato de contacto actualizado para solicitudes en curso.
 - [ ] **Integración de Twilio WhatsApp en Notificaciones**
   - [ ] Incorporar Twilio al módulo de notificaciones
   - [ ] Crear adapter para envío de mensajes por WhatsApp usando Twilio API
@@ -756,10 +869,10 @@ model Company {
 
 **Funcionalidades MVP planificadas:**
 - [ ] Dashboard con métricas y KPIs
-- [ ] Gestión de usuarios (listar, ver, editar, cambiar estado)
+- [ ] Gestión de usuarios (listar, ver, editar, cambiar estado, confirmar email/teléfono manualmente)
 - [ ] Gestión de solicitudes (listar, ver, acciones administrativas)
-- [ ] Gestión de perfiles profesionales y empresas (verificar, suspender)
-- [ ] Moderación de reviews pendientes
+- [ ] Gestión de perfiles profesionales y empresas (verificar, suspender, confirmar perfil)
+- [ ] **Moderación de reviews pendientes** — Backend ya tiene: `GET /reviews/admin/pending`, `POST /reviews/:id/approve`, `POST /reviews/:id/reject`. Falta pantalla en admin FE (ver sección [Perfil activo (MVP)](#-perfil-activo-mvp-reglas-y-restricciones), Fase D).
 - [ ] Gestión de notificaciones (estadísticas, reenviar fallidas)
 
 **Fases de implementación:**
@@ -789,6 +902,10 @@ model Company {
 
 ## 📅 Prioridades Sugeridas
 
+### Corto plazo
+1. Avanzar con [Perfil activo (MVP)](#-perfil-activo-mvp-reglas-y-restricciones): Fase A (backend) y Fase D (moderación reviews en admin FE).
+2. Confirmar/migrar pantalla de especialistas a usar solo `GET /providers` (FE).
+
 ### Esta Semana
 1. ~~Crear PRs pendientes~~ ✅ BE #10, #11 | FE #3, #4
 2. ~~Merge de PRs existentes~~ ✅
@@ -804,6 +921,7 @@ model Company {
 1. DTOs completos en todos los controladores
 2. Documentación de arquitectura
 3. Tests E2E
+4. Perfil activo: restricciones por verificación y confirmación admin (Fases A–B)
 
 ---
 

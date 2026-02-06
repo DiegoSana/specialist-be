@@ -132,12 +132,21 @@ The database has existing tables. Options:
    npx prisma migrate resolve --applied <migration_name>
    ```
 
-### Error: "Migration not found"
+### Error: "Migration not found" (P3015)
 
-Migrations in `prisma/migrations/` don't match the database. Options:
+Migrations in `prisma/migrations/` don't match the database. Common cases:
 
-1. Reset the database (dev only)
-2. Manually sync the `_prisma_migrations` table
+1. **Orphan folder in container**: A migration folder exists on disk (e.g. inside Docker) but not in the repo (e.g. `20260121143414_add_phone_email_verification`). Prisma tries to load it and fails.
+   - **Fix**: Remove the folder inside the container:  
+     `docker exec -it <api-container> rm -rf /app/prisma/migrations/<orphan_folder_name>`
+   - Then run `npx prisma migrate deploy` again.
+
+2. **Orphan row in database**: The `_prisma_migrations` table has a row for a migration that no longer exists in the repo.
+   - **Fix**: Delete the row, e.g.  
+     `DELETE FROM "_prisma_migrations" WHERE migration_name = '...';`  
+     (Use `scripts/fix-migration-record.sql` or run via `npx prisma db execute --file scripts/fix-migration-record.sql`.)
+
+3. **Reset the database** (dev only): `npx prisma migrate reset`
 
 ### Error: "Can't reach database server"
 
@@ -171,17 +180,24 @@ datasource db {
 See `prisma/schema.prisma` for the current database schema.
 
 Main models:
-- `User` - User accounts
+- `User` - User accounts (email, phone, verification; contact for all profiles)
 - `Client` - Client profiles
-- `Professional` - Professional profiles
+- `Professional` - Professional profiles (no `whatsapp`; contact = User.phone). Status only (no `active`).
+- `Company` - Company profiles (no `phone`/`email`; contact = User). Status only (no `active`).
 - `Trade` - Service categories
-- `ProfessionalTrade` - Professional-Trade relationship
+- `ProfessionalTrade` / `CompanyTrade` - Provider–Trade relationships
 - `Request` - Service requests
-- `RequestInterest` - Professional interests in public requests
+- `RequestInterest` - Provider interests in public requests
 - `Review` - Reviews and ratings
 - `File` - Uploaded files
 - `Contact` - Contact requests
 
+### Recent migration: profile contact and status (2026-02)
+
+- **Professional**: removed `whatsapp`; contact = `User.phone`. Removed `active`; “can operate” = `status` in (ACTIVE, VERIFIED).
+- **Company**: removed `phone`, `email`, `active`; contact = User; “can operate” = `status` in (ACTIVE, VERIFIED).
+- Migration: `20260206000000_remove_profile_contact_and_active`.
+
 ---
 
-*Last Updated: December 2024*
+*Last Updated: February 2026*
