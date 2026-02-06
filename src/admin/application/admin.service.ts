@@ -39,6 +39,18 @@ export class AdminService {
     );
   }
 
+  async updateUserVerification(
+    userId: string,
+    updateDto: { emailVerified?: boolean; phoneVerified?: boolean },
+    actingUser: UserEntity,
+  ) {
+    return this.userService.updateVerificationForUser(
+      userId,
+      actingUser,
+      updateDto,
+    );
+  }
+
   async getAllProfessionals(page: number = 1, limit: number = 10) {
     return this.professionalService.getAllProfessionalsForAdmin(page, limit);
   }

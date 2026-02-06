@@ -232,6 +232,31 @@ export class UserService {
     return this.userRepository.save(next);
   }
 
+  /**
+   * Admin only: set email and/or phone verification (manual confirmation).
+   */
+  async updateVerificationForUser(
+    targetUserId: string,
+    actingUser: UserEntity,
+    overrides: { emailVerified?: boolean; phoneVerified?: boolean },
+  ): Promise<UserEntity> {
+    if (!actingUser.isAdminUser()) {
+      throw new ForbiddenException('Only admins can update verification status');
+    }
+    const targetUser = await this.userRepository.findById(targetUserId, true);
+    if (!targetUser) {
+      throw new NotFoundException('User not found');
+    }
+    if (
+      overrides.emailVerified === undefined &&
+      overrides.phoneVerified === undefined
+    ) {
+      return targetUser;
+    }
+    const next = targetUser.withVerificationOverrides(overrides);
+    return this.userRepository.save(next);
+  }
+
   // ─────────────────────────────────────────────────────────────
   // Statistics methods (for admin dashboard)
   // ─────────────────────────────────────────────────────────────
