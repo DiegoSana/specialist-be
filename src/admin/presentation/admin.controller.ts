@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { AdminService } from '../application/admin.service';
 import { UpdateUserStatusDto } from '../application/dto/update-user-status.dto';
+import { UpdateUserVerificationDto } from '../application/dto/update-user-verification.dto';
 import { UpdateProfessionalStatusDto } from '../application/dto/update-professional-status.dto';
 import { UpdateCompanyStatusDto } from '../application/dto/update-company-status.dto';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
@@ -68,6 +69,23 @@ export class AdminController {
     @CurrentUser() user: UserEntity,
   ) {
     return this.adminService.updateUserStatus(id, updateDto, user);
+  }
+
+  @Put('users/:id/verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update user verification (Admin only)',
+    description:
+      'Manually confirm email and/or phone as verified. Used when admin overrides Twilio verification.',
+  })
+  @ApiResponse({ status: 200, description: 'User verification updated successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateUserVerification(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateUserVerificationDto,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.adminService.updateUserVerification(id, updateDto, user);
   }
 
   @Get('professionals')

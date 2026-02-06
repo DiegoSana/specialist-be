@@ -3,11 +3,17 @@ import { RequestStatus } from '@prisma/client';
 /**
  * Context for authorization checks.
  * - serviceProviderId: the current user's provider ID (Professional or Company)
+ * - hasActiveClientProfile / hasActiveProviderProfile: from ProfileActivationService
+ *   (single orchestration point); do not duplicate isFullyVerified/canOperate elsewhere.
  */
 export interface RequestAuthContext {
   userId: string;
   serviceProviderId?: string | null;
   isAdmin?: boolean;
+  /** Client profile exists and user is fully verified (email + phone) */
+  hasActiveClientProfile?: boolean;
+  /** Provider profile canOperate and user is fully verified */
+  hasActiveProviderProfile?: boolean;
 }
 
 export class RequestEntity {
@@ -218,13 +224,12 @@ export class RequestEntity {
   /**
    * Determines if a provider can express interest in this request.
    * Rules:
-   * - Must be a public request
-   * - Must be pending
-   * - Must not have an assigned provider yet
-   * - User must have a provider profile (Professional or Company)
+   * - Must have an active provider profile (hasActiveProviderProfile: profile can operate + user fully verified)
+   * - Must be a public request, pending, with no provider assigned yet
    */
   canExpressInterestBy(ctx: RequestAuthContext): boolean {
     if (!ctx.serviceProviderId) return false;
+    if (!ctx.hasActiveProviderProfile) return false;
     return this.isPublic && this.isPending() && !this.providerId;
   }
 
@@ -232,12 +237,13 @@ export class RequestEntity {
    * Determines if a user can assign a provider to this request.
    * Rules:
    * - Admins can assign
-   * - Only the client owner can assign
+   * - Only the client owner can assign (must have active client profile: verified email + phone)
    * - Request must be public and pending
    */
   canAssignProviderBy(ctx: RequestAuthContext): boolean {
     if (ctx.isAdmin) return true;
     if (!this.isClient(ctx)) return false;
+    if (ctx.hasActiveClientProfile === false) return false;
     return this.isPublic && this.isPending();
   }
 

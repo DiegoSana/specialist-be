@@ -149,6 +149,14 @@ export class UserEntity {
     return this.hasClientProfile && this.isActive();
   }
 
+  /**
+   * User has verified both email and phone (required for "active profile" in MVP).
+   * Admin can override via manual confirmation (separate flow).
+   */
+  isFullyVerified(): boolean {
+    return this.emailVerified && this.phoneVerified;
+  }
+
   hasBothProfiles(): boolean {
     return this.hasClientProfile && this.hasProfessionalProfile;
   }
@@ -230,6 +238,10 @@ export class UserEntity {
     );
   }
 
+  /**
+   * Link Google account to this user.
+   * Sets emailVerified to true since Google has verified the email.
+   */
   linkGoogle(
     googleId: string,
     profilePictureUrl?: string | null,
@@ -254,10 +266,14 @@ export class UserEntity {
       this.facebookId,
       this.authProvider,
       this.phoneVerified,
-      this.emailVerified,
+      true, // Google has verified this email
     );
   }
 
+  /**
+   * Link Facebook account to this user.
+   * Sets emailVerified to true since Facebook has verified the email.
+   */
   linkFacebook(
     facebookId: string,
     profilePictureUrl?: string | null,
@@ -282,7 +298,7 @@ export class UserEntity {
       facebookId,
       this.authProvider,
       this.phoneVerified,
-      this.emailVerified,
+      true, // Facebook has verified this email
     );
   }
 
@@ -391,6 +407,44 @@ export class UserEntity {
       this.authProvider,
       this.phoneVerified,
       true,
+    );
+  }
+
+  /**
+   * Admin override: set email and/or phone verification flags (manual confirmation).
+   */
+  withVerificationOverrides(overrides: {
+    emailVerified?: boolean;
+    phoneVerified?: boolean;
+  }): UserEntity {
+    const phoneVerified =
+      overrides.phoneVerified !== undefined
+        ? overrides.phoneVerified
+        : this.phoneVerified;
+    const emailVerified =
+      overrides.emailVerified !== undefined
+        ? overrides.emailVerified
+        : this.emailVerified;
+    return new UserEntity(
+      this.id,
+      this.email,
+      this.password,
+      this.firstName,
+      this.lastName,
+      this.phone,
+      this.profilePictureUrl,
+      this.isAdmin,
+      this.status,
+      this.createdAt,
+      this.updatedAt,
+      this.hasClientProfile,
+      this.hasProfessionalProfile,
+      this.hasCompanyProfile,
+      this.googleId,
+      this.facebookId,
+      this.authProvider,
+      phoneVerified,
+      emailVerified,
     );
   }
 

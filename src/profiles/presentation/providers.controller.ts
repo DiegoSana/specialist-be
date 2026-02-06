@@ -143,13 +143,15 @@ export class ProvidersController {
     const providerType = query.providerType || 'ALL';
     const results: UnifiedProviderResultDto[] = [];
 
-    // Fetch professionals if requested
+    // Fetch professionals if requested (only "active" in catalog: user verified + profile canOperate)
     if (providerType === 'ALL' || providerType === 'PROFESSIONAL') {
       const professionalsDto: SearchProfessionalsDto = {
         search: query.search,
         tradeId: query.tradeId,
       };
-      let professionals = await this.professionalService.search(professionalsDto);
+      let professionals = await this.professionalService.search(professionalsDto, {
+        onlyActiveInCatalog: true,
+      });
       
       // Filter by city/zone if provided (post-fetch filter)
       if (query.city) {
@@ -166,14 +168,16 @@ export class ProvidersController {
       results.push(...professionals.map((p) => this.mapProfessional(p)));
     }
 
-    // Fetch companies if requested
+    // Fetch companies if requested (only "active" in catalog: user verified + profile canOperate)
     if (providerType === 'ALL' || providerType === 'COMPANY') {
       const companiesDto: SearchCompaniesDto = {
         search: query.search,
         tradeId: query.tradeId,
         city: query.city,
       };
-      const companies = await this.companyService.search(companiesDto);
+      const companies = await this.companyService.search(companiesDto, {
+        onlyActiveInCatalog: true,
+      });
       results.push(...companies.map((c) => this.mapCompany(c)));
     }
 

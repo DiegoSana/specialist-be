@@ -139,6 +139,7 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/users` | `GET` | Listar todos los usuarios (paginado) |
 | `/api/admin/users/:id` | `GET` | Obtener usuario por ID |
 | `/api/admin/users/:id/status` | `PUT` | Actualizar estado de usuario |
+| `/api/admin/users/:id/verification` | `PUT` | Confirmar email/teléfono manualmente (body: `emailVerified?`, `phoneVerified?`) |
 | `/api/admin/professionals` | `GET` | Listar todos los profesionales (paginado) |
 | `/api/admin/professionals/:id` | `GET` | Obtener profesional por ID |
 | `/api/admin/professionals/:id/status` | `PUT` | Actualizar estado de profesional |

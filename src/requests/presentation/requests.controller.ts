@@ -26,12 +26,14 @@ import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { RequestService } from '../application/services/request.service';
 import { RequestInterestService } from '../application/services/request-interest.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
+import { CompanyService } from '../../profiles/application/services/company.service';
 import { CreateRequestDto } from '../application/dto/create-request.dto';
 import { UpdateRequestDto } from '../application/dto/update-request.dto';
 import {
   ExpressInterestDto,
   AssignProviderDto,
 } from '../application/dto/express-interest.dto';
+import { RateClientDto } from '../application/dto/rate-client.dto';
 import { RequestResponseDto } from './dto/request-response.dto';
 import { InterestedProfessionalResponseDto } from './dto/interested-professional-response.dto';
 import { InterestedRequestDto } from './dto/interested-request-response.dto';
@@ -45,7 +47,43 @@ export class RequestsController {
     private readonly requestService: RequestService,
     private readonly requestInterestService: RequestInterestService,
     private readonly professionalService: ProfessionalService,
+    private readonly companyService: CompanyService,
   ) {}
+
+  /**
+   * Resolve current user's provider profile (Professional or Company) and return
+   * serviceProviderId plus optional tradeIds, city, zone for job board.
+   */
+  private async resolveProviderContext(userId: string): Promise<{
+    serviceProviderId: string;
+    tradeIds: string[];
+    city?: string;
+    zone?: string;
+  } | null> {
+    try {
+      const professional = await this.professionalService.findByUserId(userId);
+      return {
+        serviceProviderId: professional.serviceProviderId,
+        tradeIds: professional.tradeIds ?? [],
+        city: professional.city,
+        zone: professional.zone ?? undefined,
+      };
+    } catch {
+      // No professional profile
+    }
+    try {
+      const company = await this.companyService.findByUserId(userId);
+      return {
+        serviceProviderId: company.serviceProviderId,
+        tradeIds: company.tradeIds ?? [],
+        city: company.city,
+        zone: company.zone ?? undefined,
+      };
+    } catch {
+      // No company profile
+    }
+    return null;
+  }
 
   // ==================== CRUD OPERATIONS ====================
 
@@ -69,18 +107,20 @@ export class RequestsController {
     @CurrentUser() user: UserEntity,
     @Query('role') role?: 'client' | 'professional',
   ): Promise<RequestResponseDto[]> {
-    // If role specified, use that. Otherwise, determine based on user profile
     let entities;
     if (role === 'client' || (!role && user.isClient())) {
       entities = await this.requestService.findByClientId(user.id);
-    } else if (role === 'professional' || (!role && user.isProfessional())) {
-      const professional = await this.professionalService.findByUserId(user.id);
-      // Use serviceProviderId directly instead of findByProfessionalId
-      entities = await this.requestService.findByProviderId(professional.serviceProviderId);
+    } else if (
+      role === 'professional' ||
+      (!role && user.hasAnyProviderProfile())
+    ) {
+      const provider = await this.resolveProviderContext(user.id);
+      entities = provider
+        ? await this.requestService.findByProviderId(provider.serviceProviderId)
+        : [];
     } else {
       entities = [];
     }
-
     return RequestResponseDto.fromEntities(entities);
   }
 
@@ -94,17 +134,23 @@ export class RequestsController {
     @Query('city') city?: string,
     @Query('zone') zone?: string,
   ): Promise<RequestResponseDto[]> {
-    if (!user.hasProfessionalProfile) {
+    if (!user.hasAnyProviderProfile()) {
       throw new BadRequestException(
-        'Only professionals can view available requests',
+        'Only providers (professionals or companies) can view available requests',
       );
     }
 
-    const professional = await this.professionalService.findByUserId(user.id);
+    // No need for active/verified profile to see the list; only to express interest (enforced in expressInterest).
+    const provider = await this.resolveProviderContext(user.id);
+    if (!provider) {
+      throw new BadRequestException(
+        'No active provider profile found to view available requests',
+      );
+    }
     const entities = await this.requestService.findAvailableForProfessional(
-      professional.tradeIds,
-      city,
-      zone,
+      provider.tradeIds,
+      city ?? provider.city,
+      zone ?? provider.zone,
     );
     return RequestResponseDto.fromEntities(entities);
   }
@@ -123,45 +169,25 @@ export class RequestsController {
       user.isAdminUser(),
     );
 
-    // Try to get full access first
     try {
       const entity = await this.requestService.findByIdForUser(id, ctx);
       return RequestResponseDto.fromEntity(entity);
     } catch (error: any) {
-      // If ForbiddenException and user is a provider, check if they expressed interest
       if (
         error instanceof ForbiddenException &&
         ctx.serviceProviderId
       ) {
-        const interestCtx = await this.requestInterestService.buildAuthContext(
-          user.id,
-          user.isAdminUser(),
-        );
-        const hasInterest =
-          await this.requestInterestService.hasExpressedInterest(
-            id,
-            interestCtx,
-          );
-
-        if (hasInterest) {
-          // User expressed interest but request was assigned to another provider
-          // Return limited information (title, description, status, createdAt)
-          const request = await this.requestService.findById(id);
-          const limitedDto = RequestResponseDto.fromEntity(request);
-          // Remove sensitive information
-          limitedDto.address = null;
-          limitedDto.photos = [];
-          limitedDto.client = undefined;
-          limitedDto.professional = undefined;
-          limitedDto.company = undefined;
-          limitedDto.availability = null;
-          limitedDto.clientRating = null;
-          limitedDto.clientRatingComment = null;
-          return limitedDto;
+        try {
+          const request =
+            await this.requestService.findByIdForInterestedProvider(
+              id,
+              ctx.serviceProviderId,
+            );
+          return RequestResponseDto.fromEntityLimited(request);
+        } catch {
+          // No interest or still forbidden; re-throw original
         }
       }
-
-      // Re-throw original error if no interest found
       throw error;
     }
   }
@@ -387,13 +413,18 @@ export class RequestsController {
   async rateClient(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
-    @Body() body: { rating: number; comment?: string },
+    @Body() body: RateClientDto,
   ): Promise<RequestResponseDto> {
     const ctx = await this.requestService.buildAuthContext(
       user.id,
       user.isAdminUser(),
     );
-    const entity = await this.requestService.rateClient(id, ctx, body.rating, body.comment);
+    const entity = await this.requestService.rateClient(
+      id,
+      ctx,
+      body.rating,
+      body.comment,
+    );
     return RequestResponseDto.fromEntity(entity);
   }
 }

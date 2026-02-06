@@ -9,9 +9,11 @@ import { REQUEST_INTEREST_REPOSITORY } from '../../domain/repositories/request-i
 import { REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { CompanyService } from '../../../profiles/application/services/company.service';
+import { ProfileActivationService } from '../../../profiles/application/services/profile-activation.service';
 import {
   createMockProfessional,
   createMockRequest,
+  createMockUser,
 } from '../../../__mocks__/test-utils';
 import { RequestStatus, ProviderType } from '@prisma/client';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
@@ -43,15 +45,17 @@ interface InterestAuthContext {
   providerName?: string | null;
   providerTradeIds?: string[];
   isAdmin?: boolean;
+  hasActiveProviderProfile?: boolean;
 }
 
-// Helper to create auth context
+// Helper to create auth context (hasActiveProviderProfile defaults true for permission-success cases)
 const createAuthContext = (
   userId: string,
   serviceProviderId?: string | null,
   providerType?: ProviderType | null,
   providerTradeIds?: string[],
   isAdmin = false,
+  hasActiveProviderProfile = true,
 ): InterestAuthContext => ({
   userId,
   serviceProviderId: serviceProviderId ?? null,
@@ -59,12 +63,14 @@ const createAuthContext = (
   providerName: 'Test Provider',
   providerTradeIds: providerTradeIds ?? [],
   isAdmin,
+  hasActiveProviderProfile,
 });
 
 describe('RequestInterestService', () => {
   let service: RequestInterestService;
   let mockRequestInterestRepository: any;
   let mockRequestRepository: any;
+  let mockProfileActivationService: any;
   let mockProfessionalService: any;
   let mockCompanyService: any;
   let mockEventBus: any;
@@ -82,6 +88,14 @@ describe('RequestInterestService', () => {
     mockRequestRepository = {
       findById: jest.fn(),
       save: jest.fn(),
+    };
+
+    mockProfileActivationService = {
+      getActivationStatus: jest.fn().mockResolvedValue({
+        hasActiveClientProfile: false,
+        hasActiveProviderProfile: true,
+        activeServiceProviderId: 'sp-123',
+      }),
     };
 
     mockProfessionalService = {
@@ -108,6 +122,10 @@ describe('RequestInterestService', () => {
         },
         { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
         { provide: EVENT_BUS, useValue: mockEventBus },
+        {
+          provide: ProfileActivationService,
+          useValue: mockProfileActivationService,
+        },
         { provide: ProfessionalService, useValue: mockProfessionalService },
         { provide: CompanyService, useValue: mockCompanyService },
       ],
@@ -127,6 +145,11 @@ describe('RequestInterestService', () => {
         userId: 'user-123',
         serviceProviderId: 'sp-123',
       });
+      mockProfileActivationService.getActivationStatus.mockResolvedValueOnce({
+        hasActiveClientProfile: false,
+        hasActiveProviderProfile: true,
+        activeServiceProviderId: 'sp-123',
+      });
       mockProfessionalService.findByUserId.mockResolvedValue(professional);
 
       const ctx = await service.buildAuthContext('user-123', false);
@@ -135,10 +158,18 @@ describe('RequestInterestService', () => {
       expect(ctx.serviceProviderId).toBe('sp-123');
       expect(ctx.providerType).toBe(ProviderType.PROFESSIONAL);
       expect(ctx.isAdmin).toBe(false);
+      expect(ctx.hasActiveProviderProfile).toBe(true);
     });
 
     it('should return context with company serviceProviderId if no professional', async () => {
-      mockProfessionalService.findByUserId.mockResolvedValue(null);
+      mockProfileActivationService.getActivationStatus.mockResolvedValueOnce({
+        hasActiveClientProfile: false,
+        hasActiveProviderProfile: true,
+        activeServiceProviderId: 'sp-456',
+      });
+      mockProfessionalService.findByUserId.mockRejectedValue(
+        new NotFoundException(),
+      );
       mockCompanyService.findByUserId.mockResolvedValue({
         id: 'company-123',
         userId: 'user-123',
@@ -155,18 +186,37 @@ describe('RequestInterestService', () => {
     });
 
     it('should return null serviceProviderId if no provider profile', async () => {
-      mockProfessionalService.findByUserId.mockResolvedValue(null);
-      mockCompanyService.findByUserId.mockRejectedValue(new NotFoundException());
+      mockProfileActivationService.getActivationStatus.mockResolvedValueOnce({
+        hasActiveClientProfile: false,
+        hasActiveProviderProfile: false,
+        activeServiceProviderId: null,
+      });
+      mockProfessionalService.findByUserId.mockRejectedValue(
+        new NotFoundException(),
+      );
+      mockCompanyService.findByUserId.mockRejectedValue(
+        new NotFoundException(),
+      );
 
       const ctx = await service.buildAuthContext('user-123', false);
 
       expect(ctx.userId).toBe('user-123');
       expect(ctx.serviceProviderId).toBeNull();
+      expect(ctx.hasActiveProviderProfile).toBe(false);
     });
 
     it('should include isAdmin flag', async () => {
-      mockProfessionalService.findByUserId.mockResolvedValue(null);
-      mockCompanyService.findByUserId.mockResolvedValue(null);
+      mockProfileActivationService.getActivationStatus.mockResolvedValueOnce({
+        hasActiveClientProfile: false,
+        hasActiveProviderProfile: false,
+        activeServiceProviderId: null,
+      });
+      mockProfessionalService.findByUserId.mockRejectedValue(
+        new NotFoundException(),
+      );
+      mockCompanyService.findByUserId.mockRejectedValue(
+        new NotFoundException(),
+      );
 
       const ctx = await service.buildAuthContext('admin-123', true);
 
@@ -203,10 +253,28 @@ describe('RequestInterestService', () => {
 
     it('should throw ForbiddenException if user has no provider profile', async () => {
       const ctx = createAuthContext('user-123', null, null);
+      mockRequestRepository.findById.mockResolvedValue(publicRequest);
 
       await expect(
         service.expressInterest('request-123', ctx, { message: 'Interested' }),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException if provider profile is not active', async () => {
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+        ['trade-1'],
+        false,
+        false, // hasActiveProviderProfile
+      );
+      mockRequestRepository.findById.mockResolvedValue(publicRequest);
+
+      await expect(
+        service.expressInterest('request-123', ctx, { message: 'Interested' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockRequestInterestRepository.add).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if request not found', async () => {

@@ -22,6 +22,7 @@
 - [**MIGRATION_GUIDE.md**](./guides/MIGRATION_GUIDE.md) - Database migration guide
 - [**NOTIFICATIONS.md**](./guides/NOTIFICATIONS.md) - Email notifications & preferences
 - [**REVIEW_MODERATION.md**](./guides/REVIEW_MODERATION.md) - Review approval workflow
+- [**PERMISSIONS_BY_ROLE.md**](./guides/PERMISSIONS_BY_ROLE.md) - Flujos de permisos por rol (Cliente, Especialista, Admin)
 
 ### WhatsApp Follow-up System
 - [**WhatsApp Follow-up**](./guides/whatsapp/README.md) - Sistema de follow-up automático vía WhatsApp

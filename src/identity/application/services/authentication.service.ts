@@ -268,6 +268,7 @@ export class AuthenticationService {
           UserEntity.createOAuth({
             id: randomUUID(),
             email,
+            emailVerified: true, // Facebook has verified the email
             firstName: facebookUser.firstName || 'Usuario',
             lastName: facebookUser.lastName || 'Facebook',
             profilePictureUrl: facebookUser.profilePictureUrl,

@@ -63,7 +63,6 @@ export interface CompanyQueryRepository {
     description: string | null;
     address: string | null;
     city: string | null;
-    phone: string | null;
     website: string | null;
     user: {
       id: string;

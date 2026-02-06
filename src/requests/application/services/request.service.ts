@@ -11,6 +11,10 @@ import {
   REQUEST_REPOSITORY,
 } from '../../domain/repositories/request.repository';
 import {
+  RequestInterestRepository,
+  REQUEST_INTEREST_REPOSITORY,
+} from '../../domain/repositories/request-interest.repository';
+import {
   RequestQueryRepository,
   REQUEST_QUERY_REPOSITORY,
 } from '../../domain/queries/request.query-repository';
@@ -29,12 +33,15 @@ import { RequestStatusChangedEvent } from '../../domain/events/request-status-ch
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { CompanyService } from '../../../profiles/application/services/company.service';
 import { UserService } from '../../../identity/application/services/user.service';
+import { ProfileActivationService } from '../../../profiles/application/services/profile-activation.service';
 
 @Injectable()
 export class RequestService {
   constructor(
     @Inject(REQUEST_REPOSITORY)
     private readonly requestRepository: RequestRepository,
+    @Inject(REQUEST_INTEREST_REPOSITORY)
+    private readonly requestInterestRepository: RequestInterestRepository,
     @Inject(REQUEST_QUERY_REPOSITORY)
     private readonly requestQueryRepository: RequestQueryRepository,
     @Inject(EVENT_BUS)
@@ -44,6 +51,8 @@ export class RequestService {
     @Inject(forwardRef(() => CompanyService))
     private readonly companyService: CompanyService,
     private readonly userService: UserService,
+    @Inject(forwardRef(() => ProfileActivationService))
+    private readonly profileActivationService: ProfileActivationService,
   ) {}
 
   async create(
@@ -53,6 +62,14 @@ export class RequestService {
     const user = await this.userService.findById(clientId, true);
     if (!user || !user.isClient()) {
       throw new BadRequestException('Only clients can create requests');
+    }
+    const activation = await this.profileActivationService.getActivationStatus(
+      clientId,
+    );
+    if (!activation.hasActiveClientProfile) {
+      throw new BadRequestException(
+        'You must verify your email and phone to create a request',
+      );
     }
 
     const isPublic = createDto.isPublic === true;
@@ -147,29 +164,66 @@ export class RequestService {
   }
 
   /**
-   * Build auth context from userId (resolves serviceProviderId if user has a provider profile)
+   * Return request for a provider who expressed interest but was not assigned.
+   * Use when findByIdForUser returns 403 but the provider has interest (caller
+   * should map result to a limited DTO: id, title, description, status, createdAt).
+   * Throws NotFoundException if request missing, ForbiddenException if no interest.
+   */
+  async findByIdForInterestedProvider(
+    id: string,
+    serviceProviderId: string,
+  ): Promise<RequestEntity> {
+    const request = await this.findById(id);
+    const interest =
+      await this.requestInterestRepository.findByRequestAndProvider(
+        id,
+        serviceProviderId,
+      );
+    if (!interest) {
+      throw new ForbiddenException(
+        'You do not have permission to view this request',
+      );
+    }
+    return request;
+  }
+
+  /**
+   * Build auth context from userId using ProfileActivationService (single orchestration).
+   * Resolves serviceProviderId for both professional and company; includes active flags.
    */
   async buildAuthContext(
     userId: string,
     isAdmin: boolean = false,
   ): Promise<RequestAuthContext> {
-    let serviceProviderId: string | null = null;
+    const activation =
+      await this.profileActivationService.getActivationStatus(userId);
 
-    try {
-      // Check if user has a professional profile
-      const professional = await this.professionalService.findByUserId(userId);
-      serviceProviderId = professional?.serviceProviderId ?? null;
-    } catch {
-      // User doesn't have a professional profile
+    let serviceProviderId = activation.activeServiceProviderId;
+    if (serviceProviderId === null) {
+      try {
+        const professional =
+          await this.professionalService.findByUserId(userId);
+        serviceProviderId = professional?.serviceProviderId ?? null;
+      } catch {
+        // no professional
+      }
+      if (serviceProviderId === null) {
+        try {
+          const company = await this.companyService.findByUserId(userId);
+          serviceProviderId = company?.serviceProviderId ?? null;
+        } catch {
+          // no company
+        }
+      }
     }
 
-    // TODO: Also check for company profile when implemented
-    // if (!serviceProviderId) {
-    //   const company = await this.companyService.findByUserId(userId);
-    //   serviceProviderId = company?.serviceProviderId ?? null;
-    // }
-
-    return { userId, serviceProviderId, isAdmin };
+    return {
+      userId,
+      serviceProviderId,
+      isAdmin,
+      hasActiveClientProfile: activation.hasActiveClientProfile,
+      hasActiveProviderProfile: activation.hasActiveProviderProfile,
+    };
   }
 
   async findByClientId(clientId: string): Promise<RequestEntity[]> {

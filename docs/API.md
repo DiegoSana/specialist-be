@@ -56,6 +56,19 @@ Authorization: Bearer <token>
 | `PATCH` | `/users/me` | Update current user profile | ✅ |
 | `POST` | `/users/me/client-profile` | Activate client profile | ✅ |
 
+### 📱 Identity - Verification (`/identity/verification`)
+
+Email and phone verification via Twilio Verify (OTP). Required for some actions (e.g. expressing interest, activating provider profile).
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/identity/verification/phone/request` | Request phone OTP (SMS) | ✅ |
+| `POST` | `/identity/verification/phone/confirm` | Confirm phone with code | ✅ |
+| `POST` | `/identity/verification/email/request` | Request email OTP | ✅ |
+| `POST` | `/identity/verification/email/confirm` | Confirm email with code | ✅ |
+
+Request body for confirm endpoints: `{ "code": "123456" }`. Phone must be in E.164 format (e.g. `+5492944123456`).
+
 ### 👷 Profiles - Professionals (`/professionals`)
 
 | Method | Endpoint | Description | Auth |
@@ -82,6 +95,14 @@ Authorization: Bearer <token>
 | `POST` | `/companies/:id/verify` | Verify company (Admin) | ✅ Admin |
 
 > **Note**: Companies and Professionals are both "Service Providers". Both can express interest in public requests and be assigned to jobs. See [ADR-004-SERVICE-PROVIDER-ABSTRACTION](./decisions/ADR-004-SERVICE-PROVIDER-ABSTRACTION.md).
+
+### 📋 Profiles - Unified catalog (`/providers`)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/providers` | Search professionals and companies in one list | ❌ |
+
+Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL` \| `COMPANY` \| `ALL`). Used by the frontend for the specialist catalog page and when creating a request (choose provider). Returns a unified shape (displayName, trades, averageRating, hasVerifiedBadge, etc.).
 
 ### 📦 Profiles - Trades (`/trades`)
 
@@ -148,6 +169,7 @@ Authorization: Bearer <token>
 | `GET` | `/admin/users` | List all users (paginated) |
 | `GET` | `/admin/users/:id` | Get user by ID |
 | `PUT` | `/admin/users/:id/status` | Update user status |
+| `PUT` | `/admin/users/:id/verification` | Manually set email/phone verified (body: `{ emailVerified?: boolean, phoneVerified?: boolean }`) |
 | `GET` | `/admin/professionals` | List all professionals (paginated) |
 | `PUT` | `/admin/professionals/:id/status` | Update professional status |
 | `GET` | `/admin/requests` | List all requests (paginated, optional status filter) |

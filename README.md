@@ -17,6 +17,7 @@ The application follows DDD principles organized in bounded contexts:
 | **Storage** | File uploads and media |
 | **Admin** | Administrative operations (see [Admin Portal Plan](./docs/plans/admin-portal-plan.md)) |
 | **Contact** | Contact requests between users |
+| **Notifications** | In-app and email notifications |
 
 Each context follows the layered architecture:
 - **Domain**: Entities, Value Objects, Repository Interfaces
@@ -94,16 +95,22 @@ docker-compose -f docker-compose.dev.yml logs -f app
 ### Quick API Overview
 
 ```
-/api/auth/*           → Authentication (login, register, OAuth)
-/api/users/*          → User profile management
-/api/professionals/*  → Professional profiles & search
-/api/trades/*         → Service categories
-/api/requests/*       → Service requests & interests
-/api/reviews/*        → Reviews & ratings
-/api/storage/*        → File uploads
-/api/admin/*          → Admin operations
-/api/health/*         → Health checks
+/api/auth/*                    → Authentication (login, register, OAuth)
+/api/users/*                   → User profile management
+/api/identity/verification/*   → Email & phone verification (Twilio)
+/api/professionals/*           → Professional profiles & search
+/api/companies/*               → Company profiles & search
+/api/providers                 → Unified provider catalog (filter by type)
+/api/trades/*                  → Service categories
+/api/requests/*                → Service requests & interests
+/api/reviews/*                 → Reviews & ratings
+/api/notifications/*           → In-app notifications & preferences
+/api/storage/*                 → File uploads
+/api/admin/*                   → Admin operations
+/api/health/*                  → Health checks
 ```
+
+See [API Reference](./docs/API.md) and [API Structure](./docs/API_STRUCTURE.md) for full endpoint details.
 
 ## 🔐 Authentication
 
@@ -112,7 +119,7 @@ JWT Bearer tokens in Authorization header:
 Authorization: Bearer <token>
 ```
 
-OAuth supported: Google, Facebook
+OAuth supported: Google, Facebook. Email and phone verification via Twilio (see [Environment Variables](./docs/guides/ENVIRONMENT_VARIABLES.md)).
 
 ## 🌐 Deployment
 
@@ -122,7 +129,7 @@ OAuth supported: Google, Facebook
 ## 📊 Test Coverage
 
 ```
-193 tests passing
+289 tests passing
 ```
 
 ## 📖 More Documentation
@@ -130,8 +137,12 @@ OAuth supported: Google, Facebook
 See the full documentation in [`docs/`](./docs/README.md):
 
 - [API Reference](./docs/API.md)
+- [API Structure](./docs/API_STRUCTURE.md)
 - [Architecture](./docs/architecture/ARCHITECTURE.md)
+- [Authorization Pattern](./docs/architecture/AUTHORIZATION_PATTERN.md)
+- [Permissions by Role](./docs/guides/PERMISSIONS_BY_ROLE.md)
 - [Domain Model](./docs/architecture/DOMAIN_MODEL.md)
 - [Docker Guide](./docs/guides/DOCKER.md)
 - [Migration Guide](./docs/guides/MIGRATION_GUIDE.md)
+- [Environment Variables](./docs/guides/ENVIRONMENT_VARIABLES.md)
 

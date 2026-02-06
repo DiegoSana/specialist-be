@@ -6,6 +6,23 @@
 
 ---
 
+## ✅ Cierre – Lo realizado hasta ahora (resumen ejecutivo)
+
+**Perfil activo y permisos (backend):**
+- **ProfileActivationService:** único punto que define “perfil activo” (cliente y proveedor). RequestService y RequestInterestService usan solo este servicio; no se llama `user.isFullyVerified()` repartido.
+- **Crear solicitud:** exige cliente activo. **Expresar interés:** exige proveedor activo. **Asignar proveedor:** exige cliente activo (`canAssignProviderBy` + `hasActiveClientProfile`). **Job board (ver lista):** no exige activo; solo expresar interés lo exige.
+- **GET /providers (catálogo):** solo muestra perfiles activos (usuario verificado + perfil canOperate). Filtro `userVerified` en repos de Professional y Company; `onlyActiveInCatalog: true` en ProvidersController.
+- **RequestsController:** soporte Company en findMyRequests y findAvailable; vista limitada en `findByIdForInterestedProvider` + `fromEntityLimited`; RateClientDto con validación; TODOs de excepciones eliminados.
+- **Admin:** `PUT /admin/users/:id/verification` para marcar email/teléfono verificados (override manual).
+
+**Contacto unificado (si ya aplicaste la migración):** contacto solo en User; perfiles sin phone/email/whatsapp; canOperate = solo status ACTIVE/VERIFIED.
+
+**Tests:** 291 pasando (suite completa verificada antes de rama/commits).
+
+**Pendiente para otra sesión:** tests opcionales (ProfileActivationService, “assign rechazado si no activo”); Frontend B.3 mensajes; Admin Fase D moderación reviews; mejora “notificar a clientes cuando proveedor cambia teléfono/email”.
+
+---
+
 ## 📌 Donde quedamos hoy (recap para seguir mañana)
 
 ### ✅ Hecho (2026-02-06): Contacto unificado y solo status en perfiles
