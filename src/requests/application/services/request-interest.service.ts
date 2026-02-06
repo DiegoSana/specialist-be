@@ -28,6 +28,7 @@ import { RequestStatusChangedEvent } from '../../domain/events/request-status-ch
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { CompanyService } from '../../../profiles/application/services/company.service';
+import { ProfileActivationService } from '../../../profiles/application/services/profile-activation.service';
 
 /**
  * Extended context that includes provider info for interest operations.
@@ -55,48 +56,51 @@ export class RequestInterestService {
     private readonly professionalService: ProfessionalService,
     @Inject(forwardRef(() => CompanyService))
     private readonly companyService: CompanyService,
+    @Inject(forwardRef(() => ProfileActivationService))
+    private readonly profileActivationService: ProfileActivationService,
   ) {}
 
   /**
-   * Build auth context from userId.
-   * Checks for both Professional and Company profiles.
+   * Build auth context from userId using ProfileActivationService (single orchestration).
+   * Resolves provider metadata (type, name, tradeIds) and sets hasActiveProviderProfile from orchestration.
    */
   async buildAuthContext(
     userId: string,
     isAdmin: boolean = false,
   ): Promise<InterestAuthContext> {
-    let serviceProviderId: string | null = null;
+    const activation =
+      await this.profileActivationService.getActivationStatus(userId);
+
+    let serviceProviderId = activation.activeServiceProviderId;
     let providerType: ProviderType | null = null;
     let providerName: string | null = null;
     let providerTradeIds: string[] = [];
 
-    // Try Professional first
     try {
-      const professional = await this.professionalService.findByUserId(userId);
-      if (professional) {
-        serviceProviderId = professional.serviceProviderId;
+      const prof = await this.professionalService.findByUserId(userId);
+      if (prof) {
+        if (serviceProviderId === null) serviceProviderId = prof.serviceProviderId;
         providerType = ProviderType.PROFESSIONAL;
-        providerName = (professional as any).user
-          ? `${(professional as any).user.firstName} ${(professional as any).user.lastName}`
+        providerName = (prof as any).user
+          ? `${(prof as any).user.firstName} ${(prof as any).user.lastName}`
           : 'Especialista';
-        providerTradeIds = professional.tradeIds || [];
+        providerTradeIds = prof.tradeIds || [];
       }
     } catch {
-      // User doesn't have a professional profile
+      // No professional profile
     }
 
-    // If no professional, try Company
-    if (!serviceProviderId) {
+    if (providerType === null) {
       try {
-        const company = await this.companyService.findByUserId(userId);
-        if (company) {
-          serviceProviderId = company.serviceProviderId;
+        const comp = await this.companyService.findByUserId(userId);
+        if (comp) {
+          if (serviceProviderId === null) serviceProviderId = comp.serviceProviderId;
           providerType = ProviderType.COMPANY;
-          providerName = company.companyName;
-          providerTradeIds = company.tradeIds || [];
+          providerName = comp.companyName;
+          providerTradeIds = comp.tradeIds || [];
         }
       } catch {
-        // User doesn't have a company profile
+        // No company profile
       }
     }
 
@@ -107,33 +111,37 @@ export class RequestInterestService {
       providerName,
       providerTradeIds,
       isAdmin,
+      hasActiveClientProfile: activation.hasActiveClientProfile,
+      hasActiveProviderProfile: activation.hasActiveProviderProfile,
     };
   }
 
   /**
    * Provider (Professional or Company) expresses interest in a public request.
-   * Uses domain entity's canExpressInterestBy for permission validation.
+   * Permission is determined by domain: canExpressInterestBy(ctx) requires
+   * hasActiveProviderProfile (user fully verified + profile canOperate).
    */
   async expressInterest(
     requestId: string,
     ctx: InterestAuthContext,
     dto: ExpressInterestDto,
   ): Promise<RequestInterestEntity> {
-    // Must have a provider profile
-    if (!ctx.serviceProviderId) {
-      throw new ForbiddenException(
-        'Only service providers (professionals or companies) can express interest',
-      );
-    }
-
-    // Get request
     const request = await this.requestRepository.findById(requestId);
     if (!request) {
       throw new NotFoundException('Request not found');
     }
 
-    // Validate using domain logic
     if (!request.canExpressInterestBy(ctx)) {
+      if (!ctx.serviceProviderId) {
+        throw new ForbiddenException(
+          'Only service providers (professionals or companies) can express interest',
+        );
+      }
+      if (!ctx.hasActiveProviderProfile) {
+        throw new BadRequestException(
+          'Your provider profile must be active to express interest. Please verify your email and phone.',
+        );
+      }
       if (!request.isPublic) {
         throw new BadRequestException(
           'Can only express interest in public requests',
@@ -389,6 +397,7 @@ export class RequestInterestService {
       ? `${client.firstName} ${client.lastName}`
       : 'Cliente';
 
+      // TODO: check if we can remove professionalId: serviceProviderId
     await this.eventBus.publish(
       new RequestProfessionalAssignedEvent({
         requestId: updatedRequest.id,
@@ -440,6 +449,7 @@ export class RequestInterestService {
       throw new NotFoundException('Request not found');
     }
 
+    // TODO: review why we did this? check assignProviderWay
     // Convert InterestAuthContext to RequestAuthContext for domain validation
     const requestCtx: RequestAuthContext = {
       userId: ctx.userId,
