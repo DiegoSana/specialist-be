@@ -5,7 +5,6 @@ import {
   IsOptional,
   IsArray,
   IsNumber,
-  IsEmail,
   Min,
   Max,
   ArrayMinSize,
@@ -55,16 +54,6 @@ export class CreateCompanyDto {
   @IsOptional()
   @IsUrl()
   website?: string;
-
-  @ApiPropertyOptional({ description: 'Phone number' })
-  @IsOptional()
-  @IsString()
-  phone?: string;
-
-  @ApiPropertyOptional({ description: 'Contact email' })
-  @IsOptional()
-  @IsEmail()
-  email?: string;
 
   @ApiPropertyOptional({ description: 'Street address' })
   @IsOptional()

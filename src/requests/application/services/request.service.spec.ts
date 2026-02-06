@@ -6,10 +6,12 @@ import {
 } from '@nestjs/common';
 import { RequestService } from './request.service';
 import { REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
+import { REQUEST_INTEREST_REPOSITORY } from '../../domain/repositories/request-interest.repository';
 import { REQUEST_QUERY_REPOSITORY } from '../../domain/queries/request.query-repository';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { CompanyService } from '../../../profiles/application/services/company.service';
 import { UserService } from '../../../identity/application/services/user.service';
+import { ProfileActivationService } from '../../../profiles/application/services/profile-activation.service';
 import {
   createMockUser,
   createMockProfessional,
@@ -26,6 +28,8 @@ describe('RequestService', () => {
   let mockProfessionalService: any;
   let mockCompanyService: any;
   let mockUserService: any;
+  let mockProfileActivationService: any;
+  let mockRequestInterestRepository: any;
   let mockEventBus: any;
 
   // Helper to create auth context
@@ -61,11 +65,29 @@ describe('RequestService', () => {
     };
 
     mockCompanyService = {
+      findByUserId: jest.fn(),
       findByServiceProviderId: jest.fn(),
     };
 
     mockUserService = {
       findById: jest.fn(),
+    };
+
+    mockProfileActivationService = {
+      getActivationStatus: jest.fn().mockResolvedValue({
+        hasActiveClientProfile: true,
+        hasActiveProviderProfile: false,
+        activeServiceProviderId: null,
+      }),
+    };
+
+    mockRequestInterestRepository = {
+      findByRequestAndProvider: jest.fn(),
+      findByRequestId: jest.fn(),
+      findByServiceProviderId: jest.fn(),
+      add: jest.fn(),
+      remove: jest.fn(),
+      removeAllByRequestId: jest.fn(),
     };
 
     mockEventBus = {
@@ -76,11 +98,19 @@ describe('RequestService', () => {
       providers: [
         RequestService,
         { provide: REQUEST_REPOSITORY, useValue: mockRequestRepository },
+        {
+          provide: REQUEST_INTEREST_REPOSITORY,
+          useValue: mockRequestInterestRepository,
+        },
         { provide: REQUEST_QUERY_REPOSITORY, useValue: mockRequestQueryRepository },
         { provide: EVENT_BUS, useValue: mockEventBus },
         { provide: ProfessionalService, useValue: mockProfessionalService },
         { provide: CompanyService, useValue: mockCompanyService },
         { provide: UserService, useValue: mockUserService },
+        {
+          provide: ProfileActivationService,
+          useValue: mockProfileActivationService,
+        },
       ],
     }).compile();
 
@@ -105,11 +135,12 @@ describe('RequestService', () => {
         const client = createMockUser({
           id: 'client-123',
           hasClientProfile: true,
+          phoneVerified: true,
+          emailVerified: true,
         });
         const professional = createMockProfessional({
           id: 'prof-123',
           status: ProfessionalStatus.VERIFIED,
-          active: true,
         });
         const newRequest = createMockRequest({
           clientId: 'client-123',
@@ -154,8 +185,31 @@ describe('RequestService', () => {
         ).rejects.toThrow(BadRequestException);
       });
 
+      it('should throw BadRequestException if user email/phone are not verified', async () => {
+        const client = createMockUser({
+          hasClientProfile: true,
+          phoneVerified: false,
+          emailVerified: true,
+        });
+        mockUserService.findById.mockResolvedValue(client);
+        mockProfileActivationService.getActivationStatus.mockResolvedValueOnce({
+          hasActiveClientProfile: false,
+          hasActiveProviderProfile: false,
+          activeServiceProviderId: null,
+        });
+
+        await expect(
+          service.create('client-123', directRequestDto),
+        ).rejects.toThrow(BadRequestException);
+        expect(mockRequestRepository.save).not.toHaveBeenCalled();
+      });
+
       it('should throw BadRequestException if professionalId is missing for direct request', async () => {
-        const client = createMockUser({ hasClientProfile: true });
+        const client = createMockUser({
+          hasClientProfile: true,
+          phoneVerified: true,
+          emailVerified: true,
+        });
         mockUserService.findById.mockResolvedValue(client);
 
         await expect(
@@ -168,7 +222,11 @@ describe('RequestService', () => {
       });
 
       it('should throw NotFoundException if professional not found', async () => {
-        const client = createMockUser({ hasClientProfile: true });
+        const client = createMockUser({
+          hasClientProfile: true,
+          phoneVerified: true,
+          emailVerified: true,
+        });
         mockUserService.findById.mockResolvedValue(client);
         mockProfessionalService.getByIdOrFail.mockRejectedValue(
           new NotFoundException('Professional not found'),
@@ -180,10 +238,13 @@ describe('RequestService', () => {
       });
 
       it('should throw BadRequestException if professional is not active', async () => {
-        const client = createMockUser({ hasClientProfile: true });
+        const client = createMockUser({
+          hasClientProfile: true,
+          phoneVerified: true,
+          emailVerified: true,
+        });
         const inactiveProfessional = createMockProfessional({
           status: ProfessionalStatus.PENDING_VERIFICATION,
-          active: false,
         });
         mockUserService.findById.mockResolvedValue(client);
         mockProfessionalService.getByIdOrFail.mockResolvedValue(
@@ -205,7 +266,11 @@ describe('RequestService', () => {
       };
 
       it('should create a public request successfully', async () => {
-        const client = createMockUser({ hasClientProfile: true });
+        const client = createMockUser({
+          hasClientProfile: true,
+          phoneVerified: true,
+          emailVerified: true,
+        });
         const newRequest = createMockRequest({
           clientId: 'client-123',
           isPublic: true,
@@ -241,7 +306,11 @@ describe('RequestService', () => {
       });
 
       it('should throw BadRequestException if tradeId is missing for public request', async () => {
-        const client = createMockUser({ hasClientProfile: true });
+        const client = createMockUser({
+          hasClientProfile: true,
+          phoneVerified: true,
+          emailVerified: true,
+        });
         mockUserService.findById.mockResolvedValue(client);
 
         await expect(
@@ -666,8 +735,11 @@ describe('RequestService', () => {
 
   describe('buildAuthContext', () => {
     it('should build context with professional ID if user has professional profile', async () => {
-      const professional = createMockProfessional({ id: 'prof-123' });
-      mockProfessionalService.findByUserId.mockResolvedValue(professional);
+      mockProfileActivationService.getActivationStatus.mockResolvedValueOnce({
+        hasActiveClientProfile: true,
+        hasActiveProviderProfile: true,
+        activeServiceProviderId: 'service-provider-123',
+      });
 
       const ctx = await service.buildAuthContext('user-123', false);
 
@@ -675,11 +747,21 @@ describe('RequestService', () => {
         userId: 'user-123',
         serviceProviderId: 'service-provider-123',
         isAdmin: false,
+        hasActiveClientProfile: true,
+        hasActiveProviderProfile: true,
       });
     });
 
     it('should build context without professional ID if user has no professional profile', async () => {
+      mockProfileActivationService.getActivationStatus.mockResolvedValueOnce({
+        hasActiveClientProfile: false,
+        hasActiveProviderProfile: false,
+        activeServiceProviderId: null,
+      });
       mockProfessionalService.findByUserId.mockRejectedValue(
+        new NotFoundException(),
+      );
+      mockCompanyService.findByUserId.mockRejectedValue(
         new NotFoundException(),
       );
 
@@ -689,11 +771,23 @@ describe('RequestService', () => {
         userId: 'user-123',
         serviceProviderId: null,
         isAdmin: false,
+        hasActiveClientProfile: false,
+        hasActiveProviderProfile: false,
       });
     });
 
     it('should build context with admin flag', async () => {
-      mockProfessionalService.findByUserId.mockResolvedValue(null);
+      mockProfileActivationService.getActivationStatus.mockResolvedValueOnce({
+        hasActiveClientProfile: false,
+        hasActiveProviderProfile: false,
+        activeServiceProviderId: null,
+      });
+      mockProfessionalService.findByUserId.mockRejectedValue(
+        new NotFoundException(),
+      );
+      mockCompanyService.findByUserId.mockRejectedValue(
+        new NotFoundException(),
+      );
 
       const ctx = await service.buildAuthContext('admin-123', true);
 
@@ -701,6 +795,8 @@ describe('RequestService', () => {
         userId: 'admin-123',
         serviceProviderId: null,
         isAdmin: true,
+        hasActiveClientProfile: false,
+        hasActiveProviderProfile: false,
       });
     });
   });

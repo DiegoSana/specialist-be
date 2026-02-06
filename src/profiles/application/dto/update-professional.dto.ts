@@ -50,11 +50,6 @@ export class UpdateProfessionalDto {
   @IsString()
   address?: string;
 
-  @ApiProperty({ example: '+5492944123456', required: false })
-  @IsOptional()
-  @IsString()
-  whatsapp?: string;
-
   @ApiProperty({ example: 'https://example.com', required: false })
   @IsOptional()
   @IsUrl()

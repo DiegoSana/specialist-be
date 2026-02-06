@@ -99,11 +99,9 @@ model Professional {
   zone              String?
   city              String             @default("Bariloche")
   address           String?
-  whatsapp          String?
   website           String?
   profileImage      String?
   gallery           String[]
-  active            Boolean            @default(true)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -143,8 +141,6 @@ model Company {
 
   // Contact
   website String?
-  phone   String?
-  email   String?
 
   // Location
   address String?
@@ -155,7 +151,6 @@ model Company {
   status       CompanyStatus @default(PENDING_VERIFICATION)
   profileImage String?
   gallery      String[]
-  active       Boolean       @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

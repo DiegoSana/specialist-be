@@ -29,11 +29,9 @@ export class ProfessionalEntity {
     public readonly zone: string | null,
     public readonly city: string,
     public readonly address: string | null,
-    public readonly whatsapp: string | null,
     public readonly website: string | null,
     public readonly profileImage: string | null,
     public readonly gallery: string[],
-    public readonly active: boolean,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
     // Optional: the full ServiceProvider entity when needed
@@ -96,9 +94,8 @@ export class ProfessionalEntity {
    * Only ACTIVE or VERIFIED status allows operation.
    */
   canOperate(): boolean {
-    return this.active && 
-           (this.status === ProfessionalStatus.ACTIVE || 
-            this.status === ProfessionalStatus.VERIFIED);
+    return this.status === ProfessionalStatus.ACTIVE ||
+           this.status === ProfessionalStatus.VERIFIED;
   }
 
   /**
@@ -206,11 +203,9 @@ export class ProfessionalEntity {
       this.zone,
       this.city,
       this.address,
-      this.whatsapp,
       this.website,
       this.profileImage,
       this.gallery,
-      this.active,
       this.createdAt,
       this.updatedAt,
       serviceProvider,

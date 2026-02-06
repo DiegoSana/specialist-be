@@ -70,9 +70,11 @@ export class CompanyResponseDto {
   @ApiPropertyOptional()
   website: string | null;
 
+  /** Contact phone (from user). */
   @ApiPropertyOptional()
   phone: string | null;
 
+  /** Contact email (from user). */
   @ApiPropertyOptional()
   email: string | null;
 
@@ -135,15 +137,15 @@ export class CompanyResponseDto {
     dto.foundedYear = entity.foundedYear;
     dto.employeeCount = entity.employeeCount;
     dto.website = entity.website;
-    dto.phone = entity.phone;
-    dto.email = entity.email;
+    dto.phone = (entity as any).user?.phone ?? null;
+    dto.email = (entity as any).user?.email ?? null;
     dto.address = entity.address;
     dto.city = entity.city;
     dto.zone = entity.zone;
     dto.status = entity.status;
     dto.profileImage = entity.profileImage;
     dto.gallery = entity.gallery;
-    dto.active = entity.active;
+    dto.active = entity.canOperate();
     dto.averageRating = entity.averageRating;
     dto.totalReviews = entity.totalReviews;
     dto.createdAt = entity.createdAt;
@@ -259,7 +261,7 @@ export class CompanySearchResultDto {
     dto.status = entity.status;
     dto.profileImage = entity.profileImage;
     dto.gallery = entity.gallery;
-    dto.active = entity.active;
+    dto.active = entity.canOperate();
     dto.averageRating = entity.averageRating;
     dto.totalReviews = entity.totalReviews;
 

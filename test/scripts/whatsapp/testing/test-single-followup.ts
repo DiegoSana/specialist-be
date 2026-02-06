@@ -85,30 +85,20 @@ async function prepareRequest(
       request.providerId,
     );
     if (professional) {
-      if (professional.whatsapp) {
-        providerPhone = professional.whatsapp;
+      const user = await userService.findById(professional.userId);
+      if (user?.phone && user.phoneVerified) {
+        providerPhone = user.phone;
         providerPhoneVerified = true;
-      } else {
-        const user = await userService.findById(professional.userId);
-        if (user?.phone && user.phoneVerified) {
-          providerPhone = user.phone;
-          providerPhoneVerified = true;
-        }
       }
     } else {
       const company = await companyService.findByServiceProviderId(
         request.providerId,
       );
       if (company) {
-        if (company.phone) {
-          providerPhone = company.phone;
+        const user = await userService.findById(company.userId);
+        if (user?.phone && user.phoneVerified) {
+          providerPhone = user.phone;
           providerPhoneVerified = true;
-        } else {
-          const user = await userService.findById(company.userId);
-          if (user?.phone && user.phoneVerified) {
-            providerPhone = user.phone;
-            providerPhoneVerified = true;
-          }
         }
       }
     }

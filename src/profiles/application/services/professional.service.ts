@@ -60,15 +60,17 @@ export class ProfessionalService {
 
   async search(
     searchDto: SearchProfessionalsDto,
+    options?: { onlyActiveInCatalog?: boolean },
   ): Promise<ProfessionalEntity[]> {
     const professionals = await this.professionalRepository.search({
       search: searchDto.search,
       tradeId: searchDto.tradeId,
-      active: true, // Only show active professionals
+      canOperate: true, // Only show professionals that can operate (status ACTIVE or VERIFIED)
+      userVerified: options?.onlyActiveInCatalog ?? false,
     });
 
     // For public search, sanitize contact info and only return public gallery
-    // Contact info (whatsapp, website, address) requires an active request
+    // Contact info (phone via user, website, address) requires an active request
     return professionals.map((professional) =>
       this.sanitizeForPublic(professional) as ProfessionalEntity,
     );
@@ -124,11 +126,9 @@ export class ProfessionalService {
         professional.zone,
         professional.city,
         professional.address,
-        professional.whatsapp,
         professional.website,
         professional.profileImage,
         professional.gallery,
-        professional.active,
         professional.createdAt,
         now,
         professional.serviceProvider,
@@ -138,7 +138,7 @@ export class ProfessionalService {
 
   /**
    * Sanitize professional data for public access
-   * Removes contact info (whatsapp, website, address)
+   * Removes contact info (phone via user, website, address)
    * Contact info is only visible after creating a request
    */
   private sanitizeForPublic(
@@ -153,12 +153,11 @@ export class ProfessionalService {
       status: professional.status,
       zone: professional.zone,
       city: professional.city,
-      // address, whatsapp, website are intentionally omitted for public access
+      // address, phone (user), website are intentionally omitted for public access
       averageRating: professional.averageRating,
       totalReviews: professional.totalReviews,
       profileImage: professional.profileImage,
       gallery: professional.gallery,
-      active: professional.active,
       createdAt: professional.createdAt,
       updatedAt: professional.updatedAt,
       combinedGallery: professional.gallery || [],
@@ -309,11 +308,9 @@ export class ProfessionalService {
         createDto.zone || null,
         createDto.city || 'Bariloche',
         createDto.address || null,
-        createDto.whatsapp || null,
         createDto.website || null,
         createDto.profileImage || null,
         createDto.gallery || [],
-        true,
         now,
         now,
       ),
@@ -401,9 +398,6 @@ export class ProfessionalService {
         updateDto.address !== undefined
           ? updateDto.address
           : professional.address,
-        updateDto.whatsapp !== undefined
-          ? updateDto.whatsapp
-          : professional.whatsapp,
         updateDto.website !== undefined
           ? updateDto.website
           : professional.website,
@@ -413,7 +407,6 @@ export class ProfessionalService {
         updateDto.gallery !== undefined
           ? updateDto.gallery
           : professional.gallery,
-        professional.active,
         professional.createdAt,
         now,
         professional.serviceProvider,
@@ -455,11 +448,9 @@ export class ProfessionalService {
         professional.zone,
         professional.city,
         professional.address,
-        professional.whatsapp,
         professional.website,
         professional.profileImage,
         updatedGallery,
-        professional.active,
         professional.createdAt,
         new Date(),
         professional.serviceProvider,
@@ -497,11 +488,9 @@ export class ProfessionalService {
         professional.zone,
         professional.city,
         professional.address,
-        professional.whatsapp,
         professional.website,
         professional.profileImage,
         updatedGallery,
-        professional.active,
         professional.createdAt,
         new Date(),
         professional.serviceProvider,

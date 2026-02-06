@@ -21,11 +21,24 @@ export class PrismaRequestInterestRepository
                 firstName: true,
                 lastName: true,
                 profilePictureUrl: true,
+                phone: true,
               },
             },
           },
         },
-        company: true,
+        company: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                profilePictureUrl: true,
+                phone: true,
+              },
+            },
+          },
+        },
       },
     },
   } as const;
@@ -38,6 +51,7 @@ export class PrismaRequestInterestRepository
       if (sp.type === ProviderType.PROFESSIONAL && sp.professional) {
         const prof = sp.professional;
         const user = prof.user;
+        const phone = user?.phone ?? null;
         providerInfo = {
           id: sp.id,
           type: 'PROFESSIONAL',
@@ -45,10 +59,12 @@ export class PrismaRequestInterestRepository
           profileImage: prof.profileImage || user?.profilePictureUrl || null,
           averageRating: sp.averageRating,
           totalReviews: sp.totalReviews,
-          whatsapp: prof.whatsapp || null,
-          phone: prof.phone || null,
+          whatsapp: phone,
+          phone,
         };
       } else if (sp.type === ProviderType.COMPANY && sp.company) {
+        const company = sp.company as { user?: { phone?: string | null } };
+        const phone = company.user?.phone ?? null;
         providerInfo = {
           id: sp.id,
           type: 'COMPANY',
@@ -57,7 +73,7 @@ export class PrismaRequestInterestRepository
           averageRating: sp.averageRating,
           totalReviews: sp.totalReviews,
           whatsapp: null,
-          phone: sp.company.phone || null,
+          phone,
         };
       }
     }

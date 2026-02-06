@@ -277,10 +277,6 @@ export class FollowUpSchedulerJob {
             request.providerId,
           );
         if (professional) {
-          // Check professional's whatsapp or user's phone
-          if (professional.whatsapp) {
-            return true;
-          }
           const user = await this.userService.findById(professional.userId);
           return !!(user?.phone && user.phoneVerified);
         }
@@ -289,9 +285,6 @@ export class FollowUpSchedulerJob {
           request.providerId,
         );
         if (company) {
-          if (company.phone) {
-            return true;
-          }
           const user = await this.userService.findById(company.userId);
           return !!(user?.phone && user.phoneVerified);
         }

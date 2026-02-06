@@ -92,13 +92,11 @@ describe('ProfessionalService', () => {
       const professionals = [
         createMockProfessional({
           id: 'prof-1',
-          whatsapp: '+5491155551234',
           website: 'https://example.com',
           address: 'Secret Address 123',
         }),
         createMockProfessional({
           id: 'prof-2',
-          whatsapp: '+5491155555678',
           website: 'https://example2.com',
           address: 'Secret Address 456',
         }),
@@ -127,7 +125,8 @@ describe('ProfessionalService', () => {
       expect(mockProfessionalRepository.search).toHaveBeenCalledWith({
         search: 'plomero',
         tradeId: 'trade-123',
-        active: true,
+        canOperate: true,
+        userVerified: false,
       });
     });
   });
@@ -135,7 +134,6 @@ describe('ProfessionalService', () => {
   describe('findById', () => {
     it('should return sanitized professional for public access', async () => {
       const professional = createMockProfessional({
-        whatsapp: '+5491155551234',
         website: 'https://example.com',
         address: 'Secret Address',
       });
@@ -233,7 +231,6 @@ describe('ProfessionalService', () => {
       experienceYears: 5,
       zone: 'Centro',
       city: 'Bariloche',
-      whatsapp: '+5491155551234',
     };
 
     it('should successfully create a professional profile', async () => {
