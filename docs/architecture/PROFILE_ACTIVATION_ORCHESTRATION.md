@@ -103,7 +103,7 @@ Acciones que deben usar AuthContext (y dónde aplicar orquestación) se resumen 
 
 | Acción / Endpoint | Rol | Contexto actual | Cambio / uso orquestación |
 |-------------------|-----|------------------|----------------------------|
-| **POST /requests** (crear) | Cliente | RequestService.create() comprueba user.isClient() y user.isFullyVerified() | Obtener hasActiveClientProfile de orquestación; validar con dominio o con flag en contexto si se añade a buildAuthContext para create. |
+| **POST /requests** (crear) | Cliente | RequestService.create() comprueba hasActiveClientProfile (orquestación). Aplica a solicitud pública y directa. | Ya implementado. |
 | **GET /requests/available** (job board) | Proveedor | RequestService/Controller | Si se exige "solo proveedor activo": contexto con hasActiveProviderProfile desde orquestación; validar antes de listar. |
 | **POST /requests/:id/interest** | Proveedor | RequestInterestService.buildAuthContext + canExpressInterestBy(ctx) | buildAuthContext debe usar orquestación para hasActiveProviderProfile; no componer inline. |
 | **DELETE /requests/:id/interest** | Proveedor | RequestInterestService | Mismo contexto; no requiere "activo" para retirar (solo tener perfil). Opcional exigir activo. |
