@@ -354,7 +354,7 @@ Para **todos** los perfiles (Cliente, Profesional, Empresa):
 | Acción | Requisito |
 |--------|-----------|
 | Aparecer en listado de proveedores (`GET /providers`, búsquedas) | Perfil activo (usuario verificado + perfil confirmado por admin) |
-| Cliente: crear solicitudes (`POST /requests`) | Perfil de cliente activo |
+| Cliente: crear solicitudes (`POST /requests`) | Perfil de cliente activo (email y teléfono del usuario verificados). **Aplica tanto a solicitud pública como a solicitud directa.** |
 | Proveedor: expresar interés (`POST /requests/:id/interest`) | Perfil proveedor activo |
 
 ### Orden de implementación sugerido
@@ -377,9 +377,9 @@ Para **todos** los perfiles (Cliente, Profesional, Empresa):
 
 #### Fase B: Frontend
 
-- [ ] **B.1** Ocultar en FE los campos de teléfono/email de **perfil** (Professional/Company) o mostrarlos como no requeridos; usar solo teléfono/email del usuario para verificación y contacto en MVP.
-- [ ] **B.2** Pantalla de especialistas: usar **solo** `GET /providers` (unificado). **Sí, debe usar /providers** en lugar de /professionals para listar; el FE principal ya usa `GET /providers` en la página de profesionales y en crear solicitud. Revisar que no queden llamadas a `/professionals` para el catálogo y migrarlas a `/providers`.
-- [ ] **B.3** Mensajes claros cuando una acción se rechaza por perfil no activo (ej. “Verificá tu email y teléfono para crear una solicitud”).
+- [x] **B.1** Ocultar en FE los campos de teléfono/email de **perfil** (Professional/Company) o mostrarlos como no requeridos; usar solo teléfono/email del usuario para verificación y contacto en MVP.
+- [x] **B.2** Pantalla de especialistas: usar **solo** `GET /providers` (unificado). La página de catálogo y nueva solicitud ya usan `useSearchProviders`.
+- [x] **B.3** Mensajes claros cuando una acción se rechaza por perfil no activo (ej. "Verificá tu email y teléfono para crear una solicitud"). Implementado: crear solicitud, expresar interés (detalle y job board) con enlace Ir a mi perfil. (ej. “Verificá tu email y teléfono para crear una solicitud”).
 
 #### Fase C: Empresa – validaciones extra (por definir)
 
@@ -396,7 +396,7 @@ Para **todos** los perfiles (Cliente, Profesional, Empresa):
 - **Activo** = usuario con email + teléfono verificados (+ perfil confirmado por admin cuando se implemente).
 - **MVP:** Contacto = solo usuario; perfiles sin exigir teléfono/email propios; admin puede confirmar manualmente.
 - **Listado proveedores** = solo perfiles activos.
-- **Crear solicitud** = cliente activo; **expresar interés** = proveedor activo.
+- **Crear solicitud** = cliente activo (email + teléfono verificados); **expresar interés** = proveedor activo. Crear solicitud aplica igual a solicitud pública y solicitud directa.
 - **Pantalla especialistas** = usar `GET /providers`.
 - **Moderación reviews** = ya en BE; falta pantalla en admin FE.
 
@@ -798,6 +798,11 @@ model Company {
 - [ ] Rate limiting por endpoint
 - [ ] Validación de inputs más estricta
 - [ ] Audit log para acciones administrativas
+
+### UX / Soporte
+- [ ] **Botón "Reportar un problema"**
+  - Agregar botón en la app (ubicación y flujo por definir).
+  - Lógica, backend y canal de reporte por definir más adelante.
 
 ### Verificación de Usuario (Email & Teléfono) ✅
 - [x] **Validación de Email**

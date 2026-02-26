@@ -39,7 +39,7 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 
 - Ver y editar su perfil (`GET/PATCH /users/me`).
 - Activar perfil de cliente (`POST /users/me/client-profile`).
-- Crear solicitudes (`POST /requests`).
+- Crear solicitudes (`POST /requests`). **Requiere perfil de cliente activo:** usuario con email y teléfono verificados (aplica tanto a solicitud pública como a solicitud directa). Ver [Perfil activo](../../architecture/PROFILE_ACTIVATION_ORCHESTRATION.md).
 - Ver sus propias solicitudes y las que le asignaron (como proveedor).
 - Ver solicitudes públicas disponibles si además es proveedor.
 - Editar, agregar/quitar fotos y cambiar estado de **sus** solicitudes (dentro de las reglas de negocio).
