@@ -200,9 +200,7 @@ describe('ProfessionalService', () => {
       ];
 
       mockProfessionalRepository.findByUserId.mockResolvedValue(professional);
-      mockRequestService.findByProviderId.mockResolvedValue(
-        completedRequests,
-      );
+      mockRequestService.findByProviderId.mockResolvedValue(completedRequests);
 
       const result = await service.findByUserId('user-123');
 
@@ -332,7 +330,11 @@ describe('ProfessionalService', () => {
       mockProfessionalRepository.findById.mockResolvedValue(professional);
       mockProfessionalRepository.save.mockResolvedValue(updatedProfessional);
 
-      const result = await service.updateProfile(mockUser, 'prof-123', updateDto);
+      const result = await service.updateProfile(
+        mockUser,
+        'prof-123',
+        updateDto,
+      );
 
       expect(result.description).toBe('Updated description');
       expect(mockProfessionalRepository.save).toHaveBeenCalled();
@@ -435,9 +437,9 @@ describe('ProfessionalService', () => {
     it('should throw NotFoundException if professional not found', async () => {
       mockProfessionalRepository.findByUserId.mockResolvedValue(null);
 
-      await expect(
-        service.addGalleryItem(mockUser, 'new.jpg'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.addGalleryItem(mockUser, 'new.jpg')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

@@ -102,7 +102,10 @@ describe('RequestService', () => {
           provide: REQUEST_INTEREST_REPOSITORY,
           useValue: mockRequestInterestRepository,
         },
-        { provide: REQUEST_QUERY_REPOSITORY, useValue: mockRequestQueryRepository },
+        {
+          provide: REQUEST_QUERY_REPOSITORY,
+          useValue: mockRequestQueryRepository,
+        },
         { provide: EVENT_BUS, useValue: mockEventBus },
         { provide: ProfessionalService, useValue: mockProfessionalService },
         { provide: CompanyService, useValue: mockCompanyService },
@@ -664,7 +667,12 @@ describe('RequestService', () => {
       mockRequestRepository.save.mockResolvedValue(ratedRequest);
 
       const ctx = createAuthContext('prof-user', 'service-provider-123');
-      const result = await service.rateClient('req-123', ctx, 5, 'Great client!');
+      const result = await service.rateClient(
+        'req-123',
+        ctx,
+        5,
+        'Great client!',
+      );
 
       expect(result.clientRating).toBe(5);
     });
@@ -814,7 +822,6 @@ describe('RequestService', () => {
       );
     });
   });
-
 
   describe('findPublicRequests', () => {
     it('should return public requests', async () => {

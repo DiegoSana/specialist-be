@@ -14,12 +14,15 @@ import {
   COMPANY_REPOSITORY,
 } from '../../domain/repositories/company.repository';
 import { ProfessionalEntity } from '../../domain/entities/professional.entity';
-import { CompanyEntity, CompanyStatus } from '../../domain/entities/company.entity';
+import {
+  CompanyEntity,
+  CompanyStatus,
+} from '../../domain/entities/company.entity';
 import { ProfileActivationPolicy } from '../../domain/services/profile-activation.policy';
 
 /**
  * Application Service that orchestrates profile activation/deactivation.
- * 
+ *
  * Uses ProfileActivationPolicy (Domain Service) for business rules
  * and repositories for persistence.
  */
@@ -39,7 +42,7 @@ export class ProfileToggleService {
   /**
    * Activates the Company profile for a user.
    * If the user has an active Professional profile, it will be deactivated.
-   * 
+   *
    * @throws BadRequestException if activation is not allowed
    * @throws NotFoundException if company profile not found
    */
@@ -85,11 +88,13 @@ export class ProfileToggleService {
   /**
    * Activates the Professional profile for a user.
    * If the user has an active Company profile, it will be deactivated.
-   * 
+   *
    * @throws BadRequestException if activation is not allowed
    * @throws NotFoundException if professional profile not found
    */
-  async activateProfessionalProfile(userId: string): Promise<ProfessionalEntity> {
+  async activateProfessionalProfile(
+    userId: string,
+  ): Promise<ProfessionalEntity> {
     const [professional, company] = await Promise.all([
       this.professionalRepository.findByUserId(userId),
       this.companyRepository.findByUserId(userId),
@@ -157,7 +162,10 @@ export class ProfileToggleService {
       this.companyRepository.findByUserId(userId),
     ]);
 
-    const { type } = this.activationPolicy.getActiveProfile(professional, company);
+    const { type } = this.activationPolicy.getActiveProfile(
+      professional,
+      company,
+    );
 
     return {
       professional,
@@ -169,10 +177,13 @@ export class ProfileToggleService {
   /**
    * Handles the special case when a Company is verified by admin.
    * This triggers automatic activation and deactivation of Professional if needed.
-   * 
+   *
    * Called by CompanyService.verifyCompany()
    */
-  async handleCompanyVerification(userId: string, companyId: string): Promise<{
+  async handleCompanyVerification(
+    userId: string,
+    companyId: string,
+  ): Promise<{
     company: CompanyEntity;
     deactivatedProfessional: boolean;
   }> {
@@ -217,4 +228,3 @@ export class ProfileToggleService {
     };
   }
 }
-

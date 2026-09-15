@@ -174,21 +174,21 @@ export class UserEntity {
     now?: Date;
   }): UserEntity {
     const now = input.now ?? new Date();
-    
+
     // Determine new phone value
     const newPhone = input.phone !== undefined ? input.phone : this.phone;
-    
+
     // Determine new email value (if provided)
     const newEmail = input.email !== undefined ? input.email : this.email;
-    
+
     // Invalidate phone verification if phone changed
     const phoneChanged = input.phone !== undefined && newPhone !== this.phone;
     const phoneVerified = phoneChanged ? false : this.phoneVerified;
-    
+
     // Invalidate email verification if email changed
     const emailChanged = input.email !== undefined && newEmail !== this.email;
     const emailVerified = emailChanged ? false : this.emailVerified;
-    
+
     return new UserEntity(
       this.id,
       newEmail,

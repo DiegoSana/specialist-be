@@ -10,6 +10,7 @@ import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
 import { RequestInteractionRespondedEvent } from '../../domain/events/request-interaction-responded.event';
 import { RequestService } from '../services/request.service';
 import { RequestInteractionService } from '../services/request-interaction.service';
+import { RequestInterestService } from '../services/request-interest.service';
 import { MessageTemplateService } from '../../../shared/infrastructure/messaging/message-template.service';
 import {
   REQUEST_INTERACTION_REPOSITORY,
@@ -24,9 +25,7 @@ import { CompanyService } from '../../../profiles/application/services/company.s
  */
 @Injectable()
 export class RequestInteractionRespondedHandler implements OnModuleInit {
-  private readonly logger = new Logger(
-    RequestInteractionRespondedHandler.name,
-  );
+  private readonly logger = new Logger(RequestInteractionRespondedHandler.name);
 
   constructor(
     @Inject(EVENT_BUS) private readonly eventBus: any,
@@ -34,6 +33,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
     @Inject(REQUEST_INTERACTION_REPOSITORY)
     private readonly interactionRepository: RequestInteractionRepository,
     private readonly interactionService: RequestInteractionService,
+    private readonly requestInterestService: RequestInterestService,
     private readonly templateService: MessageTemplateService,
     @Inject(forwardRef(() => ProfessionalService))
     private readonly professionalService: ProfessionalService,
@@ -71,40 +71,22 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
   private async handleInteractionResponded(
     event: RequestInteractionRespondedEvent,
   ): Promise<void> {
-    const { requestId, responseIntent } = event.payload;
+    const { requestId, responseContent } = event.payload;
 
     this.logger.log(
-      `Processing interaction response for request ${requestId} with intent: ${responseIntent}`,
+      `Processing interaction response for request ${requestId} with intent ${event.payload.responseIntent}`,
     );
 
     try {
-      // Get the request
       const request = await this.requestService.findById(requestId);
       if (!request) {
         this.logger.warn(`Request ${requestId} not found`);
         return;
       }
 
-      // Determine new status based on intent
-      const newStatus = this.mapIntentToStatus(
-        responseIntent,
-        request.status,
-      );
-
-      if (!newStatus) {
-        this.logger.debug(
-          `Intent ${responseIntent} does not trigger status change for request ${requestId} (current: ${request.status})`,
-        );
-        return;
-      }
-
-      // Determine who should be the actor based on the direction of the interaction
-      // For TO_PROVIDER interactions, the provider is responding
-      // For TO_CLIENT interactions, the client is responding
       const interaction = await this.interactionRepository.findById(
         event.payload.interactionId,
       );
-
       if (!interaction) {
         this.logger.warn(
           `Interaction ${event.payload.interactionId} not found`,
@@ -112,10 +94,40 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
         return;
       }
 
-      // Create context based on interaction direction
+      // Special case: client replying to "assign specialist" follow-up with a number (1, 2, 3...)
+      if (
+        interaction.direction === 'TO_CLIENT' &&
+        interaction.messageTemplate ===
+          'follow_up_pending_3_days_with_interests' &&
+        request.status === RequestStatus.PENDING
+      ) {
+        const assigned = await this.tryAssignProviderByNumber(
+          requestId,
+          request.clientId,
+          responseContent,
+          interaction.metadata,
+        );
+        if (assigned) {
+          await this.sendAssignConfirmationMessage(requestId);
+          return;
+        }
+      }
+
+      // Standard flow: map intent to status change
+      const newStatus = this.mapIntentToStatus(
+        event.payload.responseIntent,
+        request.status,
+      );
+
+      if (!newStatus) {
+        this.logger.debug(
+          `Intent ${event.payload.responseIntent} does not trigger status change for request ${requestId} (current: ${request.status})`,
+        );
+        return;
+      }
+
       let context: any;
       if (interaction.direction === 'TO_PROVIDER') {
-        // Provider is responding, so provider should be the actor
         const providerUserId = request.providerId
           ? await this.getProviderUserId(request.providerId)
           : null;
@@ -125,7 +137,6 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
           isAdmin: false,
         };
       } else {
-        // Client is responding
         context = {
           userId: request.clientId,
           serviceProviderId: null,
@@ -133,17 +144,19 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
         };
       }
 
-      // Update request status
       await this.requestService.updateStatus(requestId, context, {
         status: newStatus,
       });
 
       this.logger.log(
-        `Request ${requestId} status updated from ${request.status} to ${newStatus} based on intent ${responseIntent}`,
+        `Request ${requestId} status updated from ${request.status} to ${newStatus} based on intent ${event.payload.responseIntent}`,
       );
 
-      // Optionally send confirmation message
-      await this.sendConfirmationMessage(requestId, newStatus, responseIntent);
+      await this.sendConfirmationMessage(
+        requestId,
+        newStatus,
+        event.payload.responseIntent,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to process interaction response for request ${requestId}`,
@@ -153,9 +166,96 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
   }
 
   /**
+   * Try to parse response as 1-based index and assign that provider.
+   * Returns true if assignment was done.
+   */
+  private async tryAssignProviderByNumber(
+    requestId: string,
+    clientId: string,
+    responseContent: string,
+    metadata: unknown,
+  ): Promise<boolean> {
+    const ids = (metadata as any)?.interestedProviderIds as
+      | string[]
+      | undefined;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return false;
+    }
+    const index = this.parseOneBasedIndex(responseContent);
+    if (index === null || index < 1 || index > ids.length) {
+      this.logger.debug(
+        `Assign by number: invalid index from "${responseContent}" (expected 1-${ids.length})`,
+      );
+      return false;
+    }
+    const serviceProviderId = ids[index - 1];
+    try {
+      const ctx = await this.requestInterestService.buildAuthContext(
+        clientId,
+        false,
+      );
+      await this.requestInterestService.assignProvider(
+        requestId,
+        ctx,
+        serviceProviderId,
+      );
+      this.logger.log(
+        `Assigned provider ${serviceProviderId} to request ${requestId} (client replied "${responseContent}")`,
+      );
+      return true;
+    } catch (error: any) {
+      this.logger.warn(
+        `Failed to assign provider by number: request ${requestId}, index ${index}, error=${error.message}`,
+      );
+      return false;
+    }
+  }
+
+  /** Parse message as 1-based index (e.g. "1", "2", "el 2", "numero 3"). */
+  private parseOneBasedIndex(message: string): number | null {
+    const trimmed = message.trim();
+    const num = parseInt(trimmed, 10);
+    if (!Number.isNaN(num) && String(num) === trimmed) {
+      return num;
+    }
+    const lower = trimmed.toLowerCase();
+    const match = lower.match(/(?:el|numero|número|opci[oó]n)\s*(\d+)/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    const onlyNum = trimmed.replace(/\D/g, '');
+    if (onlyNum.length > 0) {
+      return parseInt(onlyNum, 10);
+    }
+    return null;
+  }
+
+  private async sendAssignConfirmationMessage(
+    requestId: string,
+  ): Promise<void> {
+    try {
+      const request = await this.requestService.findById(requestId);
+      const title = request?.title || 'Tu solicitud';
+      await this.interactionService.createFollowUp({
+        requestId,
+        direction: 'TO_CLIENT' as any,
+        messageTemplate: 'status_update_assigned',
+        scheduledFor: new Date(),
+        metadata: { triggeredBy: 'assign_by_number' },
+        templateVariables: { title },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send assign confirmation for request ${requestId}`,
+        error,
+      );
+    }
+  }
+
+  /**
    * Map response intent to Request status change.
    * Returns null if no status change should occur.
-   * 
+   *
    * Note: The logic considers the context of the follow-up message.
    * For example, if a follow-up asks "¿Ya empezaste?" and user responds "si",
    * it should be treated as STARTED, not CONFIRMED.
@@ -286,9 +386,8 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
         return professional.userId;
       }
 
-      const company = await this.companyService.findByServiceProviderId(
-        serviceProviderId,
-      );
+      const company =
+        await this.companyService.findByServiceProviderId(serviceProviderId);
       if (company) {
         return company.userId;
       }
@@ -302,4 +401,3 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
     return null;
   }
 }
-

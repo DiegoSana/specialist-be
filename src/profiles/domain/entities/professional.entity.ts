@@ -94,8 +94,10 @@ export class ProfessionalEntity {
    * Only ACTIVE or VERIFIED status allows operation.
    */
   canOperate(): boolean {
-    return this.status === ProfessionalStatus.ACTIVE ||
-           this.status === ProfessionalStatus.VERIFIED;
+    return (
+      this.status === ProfessionalStatus.ACTIVE ||
+      this.status === ProfessionalStatus.VERIFIED
+    );
   }
 
   /**
@@ -103,10 +105,12 @@ export class ProfessionalEntity {
    * Can activate from PENDING, INACTIVE, or re-activate from ACTIVE/VERIFIED.
    */
   canBeActivated(): boolean {
-    return this.status === ProfessionalStatus.PENDING_VERIFICATION ||
-           this.status === ProfessionalStatus.INACTIVE ||
-           this.status === ProfessionalStatus.ACTIVE ||
-           this.status === ProfessionalStatus.VERIFIED;
+    return (
+      this.status === ProfessionalStatus.PENDING_VERIFICATION ||
+      this.status === ProfessionalStatus.INACTIVE ||
+      this.status === ProfessionalStatus.ACTIVE ||
+      this.status === ProfessionalStatus.VERIFIED
+    );
   }
 
   /**
@@ -114,8 +118,10 @@ export class ProfessionalEntity {
    * Only ACTIVE or VERIFIED can be deactivated.
    */
   canBeDeactivated(): boolean {
-    return this.status === ProfessionalStatus.ACTIVE ||
-           this.status === ProfessionalStatus.VERIFIED;
+    return (
+      this.status === ProfessionalStatus.ACTIVE ||
+      this.status === ProfessionalStatus.VERIFIED
+    );
   }
 
   /**
@@ -184,14 +190,19 @@ export class ProfessionalEntity {
   // Helper: Build AuthContext
   // ─────────────────────────────────────────────────────────────
 
-  static buildAuthContext(userId: string, isAdmin: boolean): ProfessionalAuthContext {
+  static buildAuthContext(
+    userId: string,
+    isAdmin: boolean,
+  ): ProfessionalAuthContext {
     return { userId, isAdmin };
   }
 
   /**
    * Create a new professional entity with an associated service provider
    */
-  withServiceProvider(serviceProvider: ServiceProviderEntity): ProfessionalEntity {
+  withServiceProvider(
+    serviceProvider: ServiceProviderEntity,
+  ): ProfessionalEntity {
     return new ProfessionalEntity(
       this.id,
       this.userId,

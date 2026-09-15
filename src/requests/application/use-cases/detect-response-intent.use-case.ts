@@ -137,4 +137,3 @@ export class DetectResponseIntentUseCase {
     return keywords.some((keyword) => text.includes(keyword));
   }
 }
-

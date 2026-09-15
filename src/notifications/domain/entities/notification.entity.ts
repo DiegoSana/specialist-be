@@ -47,12 +47,16 @@ export class NotificationEntity {
     return this.inAppReadAt() !== null;
   }
 
-  getDeliveryByChannel(channel: NotificationChannel): NotificationDelivery | undefined {
+  getDeliveryByChannel(
+    channel: NotificationChannel,
+  ): NotificationDelivery | undefined {
     return this.deliveries.find((d) => d.channel === channel);
   }
 
   hasFailedDelivery(): boolean {
-    return this.deliveries.some((d) => d.status === NotificationDeliveryStatus.FAILED);
+    return this.deliveries.some(
+      (d) => d.status === NotificationDeliveryStatus.FAILED,
+    );
   }
 
   hasPendingExternalDelivery(): boolean {
@@ -100,7 +104,10 @@ export class NotificationEntity {
   // Helper: Build AuthContext
   // ─────────────────────────────────────────────────────────────
 
-  static buildAuthContext(userId: string, isAdmin: boolean): NotificationAuthContext {
+  static buildAuthContext(
+    userId: string,
+    isAdmin: boolean,
+  ): NotificationAuthContext {
     return { userId, isAdmin };
   }
 }

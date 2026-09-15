@@ -1,9 +1,9 @@
 /**
  * Company Query Repository
- * 
+ *
  * Handles read-only queries that return DTOs or statistics instead of domain entities.
  * Separated from CompanyRepository (aggregate repository) to maintain clear boundaries.
- * 
+ *
  * See: docs/architecture/QUERY_REPOSITORIES.md
  */
 
@@ -25,10 +25,7 @@ export interface CompanyQueryRepository {
   /**
    * List all companies for admin (paginated)
    */
-  findAllForAdmin(params: {
-    skip: number;
-    take: number;
-  }): Promise<{
+  findAllForAdmin(params: { skip: number; take: number }): Promise<{
     companies: Array<{
       id: string;
       createdAt: Date;
@@ -88,6 +85,3 @@ export interface CompanyQueryRepository {
 
 // Token for dependency injection
 export const COMPANY_QUERY_REPOSITORY = Symbol('CompanyQueryRepository');
-
-
-

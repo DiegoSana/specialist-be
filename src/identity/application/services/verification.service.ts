@@ -8,8 +8,10 @@ import {
   VerificationService as VerificationServicePort,
   VERIFICATION_SERVICE,
 } from '../../domain/ports/verification.service';
-import { USER_REPOSITORY, UserRepository } from '../../domain/repositories/user.repository';
-import { UserEntity } from '../../domain/entities/user.entity';
+import {
+  USER_REPOSITORY,
+  UserRepository,
+} from '../../domain/repositories/user.repository';
 import { Phone } from '../../domain/value-objects/phone.vo';
 import { Email } from '../../domain/value-objects/email.vo';
 
@@ -59,10 +61,7 @@ export class VerificationService {
    * Confirm phone verification.
    * Validates OTP and marks phone as verified if successful.
    */
-  async confirmPhoneVerification(
-    userId: string,
-    code: string,
-  ): Promise<void> {
+  async confirmPhoneVerification(userId: string, code: string): Promise<void> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -118,13 +117,9 @@ export class VerificationService {
     // Validate email format
     try {
       const email = new Email(user.email);
-      await this.verificationService.requestEmailVerification(
-        email.getValue(),
-      );
+      await this.verificationService.requestEmailVerification(email.getValue());
     } catch (error: any) {
-      throw new BadRequestException(
-        error.message || 'Invalid email format',
-      );
+      throw new BadRequestException(error.message || 'Invalid email format');
     }
   }
 
@@ -132,10 +127,7 @@ export class VerificationService {
    * Confirm email verification.
    * Validates OTP and marks email as verified if successful.
    */
-  async confirmEmailVerification(
-    userId: string,
-    code: string,
-  ): Promise<void> {
+  async confirmEmailVerification(userId: string, code: string): Promise<void> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -168,4 +160,3 @@ export class VerificationService {
     await this.userRepository.save(updatedUser);
   }
 }
-

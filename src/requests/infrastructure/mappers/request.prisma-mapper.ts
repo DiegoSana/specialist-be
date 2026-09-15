@@ -26,7 +26,7 @@ export class PrismaRequestMapper {
     // Map provider data (which includes professional or company through serviceProvider)
     if (request.provider) {
       const provider = request.provider;
-      
+
       // Attach the provider with its professional or company data
       (entity as any).provider = {
         id: provider.id,

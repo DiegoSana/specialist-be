@@ -27,7 +27,14 @@ export class MessageTemplateService implements OnModuleInit {
       // Development: /app/src/shared/infrastructure/messaging/message-templates.json
       path.join(__dirname.replace('/dist/', '/src/'), 'message-templates.json'),
       // Fallback: absolute path from project root
-      path.join(process.cwd(), 'src', 'shared', 'infrastructure', 'messaging', 'message-templates.json'),
+      path.join(
+        process.cwd(),
+        'src',
+        'shared',
+        'infrastructure',
+        'messaging',
+        'message-templates.json',
+      ),
     ];
 
     // Return the first path (will be checked at runtime)
@@ -71,7 +78,14 @@ export class MessageTemplateService implements OnModuleInit {
       // Development: /app/src/shared/infrastructure/messaging/message-templates.json
       path.join(__dirname.replace('/dist/', '/src/'), 'message-templates.json'),
       // Fallback: absolute path from project root
-      path.join(process.cwd(), 'src', 'shared', 'infrastructure', 'messaging', 'message-templates.json'),
+      path.join(
+        process.cwd(),
+        'src',
+        'shared',
+        'infrastructure',
+        'messaging',
+        'message-templates.json',
+      ),
     ];
 
     let lastError: Error | null = null;
@@ -176,4 +190,3 @@ export class MessageTemplateService implements OnModuleInit {
     return Object.keys(this.templates || {});
   }
 }
-

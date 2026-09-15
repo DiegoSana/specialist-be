@@ -4,8 +4,10 @@ import { ProfessionalEntity } from '../entities/professional.entity';
 export interface ProfessionalRepository {
   findById(id: string): Promise<ProfessionalEntity | null>;
   findByUserId(userId: string): Promise<ProfessionalEntity | null>;
-  findByServiceProviderId(serviceProviderId: string): Promise<ProfessionalEntity | null>;
-  
+  findByServiceProviderId(
+    serviceProviderId: string,
+  ): Promise<ProfessionalEntity | null>;
+
   /**
    * Queries (read-model). En una separación más estricta, esto viviría
    * en un "ProfessionalQueryRepository" fuera del contrato de aggregate.
@@ -30,7 +32,10 @@ export interface ProfessionalRepository {
    * Update the status of a professional profile.
    * Used for profile activation/deactivation.
    */
-  updateStatus(id: string, status: ProfessionalStatus): Promise<ProfessionalEntity>;
+  updateStatus(
+    id: string,
+    status: ProfessionalStatus,
+  ): Promise<ProfessionalEntity>;
 
   /**
    * Update rating on the ServiceProvider associated with this professional.

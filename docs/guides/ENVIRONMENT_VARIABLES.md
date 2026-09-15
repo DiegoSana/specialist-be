@@ -91,6 +91,8 @@ fly secrets list
 | `NOTIFICATIONS_DISPATCH_RETRY_BASE_SECONDS` | Base retry delay | `60` |
 | `NOTIFICATIONS_DISPATCH_RETRY_MAX_SECONDS` | Max retry delay | `3600` |
 | `NOTIFICATIONS_RETENTION_DAYS` | Days to keep notifications | `90` |
+
+> Code defaults: `NOTIFICATIONS_DISPATCH_ENABLED=false`, `NOTIFICATIONS_DISPATCH_BATCH_SIZE=25`, `NOTIFICATIONS_DISPATCH_MAX_ATTEMPTS=5`, `NOTIFICATIONS_RETENTION_DAYS=90`. Production enables dispatch via `fly.toml` (`NOTIFICATIONS_DISPATCH_ENABLED = 'true'`). The JWT expiration variable is `JWT_EXPIRES_IN` (`JWT_EXPIRATION` is accepted as a legacy fallback).
 | `MAILGUN_REGION` | Mailgun region: `us` or `eu` | `us` |
 
 ## Local Development

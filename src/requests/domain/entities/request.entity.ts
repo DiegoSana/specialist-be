@@ -176,7 +176,10 @@ export class RequestEntity {
    * - Client can: CANCEL (from non-terminal states)
    * - Assigned provider can: PENDING→ACCEPTED, ACCEPTED→IN_PROGRESS, IN_PROGRESS→DONE
    */
-  canChangeStatusBy(ctx: RequestAuthContext, newStatus: RequestStatus): boolean {
+  canChangeStatusBy(
+    ctx: RequestAuthContext,
+    newStatus: RequestStatus,
+  ): boolean {
     if (ctx.isAdmin) return true;
 
     // Client permissions

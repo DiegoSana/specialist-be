@@ -7,6 +7,3 @@ export class UpdateCompanyStatusDto {
   @IsEnum(CompanyStatus)
   status: CompanyStatus;
 }
-
-
-

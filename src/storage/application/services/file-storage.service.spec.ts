@@ -407,7 +407,8 @@ describe('FileStorageService', () => {
           userId: 'different-professional-user',
         });
         // Override the serviceProviderId to be different
-        (differentProfessional as any).serviceProviderId = 'service-provider-999';
+        (differentProfessional as any).serviceProviderId =
+          'service-provider-999';
 
         mockFileStorageRepository.findByPath.mockResolvedValue({
           category: FileCategory.REQUEST_PHOTO,

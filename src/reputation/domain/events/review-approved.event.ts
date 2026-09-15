@@ -25,4 +25,3 @@ export class ReviewApprovedEvent implements DomainEvent<ReviewApprovedPayload> {
 
   constructor(public readonly payload: ReviewApprovedPayload) {}
 }
-

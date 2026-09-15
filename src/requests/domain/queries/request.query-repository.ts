@@ -1,9 +1,9 @@
 /**
  * Request Query Repository
- * 
+ *
  * Handles read-only queries that return DTOs or statistics instead of domain entities.
  * Separated from RequestRepository (aggregate repository) to maintain clear boundaries.
- * 
+ *
  * See: docs/architecture/QUERY_REPOSITORIES.md
  */
 
@@ -56,6 +56,3 @@ export interface RequestQueryRepository {
 
 // Token for dependency injection
 export const REQUEST_QUERY_REPOSITORY = Symbol('RequestQueryRepository');
-
-
-

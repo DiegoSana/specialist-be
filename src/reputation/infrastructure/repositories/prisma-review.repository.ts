@@ -69,7 +69,9 @@ export class PrismaReviewRepository implements ReviewRepository {
     return PrismaReviewMapper.toDomain(review);
   }
 
-  async findByServiceProviderId(serviceProviderId: string): Promise<ReviewEntity[]> {
+  async findByServiceProviderId(
+    serviceProviderId: string,
+  ): Promise<ReviewEntity[]> {
     const reviews = await this.prisma.review.findMany({
       where: { serviceProviderId },
       include: this.includeReviewer,

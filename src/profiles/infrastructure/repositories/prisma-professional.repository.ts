@@ -128,10 +128,7 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
     // Catalog "active" = profile can operate + user email and phone verified
     const finalWhere = criteria.userVerified
       ? {
-          AND: [
-            { user: { emailVerified: true, phoneVerified: true } },
-            where,
-          ],
+          AND: [{ user: { emailVerified: true, phoneVerified: true } }, where],
         }
       : where;
 
@@ -269,7 +266,9 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
   /**
    * Find a professional by their serviceProviderId
    */
-  async findByServiceProviderId(serviceProviderId: string): Promise<ProfessionalEntity | null> {
+  async findByServiceProviderId(
+    serviceProviderId: string,
+  ): Promise<ProfessionalEntity | null> {
     const professional = await this.prisma.professional.findUnique({
       where: { serviceProviderId },
       include: standardIncludes,

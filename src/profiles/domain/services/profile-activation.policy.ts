@@ -21,9 +21,9 @@ export interface ProfileActivationResult {
 
 /**
  * Domain Service that encapsulates the business rules for profile activation.
- * 
+ *
  * Key Rule: Only ONE provider profile (Professional OR Company) can be active at a time.
- * 
+ *
  * This service has NO infrastructure dependencies - it only works with domain entities.
  */
 export class ProfileActivationPolicy {
@@ -32,8 +32,10 @@ export class ProfileActivationPolicy {
    */
   canActivateCompany(company: CompanyEntity): boolean {
     // Can activate if not rejected or suspended
-    return company.status !== CompanyStatus.REJECTED &&
-           company.status !== CompanyStatus.SUSPENDED;
+    return (
+      company.status !== CompanyStatus.REJECTED &&
+      company.status !== CompanyStatus.SUSPENDED
+    );
   }
 
   /**
@@ -41,13 +43,15 @@ export class ProfileActivationPolicy {
    */
   canActivateProfessional(professional: ProfessionalEntity): boolean {
     // Can activate if not rejected or suspended
-    return professional.status !== ProfessionalStatus.REJECTED &&
-           professional.status !== ProfessionalStatus.SUSPENDED;
+    return (
+      professional.status !== ProfessionalStatus.REJECTED &&
+      professional.status !== ProfessionalStatus.SUSPENDED
+    );
   }
 
   /**
    * Resolves the activation of a provider profile, enforcing the mutual exclusion rule.
-   * 
+   *
    * @param targetType - Which profile type to activate
    * @param professional - The user's professional profile (or null if none)
    * @param company - The user's company profile (or null if none)
@@ -167,8 +171,8 @@ export class ProfileActivationPolicy {
     // Determine the new status for Professional
     // If it's PENDING_VERIFICATION, for now we allow self-activation
     // (professionals don't require admin verification in MVP)
-    const newStatus = professional.isPending() 
-      ? ProfessionalStatus.ACTIVE 
+    const newStatus = professional.isPending()
+      ? ProfessionalStatus.ACTIVE
       : ProfessionalStatus.ACTIVE;
 
     const result: ProfileActivationResult = {
@@ -234,7 +238,10 @@ export class ProfileActivationPolicy {
   getActiveProfile(
     professional: ProfessionalEntity | null,
     company: CompanyEntity | null,
-  ): { type: 'PROFESSIONAL' | 'COMPANY' | null; profile: ProfessionalEntity | CompanyEntity | null } {
+  ): {
+    type: 'PROFESSIONAL' | 'COMPANY' | null;
+    profile: ProfessionalEntity | CompanyEntity | null;
+  } {
     // Check Company first (has priority if both somehow active)
     if (company?.canOperate()) {
       return { type: 'COMPANY', profile: company };
@@ -247,4 +254,3 @@ export class ProfileActivationPolicy {
     return { type: null, profile: null };
   }
 }
-

@@ -2,7 +2,6 @@ import {
   Controller,
   Post,
   Body,
-  Headers,
   HttpCode,
   HttpStatus,
   Logger,
@@ -22,19 +21,18 @@ import { TwilioRateLimitGuard } from '../guards/twilio-rate-limit.guard';
 export class TwilioWebhookController {
   private readonly logger = new Logger(TwilioWebhookController.name);
 
-  constructor(
-    private readonly interactionService: RequestInteractionService,
-  ) {}
+  constructor(private readonly interactionService: RequestInteractionService) {}
 
   @Post()
   @HttpCode(HttpStatus.OK)
   async handleWebhook(
     @Body() body: any, // Changed to any temporarily to avoid validation issues
-    @Headers() headers: Record<string, string>,
   ): Promise<{ message: string }> {
-    this.logger.log(`🔔 Webhook endpoint called! Body type: ${typeof body}, Body keys: ${Object.keys(body || {}).join(', ')}`);
+    this.logger.log(
+      `🔔 Webhook endpoint called! Body type: ${typeof body}, Body keys: ${Object.keys(body || {}).join(', ')}`,
+    );
     this.logger.log(`🔔 Raw body: ${JSON.stringify(body)}`);
-    
+
     const webhookId = body?.MessageSid || 'unknown';
     const startTime = Date.now();
     const webhookType = this.determineWebhookType(body);
@@ -42,7 +40,7 @@ export class TwilioWebhookController {
     this.logger.log(
       `Received Twilio webhook: MessageSid=${webhookId}, Type=${webhookType}, Body keys=${Object.keys(body || {}).join(',')}`,
     );
-    
+
     // Log full body for debugging inbound messages
     if (webhookType === 'INBOUND_MESSAGE') {
       this.logger.debug(
@@ -76,7 +74,7 @@ export class TwilioWebhookController {
         `Failed to process webhook: MessageSid=${webhookId}, Duration=${duration}ms, Error=${error.message}`,
         error.stack,
       );
-      
+
       // Re-throw to let NestJS handle it (will return 500)
       throw error;
     }
@@ -118,7 +116,7 @@ export class TwilioWebhookController {
       );
     } catch (error: any) {
       const duration = Date.now() - startTime;
-      
+
       // Check if error is due to idempotency (already processed)
       if (error.message?.includes('already processed')) {
         this.logger.debug(
@@ -126,7 +124,7 @@ export class TwilioWebhookController {
         );
         return;
       }
-      
+
       this.logger.error(
         `Failed to process status update: MessageSid=${body.MessageSid}, Status=${body.MessageStatus}, Duration=${duration}ms, Error=${error.message}`,
         error.stack,
@@ -166,7 +164,7 @@ export class TwilioWebhookController {
       );
     } catch (error: any) {
       const duration = Date.now() - startTime;
-      
+
       // Check if error is due to idempotency (already processed)
       if (error.message?.includes('already processed')) {
         this.logger.debug(
@@ -174,7 +172,7 @@ export class TwilioWebhookController {
         );
         return;
       }
-      
+
       this.logger.error(
         `Failed to process inbound message: MessageSid=${body.MessageSid}, From=${phoneNumber}, Duration=${duration}ms, Error=${error.message}`,
         error.stack,
@@ -184,4 +182,3 @@ export class TwilioWebhookController {
     }
   }
 }
-

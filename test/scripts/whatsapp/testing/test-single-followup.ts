@@ -1,10 +1,11 @@
 #!/usr/bin/env ts-node
+/* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * Script para testear el flujo completo de follow-up para un request específico
- * 
+ *
  * Uso:
  *   docker exec especialistas-api-dev npm run whatsapp:test-single <request-id>
- * 
+ *
  * O con opciones:
  *   docker exec especialistas-api-dev npm run whatsapp:test-single <request-id> --prepare
  *   docker exec especialistas-api-dev npm run whatsapp:test-single <request-id> --send
@@ -13,7 +14,6 @@
 
 // Load environment variables
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const dotenv = require('dotenv');
   const path = require('path');
   const envPath = path.join(__dirname, '../../../.env');
@@ -49,7 +49,9 @@ async function prepareRequest(
     });
   } catch (error: any) {
     console.log(`❌ Error al buscar request: ${error.message}`);
-    console.log(`   Verifica que el ID sea correcto y que la conexión a la BD esté activa`);
+    console.log(
+      `   Verifica que el ID sea correcto y que la conexión a la BD esté activa`,
+    );
     return false;
   }
 
@@ -60,7 +62,9 @@ async function prepareRequest(
     console.log(`   2. Verifica que el request exista en la base de datos:`);
     console.log(`      docker exec especialistas-api-dev npx prisma studio`);
     console.log(`   3. Intenta buscar requests similares:`);
-    console.log(`      docker exec especialistas-api-dev npx prisma db execute --stdin <<< "SELECT id, title FROM requests WHERE title LIKE '%palabra%' LIMIT 5;"`);
+    console.log(
+      `      docker exec especialistas-api-dev npx prisma db execute --stdin <<< "SELECT id, title FROM requests WHERE title LIKE '%palabra%' LIMIT 5;"`,
+    );
     return false;
   }
 
@@ -72,7 +76,9 @@ async function prepareRequest(
 
   // 2. Verificar que tiene provider asignado
   if (!request.providerId) {
-    console.log(`\n⚠️  Request no tiene provider asignado. Necesitas asignar uno primero.`);
+    console.log(
+      `\n⚠️  Request no tiene provider asignado. Necesitas asignar uno primero.`,
+    );
     return false;
   }
 
@@ -111,8 +117,12 @@ async function prepareRequest(
   console.log(`   Phone Verified: ${providerPhoneVerified ? '✅' : '❌'}`);
 
   if (!providerPhone || !providerPhoneVerified) {
-    console.log(`\n⚠️  Provider no tiene teléfono verificado. Necesitas configurarlo primero.`);
-    console.log(`   Puedes verificar/actualizar el teléfono del provider en la base de datos.`);
+    console.log(
+      `\n⚠️  Provider no tiene teléfono verificado. Necesitas configurarlo primero.`,
+    );
+    console.log(
+      `   Puedes verificar/actualizar el teléfono del provider en la base de datos.`,
+    );
     return false;
   }
 
@@ -137,7 +147,9 @@ async function prepareRequest(
   });
 
   if (existingInteractions.length > 0) {
-    console.log(`\n🗑️  Eliminando ${existingInteractions.length} interaction(s) existente(s)...`);
+    console.log(
+      `\n🗑️  Eliminando ${existingInteractions.length} interaction(s) existente(s)...`,
+    );
     await prisma.requestInteraction.deleteMany({
       where: { requestId },
     });
@@ -147,11 +159,14 @@ async function prepareRequest(
   return true;
 }
 
-async function testFollowUpFlow(requestId: string, options: {
-  prepare?: boolean;
-  send?: boolean;
-  simulateResponse?: boolean;
-}) {
+async function testFollowUpFlow(
+  requestId: string,
+  options: {
+    prepare?: boolean;
+    send?: boolean;
+    simulateResponse?: boolean;
+  },
+) {
   console.log('🧪 Testing Follow-up Flow for Single Request\n');
   console.log('='.repeat(60));
 
@@ -193,7 +208,9 @@ async function testFollowUpFlow(requestId: string, options: {
     if (interactions.length === 0) {
       console.log(`\n⚠️  No se creó ninguna interaction. Posibles causas:`);
       console.log(`   - Ya existe un follow-up pendiente`);
-      console.log(`   - El request no cumple las condiciones (debe estar ACCEPTED y updated_at hace 3+ días)`);
+      console.log(
+        `   - El request no cumple las condiciones (debe estar ACCEPTED y updated_at hace 3+ días)`,
+      );
       console.log(`   - El provider no tiene teléfono verificado`);
       await app.close();
       return;
@@ -204,8 +221,12 @@ async function testFollowUpFlow(requestId: string, options: {
     console.log(`   ID: ${followUpInteraction.id}`);
     console.log(`   Template: ${followUpInteraction.messageTemplate}`);
     console.log(`   Status: ${followUpInteraction.status}`);
-    console.log(`   Scheduled For: ${followUpInteraction.scheduledFor.toISOString()}`);
-    console.log(`   Message Preview: ${followUpInteraction.messageContent.substring(0, 100)}...`);
+    console.log(
+      `   Scheduled For: ${followUpInteraction.scheduledFor.toISOString()}`,
+    );
+    console.log(
+      `   Message Preview: ${followUpInteraction.messageContent.substring(0, 100)}...`,
+    );
 
     // Paso 3: Enviar mensaje
     if (options.send !== false) {
@@ -235,14 +256,20 @@ async function testFollowUpFlow(requestId: string, options: {
             const authToken = process.env.TWILIO_AUTH_TOKEN;
             if (accountSid && authToken) {
               const client = twilio(accountSid, authToken);
-              const message = await client.messages(updatedInteraction.twilioMessageSid).fetch();
+              const message = await client
+                .messages(updatedInteraction.twilioMessageSid)
+                .fetch();
               console.log(`\n📊 Estado en Twilio: ${message.status}`);
               if (message.errorCode) {
-                console.log(`   ⚠️  Error: ${message.errorCode} - ${message.errorMessage}`);
+                console.log(
+                  `   ⚠️  Error: ${message.errorCode} - ${message.errorMessage}`,
+                );
               }
             }
           } catch (error: any) {
-            console.log(`   ⚠️  No se pudo verificar estado en Twilio: ${error.message}`);
+            console.log(
+              `   ⚠️  No se pudo verificar estado en Twilio: ${error.message}`,
+            );
           }
         }
 
@@ -272,14 +299,20 @@ async function testFollowUpFlow(requestId: string, options: {
 
             console.log(`\n📊 Estado del Request después de la respuesta:`);
             console.log(`   Estado: ${updatedRequest?.status}`);
-            console.log(`   Updated At: ${updatedRequest?.updatedAt.toISOString()}`);
+            console.log(
+              `   Updated At: ${updatedRequest?.updatedAt.toISOString()}`,
+            );
           }
         } else {
           console.log(`\n💡 Para simular respuesta del usuario:`);
-          console.log(`   docker exec especialistas-api-dev npm run whatsapp:test-single ${requestId} --simulate-response`);
+          console.log(
+            `   docker exec especialistas-api-dev npm run whatsapp:test-single ${requestId} --simulate-response`,
+          );
         }
       } else {
-        console.log(`\n⚠️  Mensaje no se envió. Estado: ${updatedInteraction?.status}`);
+        console.log(
+          `\n⚠️  Mensaje no se envió. Estado: ${updatedInteraction?.status}`,
+        );
         console.log(`   Verifica los logs para más detalles.`);
       }
     }
@@ -302,11 +335,16 @@ async function testFollowUpFlow(requestId: string, options: {
     console.log(`   1. Verifica que el mensaje llegó a WhatsApp`);
     console.log(`   2. Espera webhook de Twilio o simula uno:`);
     if (interactions.length > 0 && interactions[0].twilioMessageSid) {
-      console.log(`      ./test/scripts/whatsapp/utilities/simulate-webhook.sh status ${interactions[0].twilioMessageSid} delivered`);
+      console.log(
+        `      ./test/scripts/whatsapp/utilities/simulate-webhook.sh status ${interactions[0].twilioMessageSid} delivered`,
+      );
     }
-    console.log(`   3. Verifica logs: docker logs -f especialistas-api-dev | grep -i webhook`);
-    console.log(`   4. Ver estado: docker exec especialistas-api-dev npm run whatsapp:debug\n`);
-
+    console.log(
+      `   3. Verifica logs: docker logs -f especialistas-api-dev | grep -i webhook`,
+    );
+    console.log(
+      `   4. Ver estado: docker exec especialistas-api-dev npm run whatsapp:debug\n`,
+    );
   } catch (error: any) {
     console.error(`\n❌ Error: ${error.message}`);
     console.error(error.stack);
@@ -354,4 +392,3 @@ Ejemplos:
 }
 
 main().catch(console.error);
-

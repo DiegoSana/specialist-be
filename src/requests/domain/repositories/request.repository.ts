@@ -22,6 +22,15 @@ export interface RequestRepository {
   ): Promise<RequestEntity[]>;
 
   /**
+   * Find PENDING public requests that have at least one interest but no provider
+   * assigned, and were updated before the given date.
+   * Used for follow-up "assign a specialist" (e.g. 3 days with interests, no assignment).
+   */
+  findPendingWithInterestsUpdatedBefore(
+    updatedBefore: Date,
+  ): Promise<RequestEntity[]>;
+
+  /**
    * Opción A (colección de agregados): persiste el aggregate completo.
    * La implementación decide create vs update.
    */

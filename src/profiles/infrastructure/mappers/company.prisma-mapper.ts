@@ -1,6 +1,20 @@
-import { Company, CompanyTrade, Trade, ServiceProvider, User, CompanyStatus as PrismaCompanyStatus } from '@prisma/client';
-import { CompanyEntity, TradeInfo, CompanyStatus } from '../../domain/entities/company.entity';
-import { ServiceProviderEntity, ProviderType } from '../../domain/entities/service-provider.entity';
+import {
+  Company,
+  CompanyTrade,
+  Trade,
+  ServiceProvider,
+  User,
+  CompanyStatus as PrismaCompanyStatus,
+} from '@prisma/client';
+import {
+  CompanyEntity,
+  TradeInfo,
+  CompanyStatus,
+} from '../../domain/entities/company.entity';
+import {
+  ServiceProviderEntity,
+  ProviderType,
+} from '../../domain/entities/service-provider.entity';
 
 type CompanyWithRelations = Company & {
   serviceProvider: ServiceProvider;

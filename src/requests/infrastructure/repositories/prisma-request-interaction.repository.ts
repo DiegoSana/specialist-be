@@ -32,9 +32,7 @@ export class PrismaRequestInteractionRepository
     return interactions.map((i) => PrismaRequestInteractionMapper.toDomain(i));
   }
 
-  async findPendingFollowUps(
-    now: Date,
-  ): Promise<RequestInteractionEntity[]> {
+  async findPendingFollowUps(now: Date): Promise<RequestInteractionEntity[]> {
     const interactions = await this.prisma.requestInteraction.findMany({
       where: {
         status: InteractionStatus.PENDING,
@@ -51,10 +49,9 @@ export class PrismaRequestInteractionRepository
   async findByTwilioMessageSid(
     messageSid: string,
   ): Promise<RequestInteractionEntity | null> {
-    const interaction =
-      await this.prisma.requestInteraction.findUnique({
-        where: { twilioMessageSid: messageSid },
-      });
+    const interaction = await this.prisma.requestInteraction.findUnique({
+      where: { twilioMessageSid: messageSid },
+    });
 
     if (!interaction) return null;
 
@@ -135,9 +132,7 @@ export class PrismaRequestInteractionRepository
     return PrismaRequestInteractionMapper.toDomain(interaction);
   }
 
-  async findFailedRetryable(
-    now: Date,
-  ): Promise<RequestInteractionEntity[]> {
+  async findFailedRetryable(now: Date): Promise<RequestInteractionEntity[]> {
     // Find failed interactions that have nextRetryAt in metadata and it's time to retry
     // We need to filter by status FAILED and check metadata->>'nextRetryAt' <= now
     const interactions = await this.prisma.requestInteraction.findMany({
@@ -195,4 +190,3 @@ export class PrismaRequestInteractionRepository
     return PrismaRequestInteractionMapper.toDomain(saved);
   }
 }
-

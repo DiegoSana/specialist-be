@@ -1,13 +1,14 @@
 #!/usr/bin/env ts-node
+/* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * Script para reenviar mensajes de WhatsApp
- * 
+ *
  * Opciones:
  *   - Resetear interactions específicas por ID
  *   - Resetear todas las interactions fallidas
  *   - Resetear todas las interactions enviadas de un request
  *   - Resetear todas las interactions pendientes (forzar reenvío inmediato)
- * 
+ *
  * Uso:
  *   npx ts-node test/scripts/whatsapp/utilities/resend-messages.ts [command]
  *   docker exec especialistas-api-dev npm run whatsapp:resend [command]
@@ -16,7 +17,6 @@
 // Load environment variables from .env file
 // Try to load dotenv if available, otherwise rely on environment variables
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const dotenv = require('dotenv');
   const path = require('path');
   const envPath = path.join(__dirname, '../../../.env');
@@ -30,13 +30,16 @@ import { AppModule } from '../../../../src/app.module';
 import { PrismaService } from '../../../../src/shared/infrastructure/prisma/prisma.service';
 import { WhatsAppDispatchJob } from '../../../../src/requests/application/jobs/whatsapp-dispatch.job';
 
-async function resetInteractions(prisma: PrismaService, options: {
-  interactionIds?: string[];
-  requestId?: string;
-  resetFailed?: boolean;
-  resetSent?: boolean;
-  resetAll?: boolean;
-}) {
+async function resetInteractions(
+  prisma: PrismaService,
+  options: {
+    interactionIds?: string[];
+    requestId?: string;
+    resetFailed?: boolean;
+    resetSent?: boolean;
+    resetAll?: boolean;
+  },
+) {
   const where: any = {};
 
   if (options.interactionIds && options.interactionIds.length > 0) {
@@ -72,7 +75,9 @@ async function resetInteractions(prisma: PrismaService, options: {
 
   console.log(`   Encontradas ${interactions.length} interactions:`);
   interactions.forEach((i) => {
-    console.log(`     - ${i.id.substring(0, 8)}... | ${i.status} | Request: ${i.requestId.substring(0, 8)}...`);
+    console.log(
+      `     - ${i.id.substring(0, 8)}... | ${i.status} | Request: ${i.requestId.substring(0, 8)}...`,
+    );
   });
 
   // Resetear a PENDING y actualizar scheduledFor a ahora
@@ -114,7 +119,9 @@ async function main() {
         // Resetear por IDs específicos
         if (args.length === 0) {
           console.log('❌ Debes proporcionar al menos un ID de interaction');
-          console.log('   Uso: npx ts-node test/scripts/whatsapp/utilities/resend-messages.ts reset <id1> [id2] ...');
+          console.log(
+            '   Uso: npx ts-node test/scripts/whatsapp/utilities/resend-messages.ts reset <id1> [id2] ...',
+          );
           process.exit(1);
         }
         console.log('🔄 Reseteando interactions específicas...\n');
@@ -127,7 +134,9 @@ async function main() {
         // Resetear por Request ID
         if (args.length === 0) {
           console.log('❌ Debes proporcionar un Request ID');
-          console.log('   Uso: npx ts-node test/scripts/whatsapp/utilities/resend-messages.ts request <requestId>');
+          console.log(
+            '   Uso: npx ts-node test/scripts/whatsapp/utilities/resend-messages.ts request <requestId>',
+          );
           process.exit(1);
         }
         console.log(`🔄 Reseteando interactions del request ${args[0]}...\n`);
@@ -154,7 +163,9 @@ async function main() {
 
       case 'all':
         // Resetear todas (fallidas y enviadas)
-        console.log('🔄 Reseteando todas las interactions (fallidas y enviadas)...\n');
+        console.log(
+          '🔄 Reseteando todas las interactions (fallidas y enviadas)...\n',
+        );
         resetCount = await resetInteractions(prisma, {
           resetAll: true,
         });
@@ -191,7 +202,9 @@ async function main() {
           console.log('   No se encontraron interactions.');
         } else {
           interactions.forEach((i) => {
-            console.log(`   - ${i.id.substring(0, 8)}... | ${i.status} | ${i.interactionType} | Scheduled: ${i.scheduledFor.toISOString()}`);
+            console.log(
+              `   - ${i.id.substring(0, 8)}... | ${i.status} | ${i.interactionType} | Scheduled: ${i.scheduledFor.toISOString()}`,
+            );
           });
         }
         await app.close();
@@ -233,7 +246,9 @@ Ejemplos:
       await dispatchJob.dispatchPendingMessages();
       console.log('\n✅ Proceso completado!');
     } else {
-      console.log('\n⚠️  No se resetearon interactions. No hay nada que enviar.');
+      console.log(
+        '\n⚠️  No se resetearon interactions. No hay nada que enviar.',
+      );
     }
   } catch (error: any) {
     console.error('\n❌ Error:', error.message);
@@ -244,4 +259,3 @@ Ejemplos:
 }
 
 main().catch(console.error);
-

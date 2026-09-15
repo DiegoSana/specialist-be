@@ -20,8 +20,7 @@ export class TwilioWebhookGuard implements CanActivate {
   private readonly webhookSecret: string;
 
   constructor(private readonly config: ConfigService) {
-    this.webhookSecret =
-      this.config.get<string>('TWILIO_WEBHOOK_SECRET') || '';
+    this.webhookSecret = this.config.get<string>('TWILIO_WEBHOOK_SECRET') || '';
   }
 
   canActivate(context: ExecutionContext): boolean {
@@ -35,7 +34,7 @@ export class TwilioWebhookGuard implements CanActivate {
     if (!this.webhookSecret) {
       this.logger.warn(
         'TWILIO_WEBHOOK_SECRET not configured. Webhook validation is disabled. ' +
-        'This is OK for development, but should be configured in production.',
+          'This is OK for development, but should be configured in production.',
       );
       return true;
     }
@@ -50,7 +49,7 @@ export class TwilioWebhookGuard implements CanActivate {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const twilio = require('twilio');
       const validator = new twilio.webhook.Webhook(this.webhookSecret);
-      
+
       // Twilio expects the full URL including protocol and host
       const isValid = validator.validate(signature, url, params);
 
@@ -64,7 +63,7 @@ export class TwilioWebhookGuard implements CanActivate {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      
+
       this.logger.error('Error validating Twilio webhook signature', error);
       // In case of validation errors, reject for security
       throw new UnauthorizedException('Webhook validation failed');
@@ -79,8 +78,7 @@ export class TwilioWebhookGuard implements CanActivate {
     const protocol = request.protocol || 'http';
     const host = request.get('host');
     const originalUrl = request.originalUrl || request.url;
-    
+
     return `${protocol}://${host}${originalUrl}`;
   }
 }
-

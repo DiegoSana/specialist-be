@@ -4,7 +4,9 @@ import { ReviewStatus } from '../value-objects/review-status';
 export interface ReviewRepository {
   findById(id: string): Promise<ReviewEntity | null>;
   findByServiceProviderId(serviceProviderId: string): Promise<ReviewEntity[]>;
-  findApprovedByServiceProviderId(serviceProviderId: string): Promise<ReviewEntity[]>;
+  findApprovedByServiceProviderId(
+    serviceProviderId: string,
+  ): Promise<ReviewEntity[]>;
   findByRequestId(requestId: string): Promise<ReviewEntity | null>;
   findByStatus(status: ReviewStatus): Promise<ReviewEntity[]>;
 

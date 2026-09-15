@@ -52,10 +52,7 @@ export class AdminController {
   @Get('users/:id')
   @ApiOperation({ summary: 'Get user by ID (Admin only)' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
-  async getUserById(
-    @Param('id') id: string,
-    @CurrentUser() user: UserEntity,
-  ) {
+  async getUserById(@Param('id') id: string, @CurrentUser() user: UserEntity) {
     return this.adminService.getUserById(id, user);
   }
 
@@ -78,7 +75,10 @@ export class AdminController {
     description:
       'Manually confirm email and/or phone as verified. Used when admin overrides Twilio verification.',
   })
-  @ApiResponse({ status: 200, description: 'User verification updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'User verification updated successfully',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateUserVerification(
     @Param('id') id: string,
@@ -136,7 +136,11 @@ export class AdminController {
   @ApiOperation({ summary: 'Get all requests (Admin only)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DONE', 'CANCELLED'] })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DONE', 'CANCELLED'],
+  })
   @ApiResponse({ status: 200, description: 'Requests retrieved successfully' })
   async getAllRequests(
     @Query('page') page?: string,
@@ -196,7 +200,10 @@ export class AdminController {
 
   @Get('dashboard/stats')
   @ApiOperation({ summary: 'Get dashboard statistics (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Dashboard statistics retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard statistics retrieved successfully',
+  })
   async getDashboardStats() {
     return this.adminService.getDashboardStats();
   }

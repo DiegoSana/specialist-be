@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
-import { UserQueryRepository, UserStats } from '../../domain/queries/user.query-repository';
+import {
+  UserQueryRepository,
+  UserStats,
+} from '../../domain/queries/user.query-repository';
 import { UserStatus } from '@prisma/client';
 
 @Injectable()
@@ -37,10 +40,7 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
     };
   }
 
-  async findAllForAdmin(params: {
-    skip: number;
-    take: number;
-  }): Promise<{
+  async findAllForAdmin(params: { skip: number; take: number }): Promise<{
     users: Array<{
       id: string;
       email: string;
@@ -83,6 +83,3 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
     return { users, total };
   }
 }
-
-
-

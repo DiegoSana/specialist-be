@@ -98,24 +98,66 @@ DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/pos
 
 ## Seeding Data
 
-### Run Seed
+### Run seed (local o Supabase)
+
+Desde la raíz del proyecto, el seed usa la `DATABASE_URL` de tu `.env`:
 
 ```bash
 npx prisma db seed
 ```
 
-### Seed File Location
+### Run seed contra Supabase
+
+1. **Obtener la connection string**  
+   En Supabase: **Project Settings → Database**. Usa la **Connection string** (modo “URI”).  
+   Para migraciones y seed conviene usar la **conexión directa** (puerto **5432**), no el pooler (6543).
+
+2. **Configurar `DATABASE_URL`**  
+   En tu `.env` (o solo para este comando):
+
+   - **Recomendado (IPv4):** Connection string en **Session mode** (pooler), para evitar problemas si tu red no tiene IPv6:
+     - Dashboard → **Project Settings → Database → Connect** → elegir **Session mode**
+     - Host tipo `aws-0-[REGION].pooler.supabase.com`, puerto **5432**, usuario `postgres.[PROJECT_REF]`
+     - Ejemplo: `postgresql://postgres.[PROJECT_REF]:[YOUR-PASSWORD]@aws-0-us-east-1.pooler.supabase.com:5432/postgres`
+
+   - **Alternativa (IPv6):** Conexión directa `db.[project-ref].supabase.co:5432` (solo si tu entorno tiene IPv6).
+
+3. **Aplicar migraciones (si aún no está al día)**  
+   Con la misma `DATABASE_URL`:
+
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+4. **Ejecutar el seed**  
+   Con la misma `DATABASE_URL`:
+
+   ```bash
+   npx prisma db seed
+   ```
+
+   Si preferís no tocar el `.env`, podés pasar la URL solo para este comando:
+
+   ```bash
+   DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres" npx prisma db seed
+   ```
+
+**Nota:** El seed borra y recrea datos en las tablas que toca. Usalo en desarrollo/staging o en una copia de la base; en producción con datos reales conviene no ejecutarlo o hacer un backup antes.
+
+### Seed file location
 
 ```
 prisma/seed.ts
 ```
 
-### Configure Seed in package.json
+### Configure seed in package.json
+
+El proyecto usa `tsx` para ejecutar el seed:
 
 ```json
 {
   "prisma": {
-    "seed": "ts-node --transpile-only prisma/seed.ts"
+    "seed": "npx tsx prisma/seed.ts"
   }
 }
 ```
@@ -151,8 +193,12 @@ Migrations in `prisma/migrations/` don't match the database. Common cases:
 ### Error: "Can't reach database server"
 
 1. Check `DATABASE_URL` is correct
-2. For Supabase: use direct connection (5432), not pooler (6543)
-3. Check firewall/network settings
+2. **Supabase:** The direct connection (`db.xxx.supabase.co:5432`) uses **IPv6 only**. If your network doesn’t support IPv6, use the **Session mode pooler** instead (IPv4 compatible):
+   - In Supabase Dashboard: **Project Settings → Database → Connect**
+   - Choose **Session mode** (or “Connection string” and pick the pooler with port **5432** and host `aws-0-[REGION].pooler.supabase.com`)
+   - User format: `postgres.[PROJECT_REF]` (e.g. `postgres.mheycpmaagmtpabtciks`)
+   - Example: `postgresql://postgres.mheycpmaagmtpabtciks:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:5432/postgres`
+3. Check firewall/network; if you use Supabase network restrictions, allow your IP (or temporarily allow all for testing)
 
 ### PgBouncer Issues
 

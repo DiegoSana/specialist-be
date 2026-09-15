@@ -62,9 +62,7 @@ export class MailgunEmailSender implements EmailSender {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
-          `Mailgun API error: ${response.status} - ${errorText}`,
-        );
+        throw new Error(`Mailgun API error: ${response.status} - ${errorText}`);
       }
 
       const result: MailgunResponse = await response.json();
@@ -83,7 +81,9 @@ export class MailgunEmailSender implements EmailSender {
       throw new Error('MAILGUN_DOMAIN is not configured');
     }
     if (!this.from) {
-      throw new Error('MAILGUN_FROM or NOTIFICATIONS_SMTP_FROM is not configured');
+      throw new Error(
+        'MAILGUN_FROM or NOTIFICATIONS_SMTP_FROM is not configured',
+      );
     }
   }
 
@@ -93,4 +93,3 @@ export class MailgunEmailSender implements EmailSender {
     }
   }
 }
-

@@ -79,7 +79,8 @@ export class RequestInterestService {
     try {
       const prof = await this.professionalService.findByUserId(userId);
       if (prof) {
-        if (serviceProviderId === null) serviceProviderId = prof.serviceProviderId;
+        if (serviceProviderId === null)
+          serviceProviderId = prof.serviceProviderId;
         providerType = ProviderType.PROFESSIONAL;
         providerName = (prof as any).user
           ? `${(prof as any).user.firstName} ${(prof as any).user.lastName}`
@@ -94,7 +95,8 @@ export class RequestInterestService {
       try {
         const comp = await this.companyService.findByUserId(userId);
         if (comp) {
-          if (serviceProviderId === null) serviceProviderId = comp.serviceProviderId;
+          if (serviceProviderId === null)
+            serviceProviderId = comp.serviceProviderId;
           providerType = ProviderType.COMPANY;
           providerName = comp.companyName;
           providerTradeIds = comp.tradeIds || [];
@@ -148,7 +150,9 @@ export class RequestInterestService {
         );
       }
       if (!request.isPending()) {
-        throw new BadRequestException('Request is no longer accepting interest');
+        throw new BadRequestException(
+          'Request is no longer accepting interest',
+        );
       }
       throw new ForbiddenException('Cannot express interest in this request');
     }
@@ -219,7 +223,10 @@ export class RequestInterestService {
       throw new NotFoundException('Interest not found');
     }
 
-    await this.requestInterestRepository.remove(requestId, ctx.serviceProviderId);
+    await this.requestInterestRepository.remove(
+      requestId,
+      ctx.serviceProviderId,
+    );
   }
 
   /**
@@ -358,7 +365,8 @@ export class RequestInterestService {
     let providerName: string;
 
     // Try Professional first
-    const professional = await this.professionalService.findByServiceProviderId(serviceProviderId);
+    const professional =
+      await this.professionalService.findByServiceProviderId(serviceProviderId);
     if (professional) {
       providerUserId = professional.userId;
       providerType = ProviderType.PROFESSIONAL;
@@ -367,7 +375,8 @@ export class RequestInterestService {
         : 'Especialista';
     } else {
       // Try Company
-      const company = await this.companyService.findByServiceProviderId(serviceProviderId);
+      const company =
+        await this.companyService.findByServiceProviderId(serviceProviderId);
       if (!company) {
         throw new NotFoundException('Provider not found');
       }
@@ -397,7 +406,7 @@ export class RequestInterestService {
       ? `${client.firstName} ${client.lastName}`
       : 'Cliente';
 
-      // TODO: check if we can remove professionalId: serviceProviderId
+    // TODO: check if we can remove professionalId: serviceProviderId
     await this.eventBus.publish(
       new RequestProfessionalAssignedEvent({
         requestId: updatedRequest.id,
@@ -472,7 +481,9 @@ export class RequestInterestService {
           'Can only unassign provider from accepted requests',
         );
       }
-      throw new ForbiddenException('Cannot unassign provider from this request');
+      throw new ForbiddenException(
+        'Cannot unassign provider from this request',
+      );
     }
 
     const fromStatus = request.status;
@@ -500,7 +511,8 @@ export class RequestInterestService {
 
     if (fromProviderId) {
       // Try Professional first
-      const professional = await this.professionalService.findByServiceProviderId(fromProviderId);
+      const professional =
+        await this.professionalService.findByServiceProviderId(fromProviderId);
       if (professional) {
         providerUserId = professional.userId;
         providerType = ProviderType.PROFESSIONAL;
@@ -509,7 +521,8 @@ export class RequestInterestService {
           : 'Especialista';
       } else {
         // Try Company
-        const company = await this.companyService.findByServiceProviderId(fromProviderId);
+        const company =
+          await this.companyService.findByServiceProviderId(fromProviderId);
         if (company) {
           providerUserId = company.userId;
           providerType = ProviderType.COMPANY;

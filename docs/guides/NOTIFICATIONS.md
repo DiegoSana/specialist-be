@@ -133,7 +133,7 @@ External deliveries (EMAIL/WHATSAPP) are processed by a cron job running every m
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `NOTIFICATIONS_DISPATCH_ENABLED` | Enable background dispatch | `false` |
-| `NOTIFICATIONS_DISPATCH_BATCH_SIZE` | Deliveries per tick | `50` |
+| `NOTIFICATIONS_DISPATCH_BATCH_SIZE` | Deliveries per tick | `25` |
 | `NOTIFICATIONS_DISPATCH_MAX_ATTEMPTS` | Max attempts before FAILED | `5` |
 | `NOTIFICATIONS_DISPATCH_RETRY_BASE_SECONDS` | Exponential backoff base | `60` |
 | `NOTIFICATIONS_DISPATCH_RETRY_MAX_SECONDS` | Backoff cap | `3600` |

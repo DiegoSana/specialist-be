@@ -1,7 +1,8 @@
 #!/usr/bin/env ts-node
+/* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * Script para listar requests disponibles
- * 
+ *
  * Uso:
  *   docker exec especialistas-api-dev npx ts-node test/scripts/whatsapp/utilities/list-requests.ts
  *   docker exec especialistas-api-dev npx ts-node test/scripts/whatsapp/utilities/list-requests.ts --with-provider
@@ -9,7 +10,6 @@
 
 // Load environment variables
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const dotenv = require('dotenv');
   const path = require('path');
   const envPath = path.join(__dirname, '../../../.env');
@@ -60,7 +60,13 @@ async function listRequests() {
       }
     } else {
       console.log(`✅ Encontrados ${requests.length} request(s):\n`);
-      console.log('ID'.padEnd(40), 'Title'.padEnd(40), 'Status'.padEnd(15), 'Provider'.padEnd(15), 'Updated');
+      console.log(
+        'ID'.padEnd(40),
+        'Title'.padEnd(40),
+        'Status'.padEnd(15),
+        'Provider'.padEnd(15),
+        'Updated',
+      );
       console.log('-'.repeat(150));
 
       for (const req of requests) {
@@ -78,7 +84,9 @@ async function listRequests() {
       }
 
       console.log('\n💡 Para usar un request en el test:');
-      console.log(`   docker exec especialistas-api-dev npm run whatsapp:test-single ${requests[0].id}`);
+      console.log(
+        `   docker exec especialistas-api-dev npm run whatsapp:test-single ${requests[0].id}`,
+      );
     }
 
     // Verificar el request específico si se proporciona
@@ -93,7 +101,9 @@ async function listRequests() {
       if (specificRequest) {
         console.log(`✅ Request encontrado: "${specificRequest.title}"`);
         console.log(`   Status: ${specificRequest.status}`);
-        console.log(`   Provider ID: ${specificRequest.providerId || 'No asignado'}`);
+        console.log(
+          `   Provider ID: ${specificRequest.providerId || 'No asignado'}`,
+        );
       } else {
         console.log(`❌ Request no encontrado`);
         console.log(`\n💡 Posibles causas:`);
@@ -112,5 +122,3 @@ async function listRequests() {
 }
 
 listRequests().catch(console.error);
-
-

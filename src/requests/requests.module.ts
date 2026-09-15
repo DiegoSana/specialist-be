@@ -4,9 +4,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { REQUEST_REPOSITORY } from './domain/repositories/request.repository';
 import { REQUEST_QUERY_REPOSITORY } from './domain/queries/request.query-repository';
 import { REQUEST_INTEREST_REPOSITORY } from './domain/repositories/request-interest.repository';
-import {
-  REQUEST_INTERACTION_REPOSITORY,
-} from './domain/repositories/request-interaction.repository';
+import { REQUEST_INTERACTION_REPOSITORY } from './domain/repositories/request-interaction.repository';
 import { WHATSAPP_MESSAGING_PORT } from './domain/ports/whatsapp-messaging.port';
 
 // Application
@@ -15,9 +13,19 @@ import { RequestInterestService } from './application/services/request-interest.
 import { RequestInteractionService } from './application/services/request-interaction.service';
 import { WhatsAppDispatchJob } from './application/jobs/whatsapp-dispatch.job';
 import { FollowUpSchedulerJob } from './application/jobs/follow-up-scheduler.job';
+import { FOLLOW_UP_RULES } from './application/jobs/follow-up-scheduler.job';
 import { MessageStatusCheckerJob } from './application/jobs/message-status-checker.job';
 import { DetectResponseIntentUseCase } from './application/use-cases/detect-response-intent.use-case';
 import { RequestInteractionRespondedHandler } from './application/handlers/request-interaction-responded.handler';
+import { FollowUpQueryExecutor } from './application/follow-up/follow-up-query-executor';
+import {
+  Accepted3DaysFollowUpRule,
+  Accepted7DaysFollowUpRule,
+  InProgress5DaysFollowUpRule,
+  InProgress10DaysFollowUpRule,
+  Done1DayFollowUpRule,
+  Pending3DaysWithInterestsFollowUpRule,
+} from './application/follow-up/rules';
 
 // Infrastructure
 import { PrismaRequestRepository } from './infrastructure/repositories/prisma-request.repository';
@@ -59,6 +67,32 @@ import { ProfilesModule } from '../profiles/profiles.module';
     TwilioRateLimitGuard,
     DetectResponseIntentUseCase,
     RequestInteractionRespondedHandler,
+    FollowUpQueryExecutor,
+    Accepted3DaysFollowUpRule,
+    Accepted7DaysFollowUpRule,
+    InProgress5DaysFollowUpRule,
+    InProgress10DaysFollowUpRule,
+    Done1DayFollowUpRule,
+    Pending3DaysWithInterestsFollowUpRule,
+    {
+      provide: FOLLOW_UP_RULES,
+      useFactory: (
+        r1: Accepted3DaysFollowUpRule,
+        r2: Accepted7DaysFollowUpRule,
+        r3: InProgress5DaysFollowUpRule,
+        r4: InProgress10DaysFollowUpRule,
+        r5: Done1DayFollowUpRule,
+        r6: Pending3DaysWithInterestsFollowUpRule,
+      ) => [r1, r2, r3, r4, r5, r6],
+      inject: [
+        Accepted3DaysFollowUpRule,
+        Accepted7DaysFollowUpRule,
+        InProgress5DaysFollowUpRule,
+        InProgress10DaysFollowUpRule,
+        Done1DayFollowUpRule,
+        Pending3DaysWithInterestsFollowUpRule,
+      ],
+    },
     {
       provide: REQUEST_REPOSITORY,
       useClass: PrismaRequestRepository,

@@ -1,7 +1,11 @@
 # Estado de Implementación: Sistema de Follow-up WhatsApp
 
-**Última actualización**: Diciembre 2024  
-**Etapa actual**: Etapa 1 - Fundación (MVP Mínimo) - ~90% completado
+> ⚠️ **Documento histórico (Diciembre 2024).** El sistema está implementado y en uso; la referencia vigente es
+> [`docs/guides/whatsapp/README.md`](../guides/whatsapp/README.md) (reglas, jobs, templates, webhook) y
+> [`SETUP.md`](../guides/whatsapp/SETUP.md) / [`TESTING.md`](../guides/whatsapp/TESTING.md). Se conserva como registro del plan original.
+
+**Última actualización**: Septiembre 2026 (marcado como histórico)  
+**Etapa original**: Etapa 1 - Fundación (MVP Mínimo)
 
 ---
 
@@ -144,7 +148,7 @@ https://tu-dominio.com/api/webhooks/twilio
 ### Para Probar Localmente
 1. Configurar Twilio Sandbox
 2. Registrar número de prueba en Twilio Console
-3. Configurar webhook con ngrok: `ngrok http 3000`
+3. Configurar webhook con ngrok: `ngrok http 5000`
 4. Actualizar webhook URL en Twilio Console
 5. Crear `RequestInteraction` manualmente para testing
 6. Verificar envío y recepción de mensajes

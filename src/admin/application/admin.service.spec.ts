@@ -259,10 +259,9 @@ describe('AdminService', () => {
       expect(result.meta.page).toBe(1);
       expect(result.meta.limit).toBe(10);
       expect(result.meta.totalPages).toBe(1);
-      expect(mockProfessionalService.getAllProfessionalsForAdmin).toHaveBeenCalledWith(
-        1,
-        10,
-      );
+      expect(
+        mockProfessionalService.getAllProfessionalsForAdmin,
+      ).toHaveBeenCalledWith(1, 10);
     });
 
     it('should handle empty results', async () => {
@@ -295,10 +294,9 @@ describe('AdminService', () => {
 
       await service.getAllProfessionals(2, 15);
 
-      expect(mockProfessionalService.getAllProfessionalsForAdmin).toHaveBeenCalledWith(
-        2,
-        15,
-      );
+      expect(
+        mockProfessionalService.getAllProfessionalsForAdmin,
+      ).toHaveBeenCalledWith(2, 15);
     });
   });
 

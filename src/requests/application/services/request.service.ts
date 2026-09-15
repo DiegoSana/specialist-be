@@ -63,9 +63,8 @@ export class RequestService {
     if (!user || !user.isClient()) {
       throw new BadRequestException('Only clients can create requests');
     }
-    const activation = await this.profileActivationService.getActivationStatus(
-      clientId,
-    );
+    const activation =
+      await this.profileActivationService.getActivationStatus(clientId);
     if (!activation.hasActiveClientProfile) {
       throw new BadRequestException(
         'You must verify your email and phone to create a request',
@@ -82,7 +81,7 @@ export class RequestService {
           'professionalId or companyId is required for direct requests',
         );
       }
-      
+
       if (createDto.professionalId) {
         const professional = await this.professionalService.getByIdOrFail(
           createDto.professionalId,
@@ -237,7 +236,6 @@ export class RequestService {
     return this.requestRepository.findByProviderId(providerId);
   }
 
-
   async findPublicRequests(tradeIds?: string[]): Promise<RequestEntity[]> {
     return this.requestRepository.findPublicRequests(tradeIds);
   }
@@ -283,7 +281,7 @@ export class RequestService {
       // Get names for notification
       const client = (saved as any).client;
       const prof = (saved as any).professional;
-      
+
       // Resolve provider info if assigned
       let providerUserId: string | null = null;
       let providerType: ProviderType | null = null;
@@ -291,7 +289,10 @@ export class RequestService {
 
       if (saved.providerId) {
         // Try Professional first
-        const professional = await this.professionalService.findByServiceProviderId(saved.providerId);
+        const professional =
+          await this.professionalService.findByServiceProviderId(
+            saved.providerId,
+          );
         if (professional) {
           providerUserId = professional.userId;
           providerType = ProviderType.PROFESSIONAL;
@@ -300,7 +301,9 @@ export class RequestService {
             : null;
         } else {
           // Try Company
-          const company = await this.companyService.findByServiceProviderId(saved.providerId);
+          const company = await this.companyService.findByServiceProviderId(
+            saved.providerId,
+          );
           if (company) {
             providerUserId = company.userId;
             providerType = ProviderType.COMPANY;
@@ -334,7 +337,6 @@ export class RequestService {
 
     return saved;
   }
-
 
   /**
    * Add a photo to a request with authorization check.
@@ -457,11 +459,12 @@ export class RequestService {
     status?: RequestStatus,
   ) {
     const skip = (page - 1) * limit;
-    const { requests, total } = await this.requestQueryRepository.findAllForAdmin({
-      skip,
-      take: limit,
-      status,
-    });
+    const { requests, total } =
+      await this.requestQueryRepository.findAllForAdmin({
+        skip,
+        take: limit,
+        status,
+      });
 
     return {
       data: requests,

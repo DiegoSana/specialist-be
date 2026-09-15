@@ -148,7 +148,9 @@ export class CompanyService {
   /**
    * Find company by service provider ID
    */
-  async findByServiceProviderId(serviceProviderId: string): Promise<CompanyEntity | null> {
+  async findByServiceProviderId(
+    serviceProviderId: string,
+  ): Promise<CompanyEntity | null> {
     return this.companyRepository.findByServiceProviderId(serviceProviderId);
   }
 
@@ -173,9 +175,13 @@ export class CompanyService {
 
     // Validate CUIT uniqueness if provided
     if (createDto.taxId) {
-      const existingByTaxId = await this.companyRepository.findByTaxId(createDto.taxId);
+      const existingByTaxId = await this.companyRepository.findByTaxId(
+        createDto.taxId,
+      );
       if (existingByTaxId) {
-        throw new BadRequestException('Esta empresa ya está registrada (CUIT duplicado)');
+        throw new BadRequestException(
+          'Esta empresa ya está registrada (CUIT duplicado)',
+        );
       }
     }
 
@@ -270,7 +276,9 @@ export class CompanyService {
     const ctx = this.buildAuthContext(actingUser);
 
     if (!company.canBeEditedBy(ctx)) {
-      throw new ForbiddenException('You can only update your own company profile');
+      throw new ForbiddenException(
+        'You can only update your own company profile',
+      );
     }
 
     // Handle trade updates
@@ -314,18 +322,28 @@ export class CompanyService {
         company.userId,
         company.serviceProviderId,
         updateDto.companyName ?? company.companyName,
-        updateDto.legalName !== undefined ? updateDto.legalName : company.legalName,
+        updateDto.legalName !== undefined
+          ? updateDto.legalName
+          : company.legalName,
         updateDto.taxId !== undefined ? updateDto.taxId : company.taxId,
         nextTrades,
-        updateDto.description !== undefined ? updateDto.description : company.description,
-        updateDto.foundedYear !== undefined ? updateDto.foundedYear : company.foundedYear,
-        updateDto.employeeCount !== undefined ? updateDto.employeeCount : company.employeeCount,
+        updateDto.description !== undefined
+          ? updateDto.description
+          : company.description,
+        updateDto.foundedYear !== undefined
+          ? updateDto.foundedYear
+          : company.foundedYear,
+        updateDto.employeeCount !== undefined
+          ? updateDto.employeeCount
+          : company.employeeCount,
         updateDto.website !== undefined ? updateDto.website : company.website,
         updateDto.address !== undefined ? updateDto.address : company.address,
         updateDto.city !== undefined ? updateDto.city : company.city,
         updateDto.zone !== undefined ? updateDto.zone : company.zone,
         company.status,
-        updateDto.profileImage !== undefined ? updateDto.profileImage : company.profileImage,
+        updateDto.profileImage !== undefined
+          ? updateDto.profileImage
+          : company.profileImage,
         updateDto.gallery !== undefined ? updateDto.gallery : company.gallery,
         company.createdAt,
         now,
@@ -385,7 +403,10 @@ export class CompanyService {
   /**
    * Remove gallery item
    */
-  async removeGalleryItem(user: UserEntity, url: string): Promise<CompanyEntity> {
+  async removeGalleryItem(
+    user: UserEntity,
+    url: string,
+  ): Promise<CompanyEntity> {
     const ctx = this.buildAuthContext(user);
     const company = await this.companyRepository.findByUserId(user.id);
 
@@ -429,15 +450,26 @@ export class CompanyService {
   /**
    * Update company rating (called by ReviewService)
    */
-  async updateRating(companyId: string, averageRating: number, totalReviews: number): Promise<void> {
-    await (this.companyRepository as any).updateRating(companyId, averageRating, totalReviews);
+  async updateRating(
+    companyId: string,
+    averageRating: number,
+    totalReviews: number,
+  ): Promise<void> {
+    await (this.companyRepository as any).updateRating(
+      companyId,
+      averageRating,
+      totalReviews,
+    );
   }
 
   /**
    * Verify company (admin only)
    * This activates the Company and deactivates any active Professional profile.
    */
-  async verifyCompany(actingUser: UserEntity, companyId: string): Promise<CompanyEntity> {
+  async verifyCompany(
+    actingUser: UserEntity,
+    companyId: string,
+  ): Promise<CompanyEntity> {
     if (!actingUser.isAdminUser()) {
       throw new ForbiddenException('Only admins can verify companies');
     }
@@ -481,10 +513,11 @@ export class CompanyService {
    */
   async getAllCompaniesForAdmin(page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
-    const { companies, total } = await this.companyQueryRepository.findAllForAdmin({
-      skip,
-      take: limit,
-    });
+    const { companies, total } =
+      await this.companyQueryRepository.findAllForAdmin({
+        skip,
+        take: limit,
+      });
 
     return {
       data: companies,
@@ -501,7 +534,8 @@ export class CompanyService {
    * Get company by ID for admin (with full details)
    */
   async getCompanyByIdForAdmin(companyId: string) {
-    const company = await this.companyQueryRepository.findByIdForAdmin(companyId);
+    const company =
+      await this.companyQueryRepository.findByIdForAdmin(companyId);
     if (!company) {
       throw new NotFoundException('Company not found');
     }

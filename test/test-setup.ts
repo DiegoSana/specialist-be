@@ -143,7 +143,10 @@ export async function createTestProfessional(
     city?: string;
   },
 ): Promise<TestUser & { professionalId: string; serviceProviderId: string }> {
-  const user = await createTestUser(ctx, { email: options.email, name: options.name });
+  const user = await createTestUser(ctx, {
+    email: options.email,
+    name: options.name,
+  });
 
   // Create service provider first
   const serviceProvider = await ctx.prisma.serviceProvider.create({
@@ -199,10 +202,19 @@ export async function createTestCompany(
     companyName: string;
     tradeId: string;
     city?: string;
-    status?: 'PENDING_VERIFICATION' | 'ACTIVE' | 'VERIFIED' | 'INACTIVE' | 'REJECTED' | 'SUSPENDED';
+    status?:
+      | 'PENDING_VERIFICATION'
+      | 'ACTIVE'
+      | 'VERIFIED'
+      | 'INACTIVE'
+      | 'REJECTED'
+      | 'SUSPENDED';
   },
 ): Promise<TestUser & { companyId: string; serviceProviderId: string }> {
-  const user = await createTestUser(ctx, { email: options.email, name: options.companyName });
+  const user = await createTestUser(ctx, {
+    email: options.email,
+    name: options.companyName,
+  });
 
   // Create service provider first
   const serviceProvider = await ctx.prisma.serviceProvider.create({
@@ -258,7 +270,10 @@ export async function createTestClient(
     name?: string;
   } = {},
 ): Promise<TestUser & { clientId: string }> {
-  const user = await createTestUser(ctx, { email: options.email, name: options.name });
+  const user = await createTestUser(ctx, {
+    email: options.email,
+    name: options.name,
+  });
 
   // Create client profile
   const client = await ctx.prisma.client.create({
@@ -310,4 +325,3 @@ export async function getOrCreateTrade(
 export function authHeader(token: string): [string, string] {
   return ['Authorization', `Bearer ${token}`];
 }
-

@@ -192,7 +192,8 @@ export class CompaniesController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Company cannot be activated (pending verification, rejected, etc.)',
+    description:
+      'Company cannot be activated (pending verification, rejected, etc.)',
   })
   @ApiResponse({ status: 404, description: 'Company profile not found' })
   async activateProfile(
@@ -224,4 +225,3 @@ export class CompaniesController {
     return CompanyResponseDto.fromEntity(entity);
   }
 }
-

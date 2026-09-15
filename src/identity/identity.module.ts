@@ -6,9 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 // Domain
 import { USER_REPOSITORY } from './domain/repositories/user.repository';
 import { USER_QUERY_REPOSITORY } from './domain/queries/user.query-repository';
-import {
-  VERIFICATION_SERVICE,
-} from './domain/ports/verification.service';
+import { VERIFICATION_SERVICE } from './domain/ports/verification.service';
 
 // Application
 import { AuthenticationService } from './application/services/authentication.service';
@@ -48,17 +46,17 @@ import { ProfilesModule } from '../profiles/profiles.module';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRATION', '7d'),
+          // Canonical name is JWT_EXPIRES_IN (docs, .env, docker-compose). JWT_EXPIRATION is
+          // kept as a fallback for environments that still define the old name.
+          expiresIn:
+            configService.get<string>('JWT_EXPIRES_IN') ??
+            configService.get<string>('JWT_EXPIRATION', '7d'),
         },
       }),
       inject: [ConfigService],
     }),
   ],
-  controllers: [
-    AuthController,
-    UsersController,
-    VerificationController,
-  ],
+  controllers: [AuthController, UsersController, VerificationController],
   providers: [
     AuthenticationService,
     UserService,

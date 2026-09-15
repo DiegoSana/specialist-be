@@ -31,13 +31,29 @@ export class AdminNotificationsController {
 
   @Get()
   @ApiOperation({ summary: 'List all notifications (Admin only)' })
-  @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
-  @ApiQuery({ name: 'type', required: false, description: 'Filter by notification type' })
+  @ApiQuery({
+    name: 'userId',
+    required: false,
+    description: 'Filter by user ID',
+  })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    description: 'Filter by notification type',
+  })
   @ApiQuery({ name: 'unreadOnly', required: false, type: Boolean })
   @ApiQuery({ name: 'hasFailedDelivery', required: false, type: Boolean })
-  @ApiQuery({ name: 'take', required: false, type: Number, description: 'Max 100' })
+  @ApiQuery({
+    name: 'take',
+    required: false,
+    type: Number,
+    description: 'Max 100',
+  })
   @ApiQuery({ name: 'skip', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'List of notifications with pagination' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of notifications with pagination',
+  })
   async listAll(
     @Query('userId') userId?: string,
     @Query('type') type?: string,
@@ -62,7 +78,9 @@ export class AdminNotificationsController {
   }
 
   @Get('stats')
-  @ApiOperation({ summary: 'Get notification delivery statistics (Admin only)' })
+  @ApiOperation({
+    summary: 'Get notification delivery statistics (Admin only)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Delivery statistics',
@@ -80,8 +98,14 @@ export class AdminNotificationsController {
           additionalProperties: { type: 'number' },
           description: 'Count by channel',
         },
-        failedLast24h: { type: 'number', description: 'Failed deliveries in last 24h' },
-        pendingExternal: { type: 'number', description: 'Pending external deliveries' },
+        failedLast24h: {
+          type: 'number',
+          description: 'Failed deliveries in last 24h',
+        },
+        pendingExternal: {
+          type: 'number',
+          description: 'Pending external deliveries',
+        },
       },
     },
   })
@@ -93,10 +117,7 @@ export class AdminNotificationsController {
   @ApiOperation({ summary: 'Get notification by ID (Admin only)' })
   @ApiResponse({ status: 200, description: 'Notification details' })
   @ApiResponse({ status: 404, description: 'Notification not found' })
-  async findById(
-    @Param('id') id: string,
-    @CurrentUser() user: UserEntity,
-  ) {
+  async findById(@Param('id') id: string, @CurrentUser() user: UserEntity) {
     const entity = await this.notifications.findByIdForUser(id, user);
     return NotificationResponseDto.fromEntity(entity);
   }
@@ -107,12 +128,8 @@ export class AdminNotificationsController {
   @ApiResponse({ status: 200, description: 'Notification marked for resend' })
   @ApiResponse({ status: 403, description: 'Cannot resend this notification' })
   @ApiResponse({ status: 404, description: 'Notification not found' })
-  async resend(
-    @Param('id') id: string,
-    @CurrentUser() user: UserEntity,
-  ) {
+  async resend(@Param('id') id: string, @CurrentUser() user: UserEntity) {
     const entity = await this.notifications.resendNotification(id, user);
     return NotificationResponseDto.fromEntity(entity);
   }
 }
-

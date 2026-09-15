@@ -90,7 +90,11 @@ export class RequestsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new request' })
-  @ApiResponse({ status: 201, description: 'Request created successfully', type: RequestResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Request created successfully',
+    type: RequestResponseDto,
+  })
   async create(
     @CurrentUser() user: UserEntity,
     @Body() createDto: CreateRequestDto,
@@ -101,7 +105,11 @@ export class RequestsController {
 
   @Get()
   @ApiOperation({ summary: 'Get my requests (as client or professional)' })
-  @ApiResponse({ status: 200, description: 'List of requests', type: [RequestResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'List of requests',
+    type: [RequestResponseDto],
+  })
   @ApiQuery({ name: 'role', required: false, enum: ['client', 'professional'] })
   async findMyRequests(
     @CurrentUser() user: UserEntity,
@@ -126,7 +134,11 @@ export class RequestsController {
 
   @Get('available')
   @ApiOperation({ summary: 'Get available public requests for professionals' })
-  @ApiResponse({ status: 200, description: 'List of available requests', type: [RequestResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'List of available requests',
+    type: [RequestResponseDto],
+  })
   @ApiQuery({ name: 'city', required: false })
   @ApiQuery({ name: 'zone', required: false })
   async findAvailable(
@@ -157,7 +169,11 @@ export class RequestsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get request by ID' })
-  @ApiResponse({ status: 200, description: 'Request details', type: RequestResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Request details',
+    type: RequestResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Request not found' })
   @ApiResponse({ status: 403, description: 'Access denied' })
   async findById(
@@ -173,10 +189,7 @@ export class RequestsController {
       const entity = await this.requestService.findByIdForUser(id, ctx);
       return RequestResponseDto.fromEntity(entity);
     } catch (error: any) {
-      if (
-        error instanceof ForbiddenException &&
-        ctx.serviceProviderId
-      ) {
+      if (error instanceof ForbiddenException && ctx.serviceProviderId) {
         try {
           const request =
             await this.requestService.findByIdForInterestedProvider(
@@ -195,7 +208,11 @@ export class RequestsController {
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update request status' })
-  @ApiResponse({ status: 200, description: 'Request updated successfully', type: RequestResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Request updated successfully',
+    type: RequestResponseDto,
+  })
   @ApiResponse({ status: 403, description: 'Not authorized to update' })
   async update(
     @Param('id') id: string,
@@ -215,7 +232,11 @@ export class RequestsController {
   @Post(':id/photos')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Add photo to request' })
-  @ApiResponse({ status: 201, description: 'Photo added successfully', type: RequestResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Photo added successfully',
+    type: RequestResponseDto,
+  })
   @ApiResponse({ status: 403, description: 'Not authorized to add photos' })
   async addPhoto(
     @Param('id') id: string,
@@ -233,7 +254,11 @@ export class RequestsController {
   @Delete(':id/photos')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove photo from request' })
-  @ApiResponse({ status: 200, description: 'Photo removed successfully', type: RequestResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Photo removed successfully',
+    type: RequestResponseDto,
+  })
   @ApiResponse({ status: 403, description: 'Not authorized to remove photos' })
   async removePhoto(
     @Param('id') id: string,
@@ -244,7 +269,11 @@ export class RequestsController {
       user.id,
       user.isAdminUser(),
     );
-    const entity = await this.requestService.removeRequestPhoto(id, ctx, body.url);
+    const entity = await this.requestService.removeRequestPhoto(
+      id,
+      ctx,
+      body.url,
+    );
     return RequestResponseDto.fromEntity(entity);
   }
 
@@ -255,8 +284,15 @@ export class RequestsController {
   @ApiOperation({
     summary: 'Express interest in a public request (professional only)',
   })
-  @ApiResponse({ status: 201, description: 'Interest expressed successfully', type: InterestedProfessionalResponseDto })
-  @ApiResponse({ status: 403, description: 'Not authorized to express interest' })
+  @ApiResponse({
+    status: 201,
+    description: 'Interest expressed successfully',
+    type: InterestedProfessionalResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Not authorized to express interest',
+  })
   async expressInterest(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
@@ -266,7 +302,11 @@ export class RequestsController {
       user.id,
       user.isAdminUser(),
     );
-    const entity = await this.requestInterestService.expressInterest(id, ctx, dto);
+    const entity = await this.requestInterestService.expressInterest(
+      id,
+      ctx,
+      dto,
+    );
     return InterestedProfessionalResponseDto.fromEntity(entity);
   }
 
@@ -327,10 +367,9 @@ export class RequestsController {
       );
     }
 
-    const interests =
-      await this.requestInterestService.getMyInterestedRequests(
-        ctx.serviceProviderId,
-      );
+    const interests = await this.requestInterestService.getMyInterestedRequests(
+      ctx.serviceProviderId,
+    );
 
     return InterestedRequestDto.fromInterestsWithRequests(
       interests,
@@ -340,7 +379,11 @@ export class RequestsController {
 
   @Get(':id/interests')
   @ApiOperation({ summary: 'Get all interested providers (client/admin only)' })
-  @ApiResponse({ status: 200, description: 'List of interested providers', type: [InterestedProfessionalResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'List of interested providers',
+    type: [InterestedProfessionalResponseDto],
+  })
   @ApiResponse({ status: 403, description: 'Not authorized to view interests' })
   async getInterestedProviders(
     @Param('id') id: string,
@@ -350,7 +393,10 @@ export class RequestsController {
       user.id,
       user.isAdminUser(),
     );
-    const entities = await this.requestInterestService.getInterestedProviders(id, ctx);
+    const entities = await this.requestInterestService.getInterestedProviders(
+      id,
+      ctx,
+    );
     return InterestedProfessionalResponseDto.fromEntities(entities);
   }
 
@@ -382,7 +428,9 @@ export class RequestsController {
 
   @Post(':id/unassign-provider')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Unassign provider from request (client/admin only)' })
+  @ApiOperation({
+    summary: 'Unassign provider from request (client/admin only)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Provider unassigned successfully',
@@ -408,7 +456,11 @@ export class RequestsController {
   @ApiOperation({
     summary: 'Rate client (professional only, after work is done)',
   })
-  @ApiResponse({ status: 200, description: 'Client rated successfully', type: RequestResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Client rated successfully',
+    type: RequestResponseDto,
+  })
   @ApiResponse({ status: 403, description: 'Not authorized to rate client' })
   async rateClient(
     @Param('id') id: string,

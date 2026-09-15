@@ -55,7 +55,8 @@ export class FileStorageService {
         try {
           const professional =
             await this.professionalService.findByUserId(userId);
-          isProfessional = professional.serviceProviderId === request.providerId;
+          isProfessional =
+            professional.serviceProviderId === request.providerId;
         } catch {
           // User doesn't have a professional profile
           isProfessional = false;

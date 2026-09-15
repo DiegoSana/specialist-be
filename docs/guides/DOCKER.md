@@ -49,7 +49,7 @@ docker-compose -f docker-compose.dev.yml exec app npx prisma migrate dev
 
 ### NestJS API
 - **Container**: `especialistas-api-dev` (development) / `especialistas-api` (production)
-- **Port**: `5000` (development) / `3000` (production)
+- **Port**: `5000` (development) / `3000` (production docker-compose). Fly.io production uses `PORT=8080` (see `fly.toml`).
 - **API**: 
   - Development: `http://0.0.0.0:5000/api` (use `0.0.0.0` instead of `localhost` or `127.0.0.1`)
   - Production: `http://localhost:3000/api`

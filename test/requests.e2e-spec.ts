@@ -169,7 +169,9 @@ describe('Requests & Interest (e2e)', () => {
     let requestId: string;
 
     beforeEach(async () => {
-      const client = await createTestClient(ctx, { email: 'interest-client@test.com' });
+      const client = await createTestClient(ctx, {
+        email: 'interest-client@test.com',
+      });
       clientToken = client.token;
 
       // Create a public request
@@ -199,7 +201,9 @@ describe('Requests & Interest (e2e)', () => {
         .send({ message: 'Estoy interesado en este trabajo' })
         .expect(201);
 
-      expect(response.body.serviceProviderId).toBe(professional.serviceProviderId);
+      expect(response.body.serviceProviderId).toBe(
+        professional.serviceProviderId,
+      );
       expect(response.body.message).toBe('Estoy interesado en este trabajo');
     });
 
@@ -242,7 +246,9 @@ describe('Requests & Interest (e2e)', () => {
     });
 
     it('should not allow client to express interest', async () => {
-      const anotherClient = await createTestClient(ctx, { email: 'another-client@test.com' });
+      const anotherClient = await createTestClient(ctx, {
+        email: 'another-client@test.com',
+      });
 
       await request(ctx.app.getHttpServer())
         .post(`/api/requests/${requestId}/interest`)
@@ -269,7 +275,9 @@ describe('Requests & Interest (e2e)', () => {
 
   describe('GET /api/requests/:id/interests - List interested providers', () => {
     it('should list all interested providers for request owner', async () => {
-      const client = await createTestClient(ctx, { email: 'list-client@test.com' });
+      const client = await createTestClient(ctx, {
+        email: 'list-client@test.com',
+      });
 
       // Create request
       const reqResponse = await request(ctx.app.getHttpServer())
@@ -315,7 +323,7 @@ describe('Requests & Interest (e2e)', () => {
         .expect(200);
 
       expect(response.body.length).toBe(2);
-      
+
       // Should include provider type information
       const providerTypes = response.body.map((i: any) => i.providerType);
       expect(providerTypes).toContain('PROFESSIONAL');
@@ -325,7 +333,9 @@ describe('Requests & Interest (e2e)', () => {
 
   describe('POST /api/requests/:id/assign-provider - Assign provider', () => {
     it('should allow client to assign a professional', async () => {
-      const client = await createTestClient(ctx, { email: 'assign-client@test.com' });
+      const client = await createTestClient(ctx, {
+        email: 'assign-client@test.com',
+      });
       const professional = await createTestProfessional(ctx, {
         email: 'assign-pro@test.com',
         tradeId: trade.id,
@@ -363,7 +373,9 @@ describe('Requests & Interest (e2e)', () => {
     });
 
     it('should allow client to assign a company', async () => {
-      const client = await createTestClient(ctx, { email: 'assign-client2@test.com' });
+      const client = await createTestClient(ctx, {
+        email: 'assign-client2@test.com',
+      });
       const company = await createTestCompany(ctx, {
         email: 'assign-company@test.com',
         companyName: 'Assignable Company',
@@ -402,7 +414,9 @@ describe('Requests & Interest (e2e)', () => {
     });
 
     it('should not allow assigning provider without prior interest', async () => {
-      const client = await createTestClient(ctx, { email: 'no-interest-client@test.com' });
+      const client = await createTestClient(ctx, {
+        email: 'no-interest-client@test.com',
+      });
       const professional = await createTestProfessional(ctx, {
         email: 'no-interest-pro@test.com',
         tradeId: trade.id,
@@ -433,7 +447,9 @@ describe('Requests & Interest (e2e)', () => {
 
   describe('DELETE /api/requests/:id/interest - Remove interest', () => {
     it('should allow provider to remove their interest', async () => {
-      const client = await createTestClient(ctx, { email: 'remove-client@test.com' });
+      const client = await createTestClient(ctx, {
+        email: 'remove-client@test.com',
+      });
       const professional = await createTestProfessional(ctx, {
         email: 'remove-pro@test.com',
         tradeId: trade.id,
@@ -475,4 +491,3 @@ describe('Requests & Interest (e2e)', () => {
     });
   });
 });
-

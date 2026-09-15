@@ -241,7 +241,9 @@ export class UserService {
     overrides: { emailVerified?: boolean; phoneVerified?: boolean },
   ): Promise<UserEntity> {
     if (!actingUser.isAdminUser()) {
-      throw new ForbiddenException('Only admins can update verification status');
+      throw new ForbiddenException(
+        'Only admins can update verification status',
+      );
     }
     const targetUser = await this.userRepository.findById(targetUserId, true);
     if (!targetUser) {

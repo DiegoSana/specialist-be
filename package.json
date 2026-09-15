@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "prisma": {
-    "seed": "npx ts-node --transpile-only prisma/seed.ts"
+    "seed": "npx tsx prisma/seed.ts"
   },
   "scripts": {
     "build": "nest build",
@@ -29,9 +29,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "npx ts-node --transpile-only prisma/seed.ts",
-    "db:reset": "prisma db push --force-reset && npx ts-node --transpile-only prisma/seed.ts",
-    "db:seed": "npx ts-node --transpile-only prisma/seed.ts"
+    "prisma:seed": "npx tsx prisma/seed.ts",
+    "db:reset": "prisma db push --force-reset && npx tsx prisma/seed.ts",
+    "db:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
@@ -89,7 +89,8 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0"
   },
   "jest": {
     "moduleFileExtensions": [

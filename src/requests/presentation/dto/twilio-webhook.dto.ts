@@ -22,4 +22,3 @@ export class TwilioWebhookDto {
   MediaUrl0?: string;
   MediaContentType0?: string;
 }
-

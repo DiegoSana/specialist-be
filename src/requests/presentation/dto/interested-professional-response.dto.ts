@@ -19,7 +19,9 @@ export class InterestedProfessionalResponseDto {
   /**
    * @deprecated Use serviceProviderId instead
    */
-  @ApiProperty({ description: 'Professional ID (deprecated, use serviceProviderId)' })
+  @ApiProperty({
+    description: 'Professional ID (deprecated, use serviceProviderId)',
+  })
   professionalId: string;
 
   @ApiPropertyOptional({ description: 'Message from provider' })
@@ -57,7 +59,9 @@ export class InterestedProfessionalResponseDto {
   /**
    * Convert domain entity to response DTO.
    */
-  static fromEntity(entity: RequestInterestEntity): InterestedProfessionalResponseDto {
+  static fromEntity(
+    entity: RequestInterestEntity,
+  ): InterestedProfessionalResponseDto {
     const dto = new InterestedProfessionalResponseDto();
 
     dto.id = entity.id;

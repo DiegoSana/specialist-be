@@ -17,10 +17,10 @@ export class InMemoryEventBus implements EventBus {
     this.logger.debug(`Publishing event: ${event.name}`);
     const listenerCount = this.emitter.listenerCount(event.name);
     this.logger.debug(`Event ${event.name} has ${listenerCount} listener(s)`);
-    
+
     this.emitter.emit(event.name, event);
     this.emitter.emit('*', event);
-    
+
     this.logger.debug(`Event ${event.name} emitted successfully`);
   }
 

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
-import { CompanyQueryRepository, CompanyStats } from '../../domain/queries/company.query-repository';
+import {
+  CompanyQueryRepository,
+  CompanyStats,
+} from '../../domain/queries/company.query-repository';
 import { CompanyStatus as PrismaCompanyStatus } from '@prisma/client';
 
 @Injectable()
@@ -33,10 +36,7 @@ export class PrismaCompanyQueryRepository implements CompanyQueryRepository {
     };
   }
 
-  async findAllForAdmin(params: {
-    skip: number;
-    take: number;
-  }) {
+  async findAllForAdmin(params: { skip: number; take: number }) {
     const [companies, total] = await Promise.all([
       this.prisma.company.findMany({
         skip: params.skip,
@@ -106,6 +106,3 @@ export class PrismaCompanyQueryRepository implements CompanyQueryRepository {
     return company;
   }
 }
-
-
-

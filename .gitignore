@@ -46,3 +46,9 @@ lerna-debug.log*
 # Prisma compiled seed
 /prisma/dist
 
+
+# Claude Code local overrides
+.claude/settings.local.json
+
+# tokensave MCP local cache
+.tokensave/

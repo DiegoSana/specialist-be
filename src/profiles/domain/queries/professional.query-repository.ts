@@ -1,9 +1,9 @@
 /**
  * Professional Query Repository
- * 
+ *
  * Handles read-only queries that return DTOs or statistics instead of domain entities.
  * Separated from ProfessionalRepository (aggregate repository) to maintain clear boundaries.
- * 
+ *
  * See: docs/architecture/QUERY_REPOSITORIES.md
  */
 
@@ -25,10 +25,7 @@ export interface ProfessionalQueryRepository {
   /**
    * List all professionals for admin (paginated)
    */
-  findAllForAdmin(params: {
-    skip: number;
-    take: number;
-  }): Promise<{
+  findAllForAdmin(params: { skip: number; take: number }): Promise<{
     professionals: Array<{
       id: string;
       createdAt: Date;
@@ -79,7 +76,6 @@ export interface ProfessionalQueryRepository {
 }
 
 // Token for dependency injection
-export const PROFESSIONAL_QUERY_REPOSITORY = Symbol('ProfessionalQueryRepository');
-
-
-
+export const PROFESSIONAL_QUERY_REPOSITORY = Symbol(
+  'ProfessionalQueryRepository',
+);

@@ -71,8 +71,9 @@ export class ProfessionalService {
 
     // For public search, sanitize contact info and only return public gallery
     // Contact info (phone via user, website, address) requires an active request
-    return professionals.map((professional) =>
-      this.sanitizeForPublic(professional) as ProfessionalEntity,
+    return professionals.map(
+      (professional) =>
+        this.sanitizeForPublic(professional) as ProfessionalEntity,
     );
   }
 
@@ -110,7 +111,9 @@ export class ProfessionalService {
     const professional = await this.getByIdOrFail(professionalId);
 
     if (!professional.canChangeStatusBy(ctx)) {
-      throw new ForbiddenException('Only admins can change professional status');
+      throw new ForbiddenException(
+        'Only admins can change professional status',
+      );
     }
 
     const now = new Date();
@@ -249,8 +252,12 @@ export class ProfessionalService {
    * Find professional by their service provider ID.
    * Returns null if not found (unlike getByIdOrFail).
    */
-  async findByServiceProviderId(serviceProviderId: string): Promise<ProfessionalEntity | null> {
-    return this.professionalRepository.findByServiceProviderId(serviceProviderId);
+  async findByServiceProviderId(
+    serviceProviderId: string,
+  ): Promise<ProfessionalEntity | null> {
+    return this.professionalRepository.findByServiceProviderId(
+      serviceProviderId,
+    );
   }
 
   async createProfile(
@@ -419,7 +426,9 @@ export class ProfessionalService {
     url: string,
   ): Promise<ProfessionalEntity> {
     const ctx = this.buildAuthContext(user);
-    const professional = await this.professionalRepository.findByUserId(user.id);
+    const professional = await this.professionalRepository.findByUserId(
+      user.id,
+    );
 
     if (!professional) {
       throw new NotFoundException('Professional profile not found');
@@ -463,7 +472,9 @@ export class ProfessionalService {
     url: string,
   ): Promise<ProfessionalEntity> {
     const ctx = this.buildAuthContext(user);
-    const professional = await this.professionalRepository.findByUserId(user.id);
+    const professional = await this.professionalRepository.findByUserId(
+      user.id,
+    );
 
     if (!professional) {
       throw new NotFoundException('Professional profile not found');
@@ -518,7 +529,9 @@ export class ProfessionalService {
    * Activate professional profile (for users who want to switch from Company)
    * If user has an active Company profile, it will be deactivated.
    */
-  async activateProfessionalProfile(userId: string): Promise<ProfessionalEntity> {
+  async activateProfessionalProfile(
+    userId: string,
+  ): Promise<ProfessionalEntity> {
     return this.profileToggleService.activateProfessionalProfile(userId);
   }
 
@@ -539,10 +552,11 @@ export class ProfessionalService {
    */
   async getAllProfessionalsForAdmin(page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
-    const { professionals, total } = await this.professionalQueryRepository.findAllForAdmin({
-      skip,
-      take: limit,
-    });
+    const { professionals, total } =
+      await this.professionalQueryRepository.findAllForAdmin({
+        skip,
+        take: limit,
+      });
 
     return {
       data: professionals,
@@ -559,7 +573,8 @@ export class ProfessionalService {
    * Get professional by ID for admin (with full details)
    */
   async getProfessionalByIdForAdmin(professionalId: string) {
-    const professional = await this.professionalQueryRepository.findByIdForAdmin(professionalId);
+    const professional =
+      await this.professionalQueryRepository.findByIdForAdmin(professionalId);
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }

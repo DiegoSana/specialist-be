@@ -1,6 +1,6 @@
 # 🔧 Tareas Pendientes - Specialist Backend
 
-> Última actualización: 2026-02-06
+> Última actualización: 2026-09-15
 
 > **Nueva sección:** [Perfil activo (MVP): reglas y restricciones](#-perfil-activo-mvp-reglas-y-restricciones) — definición de activo (email + teléfono usuario + confirmación admin), restricciones por perfil activo, y orden de implementación.
 
@@ -24,6 +24,21 @@
 ---
 
 ## 📌 Donde quedamos hoy (recap para seguir mañana)
+
+### ✅ Hecho (2026-09-15): Harness de Claude Code + docs al día
+
+- **Harness**: `CLAUDE.md` raíz, `src/<contexto>/CLAUDE.md`, `.claude/rules/01..08`, `.claude/skills/*`, `.claude/settings.json`.
+- **Docs refrescados contra el código**: `DOMAIN_MODEL.md`, `ROLES_ARCHITECTURE.md`, `COMPANY_PROFILES.md`, `REVIEW_MODERATION.md`, `ADR-004` (`reviewCount` → `totalReviews`), `docs/README.md` (índice completo), `whatsapp/README.md` (regla PENDING 3 días), ports/defaults en `DOCKER.md`, `ENVIRONMENT_VARIABLES.md`, `NOTIFICATIONS.md`; `whatsapp-followup-implementation-status.md` marcado histórico; `admin-portal-plan.md` usa `specialist-be`.
+- **Fix**: `identity.module.ts` lee `JWT_EXPIRES_IN` (antes `JWT_EXPIRATION`, que `.env`/compose/docs no definían); `JWT_EXPIRATION` queda como fallback.
+
+### ⬜ Hallazgos pendientes (2026-09-15)
+
+- [ ] `ReviewService.updateServiceProviderRating` no recalcula rating para Company (TODO en código; `CompanyService.updateRating` sin usar).
+- [ ] `CreateReviewDto`: `professionalId` requerido pero ignorado; `requestId` opcional en DTO pero requerido en el service. Alinear DTO con el service.
+- [x] Lint: repo formateado completo con `npm run lint` (2026-09-15); 0 errores eslint, prettier limpio. Mantenerlo así (correr `npm run lint` antes de cada commit).
+- [ ] `@specialist/shared`: tipos desactualizados (`User.role`, `UserStatus`, `AdminContract` con PATCH vs PUT); solo lo usa el login de `specialist-admin`. Decidir si se genera desde el backend o se retira.
+- [ ] `GET /professionals/:id/reviews` no tiene equivalente para companies.
+
 
 ### ✅ Hecho (2026-02-06): Contacto unificado y solo status en perfiles
 

@@ -15,7 +15,9 @@ const createMockTrade = (overrides?: Partial<TradeInfo>): TradeInfo => ({
   ...overrides,
 });
 
-const createMockCompany = (overrides?: Partial<CompanyEntity>): CompanyEntity => {
+const createMockCompany = (
+  overrides?: Partial<CompanyEntity>,
+): CompanyEntity => {
   const defaults = {
     id: 'company-123',
     userId: 'user-123',
@@ -176,7 +178,9 @@ describe('CompanyEntity', () => {
     });
 
     it('should identify pending status', () => {
-      const company = createMockCompany({ status: CompanyStatus.PENDING_VERIFICATION });
+      const company = createMockCompany({
+        status: CompanyStatus.PENDING_VERIFICATION,
+      });
 
       expect(company.hasVerifiedBadge()).toBe(false);
       expect(company.isPending()).toBe(true);
@@ -194,8 +198,12 @@ describe('CompanyEntity', () => {
     });
 
     it('should check canOperate (isActive) from status', () => {
-      const activeCompany = createMockCompany({ status: CompanyStatus.VERIFIED });
-      const inactiveCompany = createMockCompany({ status: CompanyStatus.INACTIVE });
+      const activeCompany = createMockCompany({
+        status: CompanyStatus.VERIFIED,
+      });
+      const inactiveCompany = createMockCompany({
+        status: CompanyStatus.INACTIVE,
+      });
 
       expect(activeCompany.canOperate()).toBe(true);
       expect(activeCompany.isActive()).toBe(true);
@@ -250,7 +258,10 @@ describe('CompanyEntity', () => {
 
       it('should deny non-owner non-admin to view full profile', () => {
         const company = createMockCompany({ userId: 'user-123' });
-        const ctx: CompanyAuthContext = { userId: 'other-user', isAdmin: false };
+        const ctx: CompanyAuthContext = {
+          userId: 'other-user',
+          isAdmin: false,
+        };
 
         expect(company.canViewFullProfileBy(ctx)).toBe(false);
       });
@@ -273,7 +284,10 @@ describe('CompanyEntity', () => {
 
       it('should deny non-owner non-admin to edit', () => {
         const company = createMockCompany({ userId: 'user-123' });
-        const ctx: CompanyAuthContext = { userId: 'other-user', isAdmin: false };
+        const ctx: CompanyAuthContext = {
+          userId: 'other-user',
+          isAdmin: false,
+        };
 
         expect(company.canBeEditedBy(ctx)).toBe(false);
       });
@@ -296,7 +310,10 @@ describe('CompanyEntity', () => {
 
       it('should deny non-owner non-admin to manage gallery', () => {
         const company = createMockCompany({ userId: 'user-123' });
-        const ctx: CompanyAuthContext = { userId: 'other-user', isAdmin: false };
+        const ctx: CompanyAuthContext = {
+          userId: 'other-user',
+          isAdmin: false,
+        };
 
         expect(company.canManageGalleryBy(ctx)).toBe(false);
       });
@@ -319,7 +336,10 @@ describe('CompanyEntity', () => {
 
       it('should deny non-admin to change status', () => {
         const company = createMockCompany({ userId: 'user-123' });
-        const ctx: CompanyAuthContext = { userId: 'other-user', isAdmin: false };
+        const ctx: CompanyAuthContext = {
+          userId: 'other-user',
+          isAdmin: false,
+        };
 
         expect(company.canChangeStatusBy(ctx)).toBe(false);
       });
@@ -359,7 +379,8 @@ describe('CompanyEntity', () => {
 
       it('should preserve all other fields', () => {
         const company = createMockCompany();
-        const serviceProvider = ServiceProviderEntity.createForCompany('sp-123');
+        const serviceProvider =
+          ServiceProviderEntity.createForCompany('sp-123');
 
         const updated = company.withServiceProvider(serviceProvider);
 
@@ -373,4 +394,3 @@ describe('CompanyEntity', () => {
     });
   });
 });
-

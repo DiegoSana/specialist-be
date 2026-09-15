@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  VerificationService,
-} from '../../domain/ports/verification.service';
+import { VerificationService } from '../../domain/ports/verification.service';
 import { TwilioClientService } from '../../../shared/infrastructure/messaging/twilio-client.service';
 
 /**
@@ -27,7 +25,9 @@ export class TwilioVerifyService implements VerificationService {
   async requestPhoneVerification(phone: string): Promise<string> {
     const twilioClient = this.twilioClientService.getClient();
     if (!twilioClient) {
-      throw new Error('Twilio client is not initialized. Please configure TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.');
+      throw new Error(
+        'Twilio client is not initialized. Please configure TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.',
+      );
     }
 
     const serviceSid = this.getServiceSidOrThrow();
@@ -45,14 +45,17 @@ export class TwilioVerifyService implements VerificationService {
     } catch (error: any) {
       const errorMessage = error.message || 'Unknown error';
       const errorCode = error.code || 'UNKNOWN';
-      
+
       this.logger.error(
         `Failed to request phone verification for ${phone}`,
         `Code: ${errorCode}, Message: ${errorMessage}`,
       );
 
       // Handle specific Twilio error cases
-      if (errorCode === 20003 || errorMessage.includes('Test Account Credentials')) {
+      if (
+        errorCode === 20003 ||
+        errorMessage.includes('Test Account Credentials')
+      ) {
         throw new Error(
           'Twilio test credentials cannot send. Please use production credentials or verify the phone number in Twilio console.',
         );
@@ -63,11 +66,15 @@ export class TwilioVerifyService implements VerificationService {
       }
 
       if (errorCode === 60203) {
-        throw new Error('Maximum number of attempts reached. Please try again later.');
+        throw new Error(
+          'Maximum number of attempts reached. Please try again later.',
+        );
       }
 
       // Generic error with more context
-      throw new Error(`Failed to send verification code: ${errorMessage} (Code: ${errorCode})`);
+      throw new Error(
+        `Failed to send verification code: ${errorMessage} (Code: ${errorCode})`,
+      );
     }
   }
 
@@ -99,12 +106,12 @@ export class TwilioVerifyService implements VerificationService {
     } catch (error: any) {
       const errorMessage = error.message || 'Unknown error';
       const errorCode = error.code || 'UNKNOWN';
-      
+
       this.logger.error(
         `Failed to confirm phone verification for ${phone}`,
         `Code: ${errorCode}, Message: ${errorMessage}`,
       );
-      
+
       // Return false for invalid codes, but log the specific error
       return false;
     }
@@ -113,7 +120,9 @@ export class TwilioVerifyService implements VerificationService {
   async requestEmailVerification(email: string): Promise<string> {
     const twilioClient = this.twilioClientService.getClient();
     if (!twilioClient) {
-      throw new Error('Twilio client is not initialized. Please configure TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.');
+      throw new Error(
+        'Twilio client is not initialized. Please configure TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.',
+      );
     }
 
     const serviceSid = this.getServiceSidOrThrow();
@@ -131,14 +140,17 @@ export class TwilioVerifyService implements VerificationService {
     } catch (error: any) {
       const errorMessage = error.message || 'Unknown error';
       const errorCode = error.code || 'UNKNOWN';
-      
+
       this.logger.error(
         `Failed to request email verification for ${email}`,
         `Code: ${errorCode}, Message: ${errorMessage}`,
       );
 
       // Handle specific Twilio error cases
-      if (errorCode === 20003 || errorMessage.includes('Test Account Credentials')) {
+      if (
+        errorCode === 20003 ||
+        errorMessage.includes('Test Account Credentials')
+      ) {
         throw new Error(
           'Twilio test credentials cannot send real emails. Please use production credentials.',
         );
@@ -149,15 +161,22 @@ export class TwilioVerifyService implements VerificationService {
       }
 
       if (errorCode === 60203) {
-        throw new Error('Maximum number of attempts reached. Please try again later.');
+        throw new Error(
+          'Maximum number of attempts reached. Please try again later.',
+        );
       }
 
       // Generic error with more context
-      throw new Error(`Failed to send verification code: ${errorMessage} (Code: ${errorCode})`);
+      throw new Error(
+        `Failed to send verification code: ${errorMessage} (Code: ${errorCode})`,
+      );
     }
   }
 
-  async confirmEmailVerification(email: string, code: string): Promise<boolean> {
+  async confirmEmailVerification(
+    email: string,
+    code: string,
+  ): Promise<boolean> {
     const twilioClient = this.twilioClientService.getClient();
     if (!twilioClient) {
       this.logger.error('Twilio client is not initialized');
@@ -182,12 +201,12 @@ export class TwilioVerifyService implements VerificationService {
     } catch (error: any) {
       const errorMessage = error.message || 'Unknown error';
       const errorCode = error.code || 'UNKNOWN';
-      
+
       this.logger.error(
         `Failed to confirm email verification for ${email}`,
         `Code: ${errorCode}, Message: ${errorMessage}`,
       );
-      
+
       // Return false for invalid codes, but log the specific error
       return false;
     }
@@ -201,4 +220,3 @@ export class TwilioVerifyService implements VerificationService {
     return serviceSid;
   }
 }
-
