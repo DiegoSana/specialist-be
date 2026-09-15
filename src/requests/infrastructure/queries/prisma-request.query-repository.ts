@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
-import { RequestQueryRepository, RequestStats } from '../../domain/queries/request.query-repository';
+import {
+  RequestQueryRepository,
+  RequestStats,
+} from '../../domain/queries/request.query-repository';
 import { RequestStatus } from '@prisma/client';
 
 @Injectable()
@@ -91,6 +94,3 @@ export class PrismaRequestQueryRepository implements RequestQueryRepository {
     return { requests, total };
   }
 }
-
-
-

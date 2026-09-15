@@ -73,7 +73,8 @@ export class InterestedRequestDto {
 
       const assignedToMe = request.providerId === currentServiceProviderId;
       const assignedToOther =
-        request.providerId !== null && request.providerId !== currentServiceProviderId;
+        request.providerId !== null &&
+        request.providerId !== currentServiceProviderId;
 
       dto.assignedToMe = assignedToMe;
       dto.assignedToOther = assignedToOther;
@@ -112,4 +113,3 @@ export class InterestedRequestDto {
     });
   }
 }
-

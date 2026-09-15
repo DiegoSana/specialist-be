@@ -115,10 +115,7 @@ export class RequestInteractionEntity {
     );
   }
 
-  markAsDelivered(
-    twilioStatus: string,
-    now?: Date,
-  ): RequestInteractionEntity {
+  markAsDelivered(twilioStatus: string, now?: Date): RequestInteractionEntity {
     if (!this.isSent()) {
       throw new Error(
         `Cannot mark as delivered: interaction is not sent (current status: ${this.status})`,
@@ -213,4 +210,3 @@ export class RequestInteractionEntity {
     );
   }
 }
-

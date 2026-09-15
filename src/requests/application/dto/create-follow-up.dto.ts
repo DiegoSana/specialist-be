@@ -1,7 +1,4 @@
-import {
-  InteractionType,
-  InteractionDirection,
-} from '@prisma/client';
+import { InteractionType, InteractionDirection } from '@prisma/client';
 
 export class CreateFollowUpDto {
   requestId: string;
@@ -11,4 +8,3 @@ export class CreateFollowUpDto {
   scheduledFor: Date;
   metadata?: Record<string, unknown>;
 }
-

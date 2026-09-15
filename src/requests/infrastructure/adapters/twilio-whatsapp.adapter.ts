@@ -84,9 +84,7 @@ export class TwilioWhatsAppAdapter implements WhatsAppMessagingPort {
     }
   }
 
-  async getMessageStatus(
-    messageId: string,
-  ): Promise<{ status: string }> {
+  async getMessageStatus(messageId: string): Promise<{ status: string }> {
     const twilioClient = this.twilioClientService.getClient();
     if (!twilioClient) {
       throw new Error(
@@ -106,4 +104,3 @@ export class TwilioWhatsAppAdapter implements WhatsAppMessagingPort {
     }
   }
 }
-

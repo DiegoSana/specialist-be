@@ -12,7 +12,7 @@ import { RequestInteractionService } from '../services/request-interaction.servi
  * Cron job that checks the status of sent messages in Twilio.
  * This helps detect external errors (e.g., Twilio rejected the message)
  * that weren't caught during the initial send.
- * 
+ *
  * Runs every 5 minutes to check messages that were sent but not yet delivered.
  */
 @Injectable()
@@ -60,7 +60,7 @@ export class MessageStatusCheckerJob {
       // Find interactions that are SENT but not DELIVERED
       // Check messages sent in the last hour (to avoid checking very old messages)
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-      
+
       const interactionsToCheck =
         await this.interactionRepository.findSentButNotDelivered(oneHourAgo);
 
@@ -82,9 +82,9 @@ export class MessageStatusCheckerJob {
 
         try {
           // Fetch message status from Twilio
-          const message = await twilioClient.messages(
-            interaction.twilioMessageSid,
-          ).fetch();
+          const message = await twilioClient
+            .messages(interaction.twilioMessageSid)
+            .fetch();
 
           checked++;
 
@@ -104,7 +104,7 @@ export class MessageStatusCheckerJob {
             this.logger.warn(
               `Message ${interaction.twilioMessageSid} failed in Twilio: ${message.status} (Error: ${message.errorCode || 'N/A'} - ${message.errorMessage || 'N/A'})`,
             );
-            
+
             // Update interaction status via webhook handler (which handles failed status)
             await this.interactionService.markAsDelivered(
               interaction.twilioMessageSid!,
@@ -136,4 +136,3 @@ export class MessageStatusCheckerJob {
     }
   }
 }
-

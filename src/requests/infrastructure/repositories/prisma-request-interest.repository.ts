@@ -55,7 +55,9 @@ export class PrismaRequestInterestRepository
         providerInfo = {
           id: sp.id,
           type: 'PROFESSIONAL',
-          displayName: user ? `${user.firstName} ${user.lastName}` : 'Especialista',
+          displayName: user
+            ? `${user.firstName} ${user.lastName}`
+            : 'Especialista',
           profileImage: prof.profileImage || user?.profilePictureUrl || null,
           averageRating: sp.averageRating,
           totalReviews: sp.totalReviews,

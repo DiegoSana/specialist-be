@@ -2,6 +2,23 @@
 
 Documentación completa del sistema de follow-up automático de solicitudes vía WhatsApp usando Twilio.
 
+## ¿Cuándo se hace follow-up?
+
+**Solo cuando la solicitud ya está asignada a un proveedor.** No hay follow-up para solicitudes públicas sin asignar (estado `PENDING`).
+
+| Estado de la solicitud | Días sin actividad | Destinatario | Template |
+|------------------------|---------------------|--------------|----------|
+| `ACCEPTED` (asignada, aún no empezada) | 3 días | Proveedor | follow_up_3_days |
+| `ACCEPTED` | 7 días | Proveedor | follow_up_7_days |
+| `IN_PROGRESS` (trabajo en curso) | 5 días | Proveedor | follow_up_5_days_in_progress |
+| `IN_PROGRESS` | 10 días | Proveedor | follow_up_10_days_in_progress |
+| `DONE` (finalizada) | 1 día | Cliente | follow_up_review_1_day (pedir reseña) |
+| `PENDING` pública con interesados y sin proveedor asignado | 3 días | Cliente | follow_up_pending_3_days_with_interests (elegir especialista) |
+
+El job `FollowUpSchedulerJob` corre cada hora, busca solicitudes que cumplan estado + antigüedad, y programa un mensaje de follow-up (luego `WhatsAppDispatchJob` lo envía). No se programa follow-up si ya hay uno pendiente o si hubo interacción reciente (&lt; 1 día).
+
+---
+
 ## 📚 Índice
 
 ### Guías Principales

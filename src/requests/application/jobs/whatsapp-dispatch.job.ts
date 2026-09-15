@@ -43,7 +43,7 @@ export class WhatsAppDispatchJob {
 
     try {
       const now = new Date();
-      
+
       // Get pending interactions
       const pendingInteractions =
         await this.interactionRepository.findPendingFollowUps(now);
@@ -52,7 +52,8 @@ export class WhatsAppDispatchJob {
       const retryableInteractions =
         await this.interactionRepository.findFailedRetryable(now);
 
-      const totalInteractions = pendingInteractions.length + retryableInteractions.length;
+      const totalInteractions =
+        pendingInteractions.length + retryableInteractions.length;
 
       if (totalInteractions === 0) {
         this.logger.debug('No pending or retryable interactions to dispatch');
@@ -108,4 +109,3 @@ export class WhatsAppDispatchJob {
     }
   }
 }
-

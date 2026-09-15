@@ -24,4 +24,3 @@ export class RequestInteractionRespondedEvent
 
   constructor(public readonly payload: RequestInteractionRespondedPayload) {}
 }
-

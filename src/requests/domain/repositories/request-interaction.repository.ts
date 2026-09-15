@@ -1,8 +1,4 @@
 import { RequestInteractionEntity } from '../entities/request-interaction.entity';
-import {
-  InteractionStatus,
-  InteractionType,
-} from '@prisma/client';
 
 export interface RequestInteractionRepository {
   findById(id: string): Promise<RequestInteractionEntity | null>;
@@ -57,19 +53,18 @@ export interface RequestInteractionRepository {
    * Find sent interactions that haven't been delivered yet.
    * Used by status checker job to verify message delivery.
    */
-  findSentButNotDelivered(
-    sentAfter: Date,
-  ): Promise<RequestInteractionEntity[]>;
+  findSentButNotDelivered(sentAfter: Date): Promise<RequestInteractionEntity[]>;
 
   /**
    * Persist the aggregate.
    * Implementation decides create vs update based on existence.
    */
-  save(interaction: RequestInteractionEntity): Promise<RequestInteractionEntity>;
+  save(
+    interaction: RequestInteractionEntity,
+  ): Promise<RequestInteractionEntity>;
 }
 
 // Token for dependency injection
 export const REQUEST_INTERACTION_REPOSITORY = Symbol(
   'RequestInteractionRepository',
 );
-

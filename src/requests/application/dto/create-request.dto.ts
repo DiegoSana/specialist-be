@@ -16,7 +16,9 @@ export class CreateRequestDto {
   })
   @ValidateIf((o) => !o.isPublic && !o.companyId)
   @IsString()
-  @IsNotEmpty({ message: 'professionalId or companyId is required for direct requests' })
+  @IsNotEmpty({
+    message: 'professionalId or companyId is required for direct requests',
+  })
   professionalId?: string;
 
   @ApiProperty({
@@ -26,7 +28,9 @@ export class CreateRequestDto {
   })
   @ValidateIf((o) => !o.isPublic && !o.professionalId)
   @IsString()
-  @IsNotEmpty({ message: 'professionalId or companyId is required for direct requests' })
+  @IsNotEmpty({
+    message: 'professionalId or companyId is required for direct requests',
+  })
   companyId?: string;
 
   @ApiProperty({

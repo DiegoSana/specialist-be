@@ -1,7 +1,7 @@
 /**
  * Port for WhatsApp messaging.
  * This abstraction allows swapping implementations (Twilio, other providers) without changing domain code.
- * 
+ *
  * The port is provider-agnostic - it doesn't mention Twilio in the interface.
  * The implementation (adapter) can use Twilio, another provider, or a mock for testing.
  */
@@ -25,4 +25,3 @@ export interface WhatsAppMessagingPort {
 
 // Token for dependency injection
 export const WHATSAPP_MESSAGING_PORT = Symbol('WhatsAppMessagingPort');
-

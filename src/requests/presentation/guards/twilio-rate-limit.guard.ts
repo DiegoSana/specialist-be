@@ -15,10 +15,13 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class TwilioRateLimitGuard implements CanActivate {
   private readonly logger = new Logger(TwilioRateLimitGuard.name);
-  
+
   // In-memory store for rate limiting (in production, consider using Redis)
-  private readonly requestCounts = new Map<string, { count: number; resetAt: number }>();
-  
+  private readonly requestCounts = new Map<
+    string,
+    { count: number; resetAt: number }
+  >();
+
   private readonly maxRequests: number;
   private readonly windowMs: number;
 
@@ -53,7 +56,9 @@ export class TwilioRateLimitGuard implements CanActivate {
         count: 1,
         resetAt: now + this.windowMs,
       });
-      this.logger.debug(`Rate limit passed for IP: ${ip} (first request or window expired)`);
+      this.logger.debug(
+        `Rate limit passed for IP: ${ip} (first request or window expired)`,
+      );
       return true;
     }
 
@@ -76,7 +81,9 @@ export class TwilioRateLimitGuard implements CanActivate {
     entry.count++;
     this.requestCounts.set(ip, entry);
 
-    this.logger.debug(`Rate limit passed for IP: ${ip} (count: ${entry.count}/${this.maxRequests})`);
+    this.logger.debug(
+      `Rate limit passed for IP: ${ip} (count: ${entry.count}/${this.maxRequests})`,
+    );
     return true;
   }
 
@@ -121,4 +128,3 @@ export class TwilioRateLimitGuard implements CanActivate {
     }
   }
 }
-

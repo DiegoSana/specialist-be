@@ -13,7 +13,6 @@ import { ProfileActivationService } from '../../../profiles/application/services
 import {
   createMockProfessional,
   createMockRequest,
-  createMockUser,
 } from '../../../__mocks__/test-utils';
 import { RequestStatus, ProviderType } from '@prisma/client';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
@@ -235,12 +234,21 @@ describe('RequestInterestService', () => {
     });
 
     it('should express interest successfully for provider', async () => {
-      const ctx = createAuthContext('user-123', 'sp-123', ProviderType.PROFESSIONAL, ['trade-1']);
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+        ['trade-1'],
+      );
       mockRequestRepository.findById.mockResolvedValue(publicRequest);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(null);
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        null,
+      );
       mockRequestInterestRepository.add.mockResolvedValue(createMockInterest());
 
-      const result = await service.expressInterest('request-123', ctx, { message: 'Interested' });
+      const result = await service.expressInterest('request-123', ctx, {
+        message: 'Interested',
+      });
 
       expect(result).toBeDefined();
       expect(mockRequestInterestRepository.add).toHaveBeenCalledWith({
@@ -278,7 +286,11 @@ describe('RequestInterestService', () => {
     });
 
     it('should throw NotFoundException if request not found', async () => {
-      const ctx = createAuthContext('user-123', 'sp-123', ProviderType.PROFESSIONAL);
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+      );
       mockRequestRepository.findById.mockResolvedValue(null);
 
       await expect(
@@ -287,9 +299,16 @@ describe('RequestInterestService', () => {
     });
 
     it('should throw BadRequestException if already expressed interest', async () => {
-      const ctx = createAuthContext('user-123', 'sp-123', ProviderType.PROFESSIONAL, ['trade-1']);
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+        ['trade-1'],
+      );
       mockRequestRepository.findById.mockResolvedValue(publicRequest);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(createMockInterest());
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        createMockInterest(),
+      );
 
       await expect(
         service.expressInterest('request-123', ctx, { message: 'Interested' }),
@@ -297,8 +316,15 @@ describe('RequestInterestService', () => {
     });
 
     it('should throw BadRequestException if request is not public', async () => {
-      const ctx = createAuthContext('user-123', 'sp-123', ProviderType.PROFESSIONAL);
-      const privateRequest = createMockRequest({ isPublic: false, providerId: null });
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+      );
+      const privateRequest = createMockRequest({
+        isPublic: false,
+        providerId: null,
+      });
       mockRequestRepository.findById.mockResolvedValue(privateRequest);
 
       await expect(
@@ -307,9 +333,16 @@ describe('RequestInterestService', () => {
     });
 
     it('should throw BadRequestException if provider does not have required trade', async () => {
-      const ctx = createAuthContext('user-123', 'sp-123', ProviderType.PROFESSIONAL, ['wrong-trade']);
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+        ['wrong-trade'],
+      );
       mockRequestRepository.findById.mockResolvedValue(publicRequest);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(null);
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        null,
+      );
 
       await expect(
         service.expressInterest('request-123', ctx, { message: 'Interested' }),
@@ -319,35 +352,59 @@ describe('RequestInterestService', () => {
 
   describe('removeInterest', () => {
     it('should remove interest successfully', async () => {
-      const ctx = createAuthContext('user-123', 'sp-123', ProviderType.PROFESSIONAL);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(createMockInterest());
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+      );
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        createMockInterest(),
+      );
 
       await service.removeInterest('request-123', ctx);
 
-      expect(mockRequestInterestRepository.remove).toHaveBeenCalledWith('request-123', 'sp-123');
+      expect(mockRequestInterestRepository.remove).toHaveBeenCalledWith(
+        'request-123',
+        'sp-123',
+      );
     });
 
     it('should throw ForbiddenException if user has no provider profile', async () => {
       const ctx = createAuthContext('user-123', null, null);
 
-      await expect(service.removeInterest('request-123', ctx)).rejects.toThrow(ForbiddenException);
+      await expect(service.removeInterest('request-123', ctx)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw NotFoundException if interest not found', async () => {
-      const ctx = createAuthContext('user-123', 'sp-123', ProviderType.PROFESSIONAL);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(null);
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+      );
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        null,
+      );
 
-      await expect(service.removeInterest('request-123', ctx)).rejects.toThrow(NotFoundException);
+      await expect(service.removeInterest('request-123', ctx)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('getInterestedProviders', () => {
     it('should return interests for request owner', async () => {
       const ctx = createAuthContext('client-123', null, null);
-      const request = createMockRequest({ id: 'request-123', clientId: 'client-123' });
+      const request = createMockRequest({
+        id: 'request-123',
+        clientId: 'client-123',
+      });
       const interests = [createMockInterest()];
       mockRequestRepository.findById.mockResolvedValue(request);
-      mockRequestInterestRepository.findByRequestId.mockResolvedValue(interests);
+      mockRequestInterestRepository.findByRequestId.mockResolvedValue(
+        interests,
+      );
 
       const result = await service.getInterestedProviders('request-123', ctx);
 
@@ -356,10 +413,15 @@ describe('RequestInterestService', () => {
 
     it('should return interests for admin', async () => {
       const ctx = createAuthContext('admin-123', null, null, [], true);
-      const request = createMockRequest({ id: 'request-123', clientId: 'other-user' });
+      const request = createMockRequest({
+        id: 'request-123',
+        clientId: 'other-user',
+      });
       const interests = [createMockInterest()];
       mockRequestRepository.findById.mockResolvedValue(request);
-      mockRequestInterestRepository.findByRequestId.mockResolvedValue(interests);
+      mockRequestInterestRepository.findByRequestId.mockResolvedValue(
+        interests,
+      );
 
       const result = await service.getInterestedProviders('request-123', ctx);
 
@@ -370,26 +432,35 @@ describe('RequestInterestService', () => {
       const ctx = createAuthContext('user-123', null, null);
       mockRequestRepository.findById.mockResolvedValue(null);
 
-      await expect(service.getInterestedProviders('request-123', ctx)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getInterestedProviders('request-123', ctx),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ForbiddenException if not owner or admin', async () => {
       const ctx = createAuthContext('other-user', null, null);
-      const request = createMockRequest({ id: 'request-123', clientId: 'client-123' });
+      const request = createMockRequest({
+        id: 'request-123',
+        clientId: 'client-123',
+      });
       mockRequestRepository.findById.mockResolvedValue(request);
 
-      await expect(service.getInterestedProviders('request-123', ctx)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.getInterestedProviders('request-123', ctx),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('hasExpressedInterest', () => {
     it('should return true if interest exists', async () => {
-      const ctx = createAuthContext('user-123', 'sp-123', ProviderType.PROFESSIONAL);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(createMockInterest());
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+      );
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        createMockInterest(),
+      );
 
       const result = await service.hasExpressedInterest('request-123', ctx);
 
@@ -397,8 +468,14 @@ describe('RequestInterestService', () => {
     });
 
     it('should return false if no interest', async () => {
-      const ctx = createAuthContext('user-123', 'sp-123', ProviderType.PROFESSIONAL);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(null);
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+      );
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        null,
+      );
 
       const result = await service.hasExpressedInterest('request-123', ctx);
 
@@ -437,8 +514,12 @@ describe('RequestInterestService', () => {
       });
 
       mockRequestRepository.findById.mockResolvedValue(publicRequest);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(interest);
-      mockProfessionalService.findByServiceProviderId.mockResolvedValue(professional);
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        interest,
+      );
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(
+        professional,
+      );
       mockRequestRepository.save.mockResolvedValue(updatedRequest);
 
       const result = await service.assignProvider('request-123', ctx, 'sp-123');
@@ -446,7 +527,9 @@ describe('RequestInterestService', () => {
       expect(result.providerId).toBe('sp-123');
       expect(result.status).toBe(RequestStatus.ACCEPTED);
       // Interests are kept when assigning a provider (not deleted)
-      expect(mockRequestInterestRepository.removeAllByRequestId).not.toHaveBeenCalled();
+      expect(
+        mockRequestInterestRepository.removeAllByRequestId,
+      ).not.toHaveBeenCalled();
       expect(mockEventBus.publish).toHaveBeenCalled();
     });
 
@@ -454,38 +537,43 @@ describe('RequestInterestService', () => {
       const ctx = createAuthContext('client-123', null, null);
       mockRequestRepository.findById.mockResolvedValue(null);
 
-      await expect(service.assignProvider('request-123', ctx, 'sp-123')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.assignProvider('request-123', ctx, 'sp-123'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ForbiddenException if not owner', async () => {
       const ctx = createAuthContext('other-user', null, null);
       mockRequestRepository.findById.mockResolvedValue(publicRequest);
 
-      await expect(service.assignProvider('request-123', ctx, 'sp-123')).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.assignProvider('request-123', ctx, 'sp-123'),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException if provider has not expressed interest', async () => {
       const ctx = createAuthContext('client-123', null, null);
       mockRequestRepository.findById.mockResolvedValue(publicRequest);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(null);
-
-      await expect(service.assignProvider('request-123', ctx, 'sp-123')).rejects.toThrow(
-        BadRequestException,
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        null,
       );
+
+      await expect(
+        service.assignProvider('request-123', ctx, 'sp-123'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if request is not public', async () => {
       const ctx = createAuthContext('client-123', null, null);
-      const privateRequest = createMockRequest({ isPublic: false, clientId: 'client-123' });
+      const privateRequest = createMockRequest({
+        isPublic: false,
+        clientId: 'client-123',
+      });
       mockRequestRepository.findById.mockResolvedValue(privateRequest);
 
-      await expect(service.assignProvider('request-123', ctx, 'sp-123')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.assignProvider('request-123', ctx, 'sp-123'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if request is not pending', async () => {
@@ -496,9 +584,9 @@ describe('RequestInterestService', () => {
       });
       mockRequestRepository.findById.mockResolvedValue(acceptedRequest);
 
-      await expect(service.assignProvider('request-123', ctx, 'sp-123')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.assignProvider('request-123', ctx, 'sp-123'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should allow admin to assign', async () => {
@@ -516,8 +604,12 @@ describe('RequestInterestService', () => {
       });
 
       mockRequestRepository.findById.mockResolvedValue(publicRequest);
-      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(interest);
-      mockProfessionalService.findByServiceProviderId.mockResolvedValue(professional);
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        interest,
+      );
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(
+        professional,
+      );
       mockRequestRepository.save.mockResolvedValue(updatedRequest);
 
       const result = await service.assignProvider('request-123', ctx, 'sp-123');
@@ -525,5 +617,4 @@ describe('RequestInterestService', () => {
       expect(result.providerId).toBe('sp-123');
     });
   });
-
 });

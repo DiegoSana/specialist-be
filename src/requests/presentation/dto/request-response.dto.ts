@@ -187,7 +187,7 @@ export class RequestResponseDto {
    * Convert domain entity to response DTO.
    * The entity may have attached related data (client, professional, trade)
    * from the repository's Prisma mapper.
-   * 
+   *
    * @param entity - Request domain entity (may include attached related data)
    */
   static fromEntity(entity: RequestEntity): RequestResponseDto {
@@ -232,7 +232,8 @@ export class RequestResponseDto {
               id: entityAny.professional.user.id,
               firstName: entityAny.professional.user.firstName,
               lastName: entityAny.professional.user.lastName,
-              profilePictureUrl: entityAny.professional.user.profilePictureUrl ?? null,
+              profilePictureUrl:
+                entityAny.professional.user.profilePictureUrl ?? null,
             }
           : null,
         averageRating: entityAny.professional.averageRating ?? 0,
@@ -263,7 +264,8 @@ export class RequestResponseDto {
               id: entityAny.company.user.id,
               firstName: entityAny.company.user.firstName,
               lastName: entityAny.company.user.lastName,
-              profilePictureUrl: entityAny.company.user.profilePictureUrl ?? null,
+              profilePictureUrl:
+                entityAny.company.user.profilePictureUrl ?? null,
             }
           : null,
         trades: (entityAny.company.trades || []).map((t: any) => ({
@@ -322,4 +324,3 @@ export class RequestResponseDto {
     return dto;
   }
 }
-

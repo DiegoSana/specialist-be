@@ -76,7 +76,7 @@ async function main() {
     },
   });
 
-  // Create Client Users
+  // Create Client Users (email and phone verified so they can create requests per business rules)
   console.log('👥 Creating client users...');
   const cliente1 = await prisma.user.create({
     data: {
@@ -87,6 +87,8 @@ async function main() {
       phone: '+5492944111111',
       status: UserStatus.ACTIVE,
       authProvider: AuthProvider.LOCAL,
+      emailVerified: true,
+      phoneVerified: true,
       client: { create: {} },
     },
   });
@@ -99,6 +101,8 @@ async function main() {
       phone: '+5492944222222',
       status: UserStatus.ACTIVE,
       authProvider: AuthProvider.LOCAL,
+      emailVerified: true,
+      phoneVerified: true,
       client: { create: {} },
     },
   });
@@ -111,6 +115,8 @@ async function main() {
       phone: '+5492944333333',
       status: UserStatus.ACTIVE,
       authProvider: AuthProvider.LOCAL,
+      emailVerified: true,
+      phoneVerified: true,
       client: { create: {} },
     },
   });
@@ -123,6 +129,8 @@ async function main() {
       phone: '+5492944444444',
       status: UserStatus.ACTIVE,
       authProvider: AuthProvider.LOCAL,
+      emailVerified: true,
+      phoneVerified: true,
       client: { create: {} },
     },
   });
@@ -164,6 +172,8 @@ async function main() {
         phone: data.phone,
         status: UserStatus.ACTIVE,
         authProvider: AuthProvider.LOCAL,
+        emailVerified: true,
+        phoneVerified: true,
         professional: {
           create: {
             serviceProviderId: serviceProvider.id,
@@ -342,6 +352,8 @@ async function main() {
         phone: data.phone,
         status: UserStatus.ACTIVE,
         authProvider: AuthProvider.LOCAL,
+        emailVerified: true,
+        phoneVerified: true,
         company: {
           create: {
             serviceProviderId: serviceProvider.id,
@@ -611,6 +623,203 @@ async function main() {
     },
   });
 
+  // More public requests (higher volume)
+  const publicRequest6 = await prisma.request.create({
+    data: {
+      clientId: cliente2.id,
+      tradeId: tradeCerrajero.id,
+      isPublic: true,
+      title: 'Cambio de cerradura y copia de llaves',
+      description: 'Necesito cambiar la cerradura de la puerta de entrada y hacer 3 copias de llaves.',
+      address: 'Moreno 456, Centro, Bariloche',
+      availability: 'Esta semana',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  const publicRequest7 = await prisma.request.create({
+    data: {
+      clientId: cliente4.id,
+      tradeId: tradeVidriero.id,
+      isPublic: true,
+      title: 'Vidrio roto en ventana',
+      description: 'Se rompió un vidrio de la ventana del living. Necesito reemplazo urgente.',
+      address: 'Palacios 789, Alto, Bariloche',
+      availability: 'Lo antes posible',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  const publicRequest8 = await prisma.request.create({
+    data: {
+      clientId: cliente3.id,
+      tradeId: tradeAire.id,
+      isPublic: true,
+      title: 'Mantenimiento de aires acondicionados',
+      description: 'Tengo 3 equipos split que necesitan mantenimiento anual (limpieza de filtros y carga de gas).',
+      address: 'Los Ñires 123, Melipal, Bariloche',
+      availability: 'Próximas 2 semanas',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  const publicRequest9 = await prisma.request.create({
+    data: {
+      clientId: cliente1.id,
+      tradeId: tradePlomero.id,
+      isPublic: true,
+      title: 'Destape de cañería',
+      description: 'Tengo una cañería tapada en el baño. Necesito destape y revisión.',
+      address: 'Av. Bustillo Km 3.5, Bariloche',
+      availability: 'Fines de semana',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  const publicRequest10 = await prisma.request.create({
+    data: {
+      clientId: cliente4.id,
+      tradeId: tradeCarpintero.id,
+      isPublic: true,
+      title: 'Estantería y escritorio a medida',
+      description: 'Busco cotización para estantería en living y escritorio en habitación.',
+      address: 'Palacios 789, Alto, Bariloche',
+      availability: 'Flexible',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  const publicRequest11 = await prisma.request.create({
+    data: {
+      clientId: cliente2.id,
+      tradeId: tradeAlbañil.id,
+      isPublic: true,
+      title: 'Piso de porcelanato en cocina',
+      description: 'Quiero colocar piso de porcelanato en cocina y pasillo. Aprox 25m2.',
+      address: 'Moreno 456, Centro, Bariloche',
+      availability: 'Marzo',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  const publicRequest12 = await prisma.request.create({
+    data: {
+      clientId: cliente3.id,
+      tradeId: tradeElectricista.id,
+      isPublic: true,
+      title: 'Colocar ventilador de techo',
+      description: 'Necesito instalar 2 ventiladores de techo en dormitorios.',
+      address: 'Los Ñires 123, Melipal, Bariloche',
+      availability: 'Cualquier día',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  // More direct requests (higher volume)
+  const directRequestA = await prisma.request.create({
+    data: {
+      clientId: cliente4.id,
+      providerId: plomero.professional!.serviceProviderId,
+      isPublic: false,
+      title: 'Cambio de flotante y revisión de tanque',
+      description: 'El tanque de agua pierde. Necesito cambio de flotante y revisión general.',
+      address: 'Palacios 789, Alto, Bariloche',
+      availability: 'Mañana si es posible',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  const directRequestB = await prisma.request.create({
+    data: {
+      clientId: cliente2.id,
+      providerId: pinturasnorte.company!.serviceProviderId,
+      isPublic: false,
+      title: 'Pintura de fachada',
+      description: 'Presupuesto para pintar fachada de casa de 2 plantas. Aprox 80m2.',
+      address: 'Moreno 456, Centro, Bariloche',
+      availability: 'Primavera',
+      status: RequestStatus.ACCEPTED,
+    },
+  });
+
+  const directRequestC = await prisma.request.create({
+    data: {
+      clientId: cliente3.id,
+      providerId: gasista.professional!.serviceProviderId,
+      isPublic: false,
+      title: 'Colocación de termotanque',
+      description: 'Necesito instalar termotanque eléctrico 80 litros.',
+      address: 'Los Ñires 123, Melipal, Bariloche',
+      availability: 'Próxima semana',
+      status: RequestStatus.IN_PROGRESS,
+    },
+  });
+
+  const directRequestD = await prisma.request.create({
+    data: {
+      clientId: cliente1.id,
+      providerId: serviciostecnicos.company!.serviceProviderId,
+      isPublic: false,
+      title: 'Instalación de 2 splits',
+      description: 'Casa nueva, necesito instalar 2 equipos split (living y habitación).',
+      address: 'Av. Bustillo Km 3.5, Bariloche',
+      availability: 'A coordinar',
+      status: RequestStatus.DONE,
+    },
+  });
+
+  const directRequestE = await prisma.request.create({
+    data: {
+      clientId: cliente4.id,
+      providerId: carpintero.professional!.serviceProviderId,
+      isPublic: false,
+      title: 'Puerta de placard',
+      description: 'Necesito una puerta corrediza para placard de 2,20m de ancho.',
+      address: 'Palacios 789, Alto, Bariloche',
+      availability: 'Sin apuro',
+      status: RequestStatus.PENDING,
+    },
+  });
+
+  const directRequestF = await prisma.request.create({
+    data: {
+      clientId: cliente2.id,
+      providerId: electricista.professional!.serviceProviderId,
+      isPublic: false,
+      title: 'Iluminación LED en jardín',
+      description: 'Quiero colocar tiras LED y focos en el jardín con sensor de movimiento.',
+      address: 'Moreno 456, Centro, Bariloche',
+      availability: 'Fines de semana',
+      status: RequestStatus.CANCELLED,
+    },
+  });
+
+  const directRequestG = await prisma.request.create({
+    data: {
+      clientId: cliente3.id,
+      providerId: multioficio.professional!.serviceProviderId,
+      isPublic: false,
+      title: 'Múltiples arreglos en casa',
+      description: 'Varios trabajos: una canilla que gotea, un tomacorriente que no funciona y cambio de bisagras en puerta.',
+      address: 'Los Ñires 123, Melipal, Bariloche',
+      availability: 'Un solo día si es posible',
+      status: RequestStatus.ACCEPTED,
+    },
+  });
+
+  const directRequestH = await prisma.request.create({
+    data: {
+      clientId: cliente1.id,
+      providerId: constructora.company!.serviceProviderId,
+      isPublic: false,
+      title: 'Pergola en el patio',
+      description: 'Quiero construir una pérgola de 3x4m en el patio. Material madera o hierro.',
+      address: 'Av. Bustillo Km 3.5, Bariloche',
+      availability: 'Verano',
+      status: RequestStatus.PENDING,
+    },
+  });
+
   // Request assigned to a Company
   const requestToCompany = await prisma.request.create({
     data: {
@@ -640,6 +849,14 @@ async function main() {
       { requestId: publicRequest4.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer el trabajo completo.' },
       // Provider interested in gas installation
       { requestId: publicRequest5.id, serviceProviderId: gasista.professional!.serviceProviderId, message: 'Gasista matriculado. Experiencia en calefacción central.' },
+      // New public requests - interests
+      { requestId: publicRequest8.id, serviceProviderId: serviciostecnicos.company!.serviceProviderId, message: 'Hacemos mantenimiento de aires. Incluimos carga de gas si hace falta.' },
+      { requestId: publicRequest9.id, serviceProviderId: plomero.professional!.serviceProviderId, message: 'Plomero con equipo de destape. Presupuesto sin cargo.' },
+      { requestId: publicRequest9.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer destape y revisión.' },
+      { requestId: publicRequest10.id, serviceProviderId: carpintero.professional!.serviceProviderId, message: 'Trabajo a medida. Te paso presupuesto a la brevedad.' },
+      { requestId: publicRequest11.id, serviceProviderId: constructora.company!.serviceProviderId, message: 'Colocamos porcelanato. Incluimos preparación del piso.' },
+      { requestId: publicRequest12.id, serviceProviderId: electricista.professional!.serviceProviderId, message: 'Instalo ventiladores de techo. Varias marcas disponibles.' },
+      { requestId: publicRequest12.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer la instalación.' },
     ],
   });
 
@@ -744,11 +961,11 @@ async function main() {
   console.log('📋 Summary:');
   console.log(`   - 10 trades created`);
   console.log(`   - 1 admin user`);
-  console.log(`   - 4 client users`);
+  console.log(`   - 4 client users (email + phone verified)`);
   console.log(`   - 6 professional users (with ServiceProvider)`);
   console.log(`   - 4 company users (with ServiceProvider)`);
-  console.log(`   - 14 requests (8 direct, 6 public)`);
-  console.log(`   - 7 request interests`);
+  console.log(`   - 29 requests (17 direct, 12 public)`);
+  console.log(`   - 15 request interests`);
   console.log(`   - 6 reviews`);
   console.log(`   - 3 contacts`);
   console.log('');

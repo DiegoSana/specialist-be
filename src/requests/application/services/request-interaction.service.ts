@@ -27,7 +27,6 @@ import { UserService } from '../../../identity/application/services/user.service
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { CompanyService } from '../../../profiles/application/services/company.service';
 import { DetectResponseIntentUseCase } from '../use-cases/detect-response-intent.use-case';
-import { ResponseIntent } from '@prisma/client';
 import { MessageTemplateService } from '../../../shared/infrastructure/messaging/message-template.service';
 import { randomUUID } from 'crypto';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
@@ -75,8 +74,9 @@ export class RequestInteractionService {
 
     // Allow retrying failed messages that are scheduled for retry
     const isPending = interaction.isPending();
-    const isFailedButRetryable = interaction.isFailed() && this.canRetry(interaction);
-    
+    const isFailedButRetryable =
+      interaction.isFailed() && this.canRetry(interaction);
+
     if (!isPending && !isFailedButRetryable) {
       this.logger.warn(
         `Cannot send message: interaction ${interactionId} is not pending or retryable (status: ${interaction.status})`,
@@ -112,13 +112,17 @@ export class RequestInteractionService {
       // Reload the interaction
       const reloaded = await this.interactionRepository.findById(interactionId);
       if (!reloaded) {
-        throw new NotFoundException(`Interaction ${interactionId} not found after reset`);
+        throw new NotFoundException(
+          `Interaction ${interactionId} not found after reset`,
+        );
       }
       interaction = reloaded;
     }
 
     // Get request to determine recipient phone number
-    const request = await this.requestRepository.findById(interaction.requestId);
+    const request = await this.requestRepository.findById(
+      interaction.requestId,
+    );
     if (!request) {
       throw new NotFoundException(
         `Request with id ${interaction.requestId} not found`,
@@ -128,8 +132,11 @@ export class RequestInteractionService {
     // Determine recipient phone number based on direction
     // TODO: Get phone from User or Professional/Company based on direction
     // For now, this is a placeholder - we'll need to fetch user/provider data
-    const recipientPhone = await this.getRecipientPhone(request, interaction.direction);
-    
+    const recipientPhone = await this.getRecipientPhone(
+      request,
+      interaction.direction,
+    );
+
     if (!recipientPhone) {
       this.logger.warn(
         `Cannot send message: recipient phone not found for interaction ${interactionId}`,
@@ -334,7 +341,10 @@ export class RequestInteractionService {
     }
 
     // Rate limit errors - retry with backoff
-    if (errorCode === 'rate_limit_exceeded' || errorMessage.includes('rate limit')) {
+    if (
+      errorCode === 'rate_limit_exceeded' ||
+      errorMessage.includes('rate limit')
+    ) {
       return true;
     }
 
@@ -465,9 +475,7 @@ export class RequestInteractionService {
     // Handle different Twilio statuses
     if (twilioStatus === 'delivered' || twilioStatus === 'read') {
       // Successfully delivered
-      const deliveredInteraction = interaction.markAsDelivered(
-        twilioStatus,
-      );
+      const deliveredInteraction = interaction.markAsDelivered(twilioStatus);
       await this.interactionRepository.save(deliveredInteraction);
 
       this.logger.log(
@@ -574,7 +582,7 @@ export class RequestInteractionService {
     // We check by looking for an interaction that has this MessageId stored in metadata
     const existingInteraction =
       await this.interactionRepository.findByTwilioMessageSid(params.messageId);
-    
+
     if (existingInteraction && existingInteraction.isResponded()) {
       // Check if this is the same inbound message we already processed
       const metadata = existingInteraction.metadata as any;
@@ -587,10 +595,11 @@ export class RequestInteractionService {
     }
 
     // Try multiple strategies to find the matching interaction
-    
+
     // Strategy 1: Find by Twilio message SID (if this is a status update or reply)
-    let interaction =
-      await this.interactionRepository.findByTwilioMessageSid(params.messageId);
+    let interaction = await this.interactionRepository.findByTwilioMessageSid(
+      params.messageId,
+    );
 
     // Strategy 2: Find by phone number in metadata (most recent pending/delivered)
     if (!interaction) {
@@ -615,7 +624,7 @@ export class RequestInteractionService {
         );
         return;
       }
-      
+
       // If it's a different message but already responded, log and skip
       this.logger.warn(
         `Interaction ${interaction.id} already has a response, skipping duplicate inbound message`,
@@ -633,13 +642,13 @@ export class RequestInteractionService {
 
     // Detect intent from message text
     const intent = this.detectIntentUseCase.detectIntent(params.body);
-    
+
     // Mark interaction as responded and store inbound message SID for idempotency
     const respondedInteraction = interaction.markAsResponded(
       params.body,
       intent,
     );
-    
+
     // Add inbound message SID to metadata for idempotency tracking
     const metadata = {
       ...(interaction.metadata || {}),
@@ -668,7 +677,7 @@ export class RequestInteractionService {
       respondedInteraction.createdAt,
       new Date(),
     );
-    
+
     await this.interactionRepository.save(respondedInteractionWithMetadata);
 
     // Calculate response time
@@ -712,6 +721,8 @@ export class RequestInteractionService {
     messageTemplate: string;
     scheduledFor: Date;
     metadata?: Record<string, unknown>;
+    /** Optional template variables (e.g. {title}, {count}). Merged with default title. */
+    templateVariables?: Record<string, string>;
   }): Promise<RequestInteractionEntity> {
     const request = await this.requestRepository.findById(params.requestId);
     if (!request) {
@@ -720,16 +731,17 @@ export class RequestInteractionService {
       );
     }
 
-    // Get template message with request title
+    const variables: Record<string, string> = {
+      title: request.title || 'Tu solicitud',
+      ...params.templateVariables,
+    };
+
     const messageContent = await this.templateService.getTemplate(
       params.messageTemplate,
       'es', // TODO: Get language from user preferences
-      {
-        title: request.title || 'Tu solicitud',
-      },
+      variables,
     );
 
-    // Create interaction
     const interaction = RequestInteractionEntity.createPending({
       id: randomUUID(),
       requestId: params.requestId,
@@ -745,4 +757,3 @@ export class RequestInteractionService {
     return await this.interactionRepository.save(interaction);
   }
 }
-
