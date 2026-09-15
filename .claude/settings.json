@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npx jest:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run format)",
+      "Bash(npm run build)",
+      "Bash(npm run test:e2e)",
+      "Bash(npx prisma validate)",
+      "Bash(npx prisma generate)",
+      "Bash(npx prisma format)",
+      "Bash(npx prisma migrate status)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)"
+    ],
+    "deny": [
+      "Bash(npx prisma migrate reset:*)",
+      "Bash(npx prisma db push --force-reset:*)",
+      "Bash(npm run db:reset)",
+      "Bash(fly secrets:*)",
+      "Bash(flyctl secrets:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}

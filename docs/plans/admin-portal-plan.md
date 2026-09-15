@@ -74,7 +74,7 @@ Esto limita:
 │   ├ package.json                     # Depende de @specialist/shared
 │   └ ...
 │
-├ specialist-api/                      # Repo separado (backend NestJS)
+├ specialist-be/                      # Repo separado (backend NestJS)
 │   ├ src/
 │   ├ package.json                     # Depende de @specialist/shared
 │   └ ...
@@ -164,14 +164,14 @@ specialist-shared/
 **Ejemplo de uso:**
 
 ```typescript
-// En specialist-admin o specialist-api
+// En specialist-admin o specialist-be
 import { User, LoginDTO, loginSchema, UserRole } from '@specialist/shared'
 ```
 
 **Instalación en cada repo:**
 
 ```json
-// package.json en specialist-admin, specialist-api, specialist-web
+// package.json en specialist-admin, specialist-be, specialist-web
 {
   "dependencies": {
     "@specialist/shared": "github:tu-usuario/specialist-shared#main"
@@ -653,11 +653,11 @@ export default function TestPage() {
 }
 ```
 
-### 4.3 Conectar Backend (specialist-api) con Shared
+### 4.3 Conectar Backend (specialist-be) con Shared
 
 **Paso 1: Agregar dependencia en backend**
 
-`specialist-api/package.json`:
+`specialist-be/package.json`:
 ```json
 {
   "dependencies": {
@@ -669,7 +669,7 @@ export default function TestPage() {
 **Paso 2: Instalar**
 
 ```bash
-cd specialist-api
+cd specialist-be
 npm install
 ```
 
@@ -702,7 +702,7 @@ git push origin main
 **Para usar cambios en otros repos:**
 
 ```bash
-# En specialist-admin o specialist-api
+# En specialist-admin o specialist-be
 npm install @specialist/shared
 # Esto actualizará desde GitHub
 ```
@@ -728,7 +728,7 @@ Si todos los repos están en la misma carpeta padre, Cursor puede ver el context
 /var/www/specialist/
   ├ specialist-web/
   ├ specialist-admin/
-  ├ specialist-api/
+  ├ specialist-be/
   └ specialist-shared/
 ```
 
@@ -739,7 +739,7 @@ Puedes crear `.cursor/rules.md` en la carpeta padre:
 
 You are working with multiple separate repositories:
 
-- `specialist-api` = NestJS backend
+- `specialist-be` = NestJS backend
 - `specialist-admin` = Next.js admin panel
 - `specialist-web` = Next.js frontend principal
 - `specialist-shared` = shared types, schemas, and constants
@@ -876,7 +876,7 @@ export const AdminContract = {
 - [ ] Crear app Next.js admin con Tailwind
 - [ ] Instalar y configurar Shadcn UI
 - [ ] Conectar `specialist-admin` con `specialist-shared` (GitHub dependency)
-- [ ] Conectar `specialist-api` con `specialist-shared` (GitHub dependency)
+- [ ] Conectar `specialist-be` con `specialist-shared` (GitHub dependency)
 - [ ] Verificar que las importaciones funcionan en ambos repos
 - [ ] Configurar `.cursor/rules.md` (opcional, si repos están en misma carpeta)
 
@@ -1072,7 +1072,7 @@ npm install @specialist/shared  # Actualiza desde GitHub
    - Verificar que los imports funcionan
 
 3. **Conectar Backend:**
-   - Agregar dependencia de `specialist-shared` en `specialist-api`
+   - Agregar dependencia de `specialist-shared` en `specialist-be`
    - Verificar endpoints admin existentes
    - Crear endpoints faltantes (`/admin/dashboard/stats`, etc.)
    - Asegurar que JWT incluye `role` en el payload

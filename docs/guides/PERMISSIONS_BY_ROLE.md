@@ -44,7 +44,7 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - Ver solicitudes públicas disponibles si además es proveedor.
 - Editar, agregar/quitar fotos y cambiar estado de **sus** solicitudes (dentro de las reglas de negocio).
 - Ver interesados **solo en sus propias solicitudes** (`GET /requests/:id/interests` — el backend valida que sea el dueño del request; si no, 403).
-- Asignar un proveedor a una solicitud pública (`POST /requests/:id/assign`).
+- Asignar un proveedor a una solicitud pública (`POST /requests/:id/assign-provider`; el admin también puede, ver `canAssignProviderBy`).
 - Crear, editar y eliminar **su** reseña de un request completado (estado PENDING hasta moderación).
 - Ver notificaciones propias y gestionar preferencias.
 - Solicitar y confirmar verificación de email y teléfono.

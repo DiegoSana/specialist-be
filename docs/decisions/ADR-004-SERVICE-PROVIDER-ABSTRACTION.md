@@ -28,7 +28,7 @@ We introduce a **ServiceProvider** abstraction as a polymorphic parent entity fo
 │ id: UUID                            │
 │ type: PROFESSIONAL | COMPANY        │
 │ averageRating: Decimal              │
-│ reviewCount: Int                    │
+│ totalReviews: Int                    │
 └───────────────┬─────────────────────┘
                 │
         ┌───────┴───────┐
@@ -47,7 +47,7 @@ We introduce a **ServiceProvider** abstraction as a polymorphic parent entity fo
 ### Key Design Decisions
 
 #### 1. ServiceProvider owns shared attributes
-- `averageRating` and `reviewCount` are stored in `ServiceProvider`
+- `averageRating` and `totalReviews` are stored in `ServiceProvider`
 - Both `Professional` and `Company` inherit these via their relation
 - This enables unified rating/review aggregation
 
@@ -73,7 +73,7 @@ model ServiceProvider {
   id            String       @id @default(uuid())
   type          ProviderType
   averageRating Decimal      @default(0)
-  reviewCount   Int          @default(0)
+  totalReviews   Int          @default(0)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
