@@ -41,4 +41,3 @@ export interface VerificationService {
 
 // Token for dependency injection
 export const VERIFICATION_SERVICE = Symbol('VerificationService');
-

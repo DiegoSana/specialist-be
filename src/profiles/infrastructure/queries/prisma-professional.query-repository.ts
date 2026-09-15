@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
-import { ProfessionalQueryRepository, ProfessionalStats } from '../../domain/queries/professional.query-repository';
+import {
+  ProfessionalQueryRepository,
+  ProfessionalStats,
+} from '../../domain/queries/professional.query-repository';
 import { ProfessionalStatus } from '@prisma/client';
 
 @Injectable()
-export class PrismaProfessionalQueryRepository implements ProfessionalQueryRepository {
+export class PrismaProfessionalQueryRepository
+  implements ProfessionalQueryRepository
+{
   constructor(private readonly prisma: PrismaService) {}
 
   async getProfessionalStats(): Promise<ProfessionalStats> {
@@ -33,10 +38,7 @@ export class PrismaProfessionalQueryRepository implements ProfessionalQueryRepos
     };
   }
 
-  async findAllForAdmin(params: {
-    skip: number;
-    take: number;
-  }) {
+  async findAllForAdmin(params: { skip: number; take: number }) {
     const [professionals, total] = await Promise.all([
       this.prisma.professional.findMany({
         skip: params.skip,
@@ -106,6 +108,3 @@ export class PrismaProfessionalQueryRepository implements ProfessionalQueryRepos
     return professional;
   }
 }
-
-
-

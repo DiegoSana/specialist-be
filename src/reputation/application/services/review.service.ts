@@ -56,8 +56,12 @@ export class ReviewService {
    * Find reviews for a service provider (public display).
    * Only returns APPROVED reviews.
    */
-  async findByServiceProviderId(serviceProviderId: string): Promise<ReviewEntity[]> {
-    return this.reviewRepository.findApprovedByServiceProviderId(serviceProviderId);
+  async findByServiceProviderId(
+    serviceProviderId: string,
+  ): Promise<ReviewEntity[]> {
+    return this.reviewRepository.findApprovedByServiceProviderId(
+      serviceProviderId,
+    );
   }
 
   /**
@@ -65,8 +69,11 @@ export class ReviewService {
    */
   async findByProfessionalId(professionalId: string): Promise<ReviewEntity[]> {
     // Get professional's serviceProviderId
-    const professional = await this.professionalService.getByIdOrFail(professionalId);
-    return this.reviewRepository.findApprovedByServiceProviderId(professional.serviceProviderId);
+    const professional =
+      await this.professionalService.getByIdOrFail(professionalId);
+    return this.reviewRepository.findApprovedByServiceProviderId(
+      professional.serviceProviderId,
+    );
   }
 
   /**
@@ -88,7 +95,9 @@ export class ReviewService {
     const ctx = await this.buildAuthContext(review, userId);
 
     if (!review.canBeViewedBy(ctx)) {
-      throw new ForbiddenException('You do not have permission to view this review');
+      throw new ForbiddenException(
+        'You do not have permission to view this review',
+      );
     }
 
     return review;
@@ -337,13 +346,15 @@ export class ReviewService {
     serviceProviderId: string,
   ): Promise<void> {
     // Only count APPROVED reviews for rating calculation
-    const reviews = await this.reviewRepository.findApprovedByServiceProviderId(
-      serviceProviderId,
-    );
+    const reviews =
+      await this.reviewRepository.findApprovedByServiceProviderId(
+        serviceProviderId,
+      );
 
     // Try to find the professional by serviceProviderId to update their rating
-    const professional = await this.professionalService.findByServiceProviderId(serviceProviderId);
-    
+    const professional =
+      await this.professionalService.findByServiceProviderId(serviceProviderId);
+
     if (!professional) {
       // TODO: Handle company providers when implemented
       return;

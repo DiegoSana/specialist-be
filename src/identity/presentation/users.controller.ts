@@ -27,7 +27,10 @@ import { UserEntity } from '../domain/entities/user.entity';
  * Response DTO for provider profiles status
  */
 class ProviderProfilesResponseDto {
-  @ApiProperty({ example: 'PROFESSIONAL', enum: ['PROFESSIONAL', 'COMPANY', null] })
+  @ApiProperty({
+    example: 'PROFESSIONAL',
+    enum: ['PROFESSIONAL', 'COMPANY', null],
+  })
   activeType: 'PROFESSIONAL' | 'COMPANY' | null;
 
   @ApiProperty({ required: false })
@@ -111,7 +114,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Get provider profiles status',
     description:
-      'Returns information about the user\'s Professional and Company profiles, ' +
+      "Returns information about the user's Professional and Company profiles, " +
       'including which one is currently active. Only one provider profile can be ' +
       'active at a time.',
   })

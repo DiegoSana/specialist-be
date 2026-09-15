@@ -118,16 +118,14 @@ function findPrismaServiceImports(filePath: string): {
   // Matches: import { Something, PrismaService } from '...'
   const prismaImportPattern =
     /import\s+(?:{[\s\S]*?\bPrismaService\b[\s\S]*?}|\*\s+as\s+PrismaService|PrismaService)\s+from\s+['"]/;
-  
+
   // Pattern to match PrismaService type annotation in constructor/injection
   const prismaConstructorPattern =
     /(?:private|public|protected)\s+(?:readonly\s+)?\w+:\s*PrismaService\b/;
-  const prismaInjectionPattern =
-    /@Inject\([^)]*\bPrismaService\b/;
-  
+  const prismaInjectionPattern = /@Inject\([^)]*\bPrismaService\b/;
+
   // Pattern to match this.prisma usage (indicates PrismaService dependency)
-  const prismaUsagePattern =
-    /this\.prisma\./;
+  const prismaUsagePattern = /this\.prisma\./;
 
   lines.forEach((line, index) => {
     // Skip comments

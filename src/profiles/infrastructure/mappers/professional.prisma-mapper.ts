@@ -1,9 +1,11 @@
-import { ProfessionalStatus, ProviderType as PrismaProviderType } from '@prisma/client';
+import {
+  ProfessionalStatus,
+  ProviderType as PrismaProviderType,
+} from '@prisma/client';
 import {
   ProfessionalEntity,
   TradeInfo,
 } from '../../domain/entities/professional.entity';
-import { ServiceProviderEntity, ProviderType } from '../../domain/entities/service-provider.entity';
 import { PrismaServiceProviderMapper } from './service-provider.prisma-mapper';
 
 export class PrismaProfessionalMapper {

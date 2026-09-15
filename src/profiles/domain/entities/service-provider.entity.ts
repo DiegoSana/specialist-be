@@ -84,7 +84,10 @@ export class ServiceProviderEntity {
   /**
    * Calculate new average rating after a new review
    */
-  calculateNewRating(newRating: number): { averageRating: number; totalReviews: number } {
+  calculateNewRating(newRating: number): {
+    averageRating: number;
+    totalReviews: number;
+  } {
     const newTotal = this.totalReviews + 1;
     const newAverage =
       (this.averageRating * this.totalReviews + newRating) / newTotal;
@@ -138,4 +141,3 @@ export class ServiceProviderEntity {
     );
   }
 }
-

@@ -198,4 +198,3 @@ export class PublicReviewDto {
     return entities.map((entity) => PublicReviewDto.fromEntity(entity));
   }
 }
-

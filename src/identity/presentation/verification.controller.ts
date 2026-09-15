@@ -63,16 +63,14 @@ class VerificationConfirmResponseDto {
 @Controller('identity/verification')
 @UseGuards(JwtAuthGuard)
 export class VerificationController {
-  constructor(
-    private readonly verificationService: VerificationService,
-  ) {}
+  constructor(private readonly verificationService: VerificationService) {}
 
   @Post('phone/request')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Request phone verification',
     description:
-      'Sends an OTP code to the user\'s phone number via SMS. ' +
+      "Sends an OTP code to the user's phone number via SMS. " +
       'The phone number must be in E.164 format (e.g., +5492944123456).',
   })
   @ApiResponse({
@@ -82,7 +80,8 @@ export class VerificationController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid phone number format, user has no phone, or phone is already verified',
+    description:
+      'Invalid phone number format, user has no phone, or phone is already verified',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   async requestPhoneVerification(
@@ -121,7 +120,7 @@ export class VerificationController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Request email verification',
-    description: 'Sends an OTP code to the user\'s email address.',
+    description: "Sends an OTP code to the user's email address.",
   })
   @ApiResponse({
     status: 200,
@@ -165,4 +164,3 @@ export class VerificationController {
     return { message: 'Email verified successfully' };
   }
 }
-

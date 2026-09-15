@@ -28,4 +28,3 @@ export const emailSenderProvider: Provider = {
   },
   inject: [ConfigService],
 };
-

@@ -7,7 +7,9 @@ export class Phone {
 
   constructor(phone: string) {
     if (!this.isValid(phone)) {
-      throw new Error('Invalid phone format. Must be in E.164 format (e.g., +5492944123456)');
+      throw new Error(
+        'Invalid phone format. Must be in E.164 format (e.g., +5492944123456)',
+      );
     }
     this.value = phone.trim();
   }
@@ -26,4 +28,3 @@ export class Phone {
     return this.value === other.value;
   }
 }
-

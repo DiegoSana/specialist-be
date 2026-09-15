@@ -5,13 +5,18 @@ import {
   VERIFICATION_SERVICE,
   VerificationService as VerificationServicePort,
 } from '../../domain/ports/verification.service';
-import { USER_REPOSITORY, UserRepository } from '../../domain/repositories/user.repository';
+import {
+  USER_REPOSITORY,
+  UserRepository,
+} from '../../domain/repositories/user.repository';
 import { createMockUser } from '../../../__mocks__/test-utils';
 
 describe('VerificationService', () => {
   let service: VerificationService;
   let mockVerificationPort: jest.Mocked<VerificationServicePort>;
-  let mockUserRepository: jest.Mocked<Pick<UserRepository, 'findById' | 'save'>>;
+  let mockUserRepository: jest.Mocked<
+    Pick<UserRepository, 'findById' | 'save'>
+  >;
 
   const userId = 'user-123';
 
@@ -47,33 +52,39 @@ describe('VerificationService', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockUserRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        service.requestPhoneVerification(userId),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.requestPhoneVerification(userId)).rejects.toThrow(
+        NotFoundException,
+      );
 
-      expect(mockVerificationPort.requestPhoneVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.requestPhoneVerification,
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when user has no phone', async () => {
       const user = createMockUser({ id: userId, phone: null });
       mockUserRepository.findById.mockResolvedValue(user);
 
-      await expect(
-        service.requestPhoneVerification(userId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.requestPhoneVerification(userId)).rejects.toThrow(
+        BadRequestException,
+      );
 
-      expect(mockVerificationPort.requestPhoneVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.requestPhoneVerification,
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when phone is already verified', async () => {
       const user = createMockUser({ id: userId, phoneVerified: true });
       mockUserRepository.findById.mockResolvedValue(user);
 
-      await expect(
-        service.requestPhoneVerification(userId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.requestPhoneVerification(userId)).rejects.toThrow(
+        BadRequestException,
+      );
 
-      expect(mockVerificationPort.requestPhoneVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.requestPhoneVerification,
+      ).not.toHaveBeenCalled();
     });
 
     it('should call port and succeed when user has unverified phone', async () => {
@@ -86,9 +97,9 @@ describe('VerificationService', () => {
 
       await service.requestPhoneVerification(userId);
 
-      expect(mockVerificationPort.requestPhoneVerification).toHaveBeenCalledWith(
-        '+5492944123456',
-      );
+      expect(
+        mockVerificationPort.requestPhoneVerification,
+      ).toHaveBeenCalledWith('+5492944123456');
     });
 
     it('should throw BadRequestException when Phone format is invalid', async () => {
@@ -99,11 +110,13 @@ describe('VerificationService', () => {
       });
       mockUserRepository.findById.mockResolvedValue(user);
 
-      await expect(
-        service.requestPhoneVerification(userId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.requestPhoneVerification(userId)).rejects.toThrow(
+        BadRequestException,
+      );
 
-      expect(mockVerificationPort.requestPhoneVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.requestPhoneVerification,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -115,7 +128,9 @@ describe('VerificationService', () => {
         service.confirmPhoneVerification(userId, '123456'),
       ).rejects.toThrow(NotFoundException);
 
-      expect(mockVerificationPort.confirmPhoneVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.confirmPhoneVerification,
+      ).not.toHaveBeenCalled();
       expect(mockUserRepository.save).not.toHaveBeenCalled();
     });
 
@@ -142,7 +157,9 @@ describe('VerificationService', () => {
         service.confirmPhoneVerification(userId, '123456'),
       ).rejects.toThrow(BadRequestException);
 
-      expect(mockVerificationPort.confirmPhoneVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.confirmPhoneVerification,
+      ).not.toHaveBeenCalled();
       expect(mockUserRepository.save).not.toHaveBeenCalled();
     });
 
@@ -159,10 +176,9 @@ describe('VerificationService', () => {
         service.confirmPhoneVerification(userId, '000000'),
       ).rejects.toThrow(BadRequestException);
 
-      expect(mockVerificationPort.confirmPhoneVerification).toHaveBeenCalledWith(
-        '+5492944123456',
-        '000000',
-      );
+      expect(
+        mockVerificationPort.confirmPhoneVerification,
+      ).toHaveBeenCalledWith('+5492944123456', '000000');
       expect(mockUserRepository.save).not.toHaveBeenCalled();
     });
 
@@ -176,10 +192,9 @@ describe('VerificationService', () => {
 
       await service.confirmPhoneVerification(userId, '123456');
 
-      expect(mockVerificationPort.confirmPhoneVerification).toHaveBeenCalledWith(
-        '+5492944123456',
-        '123456',
-      );
+      expect(
+        mockVerificationPort.confirmPhoneVerification,
+      ).toHaveBeenCalledWith('+5492944123456', '123456');
       expect(mockUserRepository.save).toHaveBeenCalledTimes(1);
       const savedUser = mockUserRepository.save.mock.calls[0][0];
       expect(savedUser.phoneVerified).toBe(true);
@@ -190,22 +205,26 @@ describe('VerificationService', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockUserRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        service.requestEmailVerification(userId),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.requestEmailVerification(userId)).rejects.toThrow(
+        NotFoundException,
+      );
 
-      expect(mockVerificationPort.requestEmailVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.requestEmailVerification,
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when email is already verified', async () => {
       const user = createMockUser({ id: userId, emailVerified: true });
       mockUserRepository.findById.mockResolvedValue(user);
 
-      await expect(
-        service.requestEmailVerification(userId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.requestEmailVerification(userId)).rejects.toThrow(
+        BadRequestException,
+      );
 
-      expect(mockVerificationPort.requestEmailVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.requestEmailVerification,
+      ).not.toHaveBeenCalled();
     });
 
     it('should call port and succeed when email is not verified', async () => {
@@ -218,9 +237,9 @@ describe('VerificationService', () => {
 
       await service.requestEmailVerification(userId);
 
-      expect(mockVerificationPort.requestEmailVerification).toHaveBeenCalledWith(
-        'user@example.com',
-      );
+      expect(
+        mockVerificationPort.requestEmailVerification,
+      ).toHaveBeenCalledWith('user@example.com');
     });
   });
 
@@ -232,7 +251,9 @@ describe('VerificationService', () => {
         service.confirmEmailVerification(userId, '123456'),
       ).rejects.toThrow(NotFoundException);
 
-      expect(mockVerificationPort.confirmEmailVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.confirmEmailVerification,
+      ).not.toHaveBeenCalled();
       expect(mockUserRepository.save).not.toHaveBeenCalled();
     });
 
@@ -248,7 +269,9 @@ describe('VerificationService', () => {
         service.confirmEmailVerification(userId, '123456'),
       ).rejects.toThrow(BadRequestException);
 
-      expect(mockVerificationPort.confirmEmailVerification).not.toHaveBeenCalled();
+      expect(
+        mockVerificationPort.confirmEmailVerification,
+      ).not.toHaveBeenCalled();
       expect(mockUserRepository.save).not.toHaveBeenCalled();
     });
 
@@ -265,10 +288,9 @@ describe('VerificationService', () => {
         service.confirmEmailVerification(userId, '000000'),
       ).rejects.toThrow(BadRequestException);
 
-      expect(mockVerificationPort.confirmEmailVerification).toHaveBeenCalledWith(
-        'user@example.com',
-        '000000',
-      );
+      expect(
+        mockVerificationPort.confirmEmailVerification,
+      ).toHaveBeenCalledWith('user@example.com', '000000');
       expect(mockUserRepository.save).not.toHaveBeenCalled();
     });
 
@@ -282,10 +304,9 @@ describe('VerificationService', () => {
 
       await service.confirmEmailVerification(userId, '123456');
 
-      expect(mockVerificationPort.confirmEmailVerification).toHaveBeenCalledWith(
-        'user@example.com',
-        '123456',
-      );
+      expect(
+        mockVerificationPort.confirmEmailVerification,
+      ).toHaveBeenCalledWith('user@example.com', '123456');
       expect(mockUserRepository.save).toHaveBeenCalledTimes(1);
       const savedUser = mockUserRepository.save.mock.calls[0][0];
       expect(savedUser.emailVerified).toBe(true);

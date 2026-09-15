@@ -106,23 +106,31 @@ describe('ReviewService', () => {
       const professional = createMockProfessional({ id: 'prof-123' });
       const reviews = [
         createMockReview({ rating: 5, status: ReviewStatus.APPROVED }),
-        createMockReview({ id: 'review-456', rating: 4, status: ReviewStatus.APPROVED }),
+        createMockReview({
+          id: 'review-456',
+          rating: 4,
+          status: ReviewStatus.APPROVED,
+        }),
       ];
       mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
-      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue(reviews);
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue(
+        reviews,
+      );
 
       const result = await service.findByProfessionalId('prof-123');
 
       expect(result).toHaveLength(2);
-      expect(mockReviewRepository.findApprovedByServiceProviderId).toHaveBeenCalledWith(
-        'service-provider-123',
-      );
+      expect(
+        mockReviewRepository.findApprovedByServiceProviderId,
+      ).toHaveBeenCalledWith('service-provider-123');
     });
 
     it('should return empty array when no approved reviews', async () => {
       const professional = createMockProfessional({ id: 'prof-123' });
       mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
-      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue([]);
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue(
+        [],
+      );
 
       const result = await service.findByProfessionalId('prof-123');
 
@@ -498,8 +506,12 @@ describe('ReviewService', () => {
       mockReviewRepository.findById.mockResolvedValue(review);
       mockUserService.findById.mockResolvedValue(user);
       mockReviewRepository.delete.mockResolvedValue(undefined);
-      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue([]);
-      mockProfessionalService.findByServiceProviderId.mockResolvedValue(professional);
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue(
+        [],
+      );
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(
+        professional,
+      );
       mockProfessionalService.updateRating.mockResolvedValue(undefined);
 
       await service.delete('review-123', 'user-123');
@@ -569,7 +581,9 @@ describe('ReviewService', () => {
       mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue(
         remainingReviews,
       );
-      mockProfessionalService.findByServiceProviderId.mockResolvedValue(professional);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(
+        professional,
+      );
 
       await service.delete('review-123', 'user-123');
 
@@ -594,7 +608,9 @@ describe('ReviewService', () => {
       mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue([
         approvedReview,
       ]);
-      mockProfessionalService.findByServiceProviderId.mockResolvedValue(professional);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(
+        professional,
+      );
 
       const result = await service.approve('review-123', 'admin-123');
 
@@ -609,9 +625,9 @@ describe('ReviewService', () => {
       mockReviewRepository.findById.mockResolvedValue(review);
       mockUserService.findById.mockResolvedValue(user);
 
-      await expect(
-        service.approve('review-123', 'user-123'),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.approve('review-123', 'user-123')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw BadRequestException if review is not pending', async () => {
@@ -621,9 +637,9 @@ describe('ReviewService', () => {
       mockReviewRepository.findById.mockResolvedValue(review);
       mockUserService.findById.mockResolvedValue(admin);
 
-      await expect(
-        service.approve('review-123', 'admin-123'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.approve('review-123', 'admin-123')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -649,9 +665,9 @@ describe('ReviewService', () => {
       mockReviewRepository.findById.mockResolvedValue(review);
       mockUserService.findById.mockResolvedValue(user);
 
-      await expect(
-        service.reject('review-123', 'user-123'),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.reject('review-123', 'user-123')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw BadRequestException if review is not pending', async () => {
@@ -661,9 +677,9 @@ describe('ReviewService', () => {
       mockReviewRepository.findById.mockResolvedValue(review);
       mockUserService.findById.mockResolvedValue(admin);
 
-      await expect(
-        service.reject('review-123', 'admin-123'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.reject('review-123', 'admin-123')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

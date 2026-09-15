@@ -97,8 +97,12 @@ export class PrismaReviewMapper {
       ...(input.rating !== undefined && { rating: input.rating }),
       ...(input.comment !== undefined && { comment: input.comment }),
       ...(input.status !== undefined && { status: input.status }),
-      ...(input.moderatedAt !== undefined && { moderatedAt: input.moderatedAt }),
-      ...(input.moderatedBy !== undefined && { moderatedBy: input.moderatedBy }),
+      ...(input.moderatedAt !== undefined && {
+        moderatedAt: input.moderatedAt,
+      }),
+      ...(input.moderatedBy !== undefined && {
+        moderatedBy: input.moderatedBy,
+      }),
     };
   }
 }

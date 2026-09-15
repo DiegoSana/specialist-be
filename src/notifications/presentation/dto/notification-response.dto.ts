@@ -27,8 +27,9 @@ export class NotificationResponseDto {
     return dto;
   }
 
-  static fromEntities(entities: NotificationEntity[]): NotificationResponseDto[] {
+  static fromEntities(
+    entities: NotificationEntity[],
+  ): NotificationResponseDto[] {
     return entities.map((e) => NotificationResponseDto.fromEntity(e));
   }
 }
-

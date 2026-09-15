@@ -1,8 +1,4 @@
-import {
-  Controller,
-  Get,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -127,8 +123,16 @@ export class ProvidersController {
     description: 'List of service providers',
     type: [UnifiedProviderResultDto],
   })
-  @ApiQuery({ name: 'search', required: false, description: 'Search by name or description' })
-  @ApiQuery({ name: 'tradeId', required: false, description: 'Filter by trade ID' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by name or description',
+  })
+  @ApiQuery({
+    name: 'tradeId',
+    required: false,
+    description: 'Filter by trade ID',
+  })
   @ApiQuery({ name: 'city', required: false, description: 'Filter by city' })
   @ApiQuery({ name: 'zone', required: false, description: 'Filter by zone' })
   @ApiQuery({
@@ -149,22 +153,25 @@ export class ProvidersController {
         search: query.search,
         tradeId: query.tradeId,
       };
-      let professionals = await this.professionalService.search(professionalsDto, {
-        onlyActiveInCatalog: true,
-      });
-      
+      let professionals = await this.professionalService.search(
+        professionalsDto,
+        {
+          onlyActiveInCatalog: true,
+        },
+      );
+
       // Filter by city/zone if provided (post-fetch filter)
       if (query.city) {
-        professionals = professionals.filter((p: any) => 
-          p.city?.toLowerCase() === query.city?.toLowerCase()
+        professionals = professionals.filter(
+          (p: any) => p.city?.toLowerCase() === query.city?.toLowerCase(),
         );
       }
       if (query.zone) {
-        professionals = professionals.filter((p: any) => 
-          p.zone?.toLowerCase() === query.zone?.toLowerCase()
+        professionals = professionals.filter(
+          (p: any) => p.zone?.toLowerCase() === query.zone?.toLowerCase(),
         );
       }
-      
+
       results.push(...professionals.map((p) => this.mapProfessional(p)));
     }
 
@@ -249,4 +256,3 @@ export class ProvidersController {
     };
   }
 }
-

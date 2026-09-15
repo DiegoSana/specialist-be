@@ -5,7 +5,10 @@ import {
   CompanyRepository,
   CompanySearchParams,
 } from '../../domain/repositories/company.repository';
-import { CompanyEntity, CompanyStatus } from '../../domain/entities/company.entity';
+import {
+  CompanyEntity,
+  CompanyStatus,
+} from '../../domain/entities/company.entity';
 import { CompanyPrismaMapper } from '../mappers/company.prisma-mapper';
 
 @Injectable()
@@ -51,7 +54,9 @@ export class PrismaCompanyRepository implements CompanyRepository {
     return CompanyPrismaMapper.toDomain(company);
   }
 
-  async findByServiceProviderId(serviceProviderId: string): Promise<CompanyEntity | null> {
+  async findByServiceProviderId(
+    serviceProviderId: string,
+  ): Promise<CompanyEntity | null> {
     const company = await this.prisma.company.findUnique({
       where: { serviceProviderId },
       include: this.fullInclude,
@@ -109,10 +114,7 @@ export class PrismaCompanyRepository implements CompanyRepository {
     // Catalog "active" = profile can operate + user email and phone verified
     const finalWhere = params.userVerified
       ? {
-          AND: [
-            { user: { emailVerified: true, phoneVerified: true } },
-            where,
-          ],
+          AND: [{ user: { emailVerified: true, phoneVerified: true } }, where],
         }
       : where;
 
@@ -195,7 +197,10 @@ export class PrismaCompanyRepository implements CompanyRepository {
   /**
    * Update the status of a company profile.
    */
-  async updateStatus(id: string, status: CompanyStatus): Promise<CompanyEntity> {
+  async updateStatus(
+    id: string,
+    status: CompanyStatus,
+  ): Promise<CompanyEntity> {
     const updated = await this.prisma.company.update({
       where: { id },
       data: { status: status as PrismaCompanyStatus, updatedAt: new Date() },
@@ -208,7 +213,11 @@ export class PrismaCompanyRepository implements CompanyRepository {
   /**
    * Update company trades (replace all)
    */
-  async updateTrades(companyId: string, tradeIds: string[], primaryTradeId?: string): Promise<void> {
+  async updateTrades(
+    companyId: string,
+    tradeIds: string[],
+    primaryTradeId?: string,
+  ): Promise<void> {
     // Delete existing trades
     await this.prisma.companyTrade.deleteMany({
       where: { companyId },
@@ -227,7 +236,11 @@ export class PrismaCompanyRepository implements CompanyRepository {
   /**
    * Update ServiceProvider rating for a company
    */
-  async updateRating(companyId: string, averageRating: number, totalReviews: number): Promise<void> {
+  async updateRating(
+    companyId: string,
+    averageRating: number,
+    totalReviews: number,
+  ): Promise<void> {
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
       select: { serviceProviderId: true },
@@ -241,4 +254,3 @@ export class PrismaCompanyRepository implements CompanyRepository {
     });
   }
 }
-

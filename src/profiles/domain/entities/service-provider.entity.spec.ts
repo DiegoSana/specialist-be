@@ -35,7 +35,9 @@ describe('ServiceProviderEntity', () => {
       const provider = ServiceProviderEntity.createForProfessional('sp-123');
       const after = new Date();
 
-      expect(provider.createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(provider.createdAt.getTime()).toBeGreaterThanOrEqual(
+        before.getTime(),
+      );
       expect(provider.createdAt.getTime()).toBeLessThanOrEqual(after.getTime());
     });
   });
@@ -256,4 +258,3 @@ describe('ServiceProviderEntity', () => {
     });
   });
 });
-

@@ -1,8 +1,9 @@
 #!/usr/bin/env ts-node
+/* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * Script de debugging para WhatsApp
  * Verifica configuración y estado de mensajes
- * 
+ *
  * Uso:
  *   npx ts-node test/scripts/whatsapp/debugging/debug-whatsapp.ts
  *   docker exec especialistas-api-dev npm run whatsapp:debug
@@ -11,7 +12,6 @@
 // Load environment variables from .env file
 // Try to load dotenv if available, otherwise rely on environment variables
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const dotenv = require('dotenv');
   const path = require('path');
   const envPath = path.join(__dirname, '../../../.env');
@@ -28,7 +28,7 @@ import { ConfigService } from '@nestjs/config';
 
 async function debugWhatsApp() {
   console.log('🔍 WhatsApp Debugging Tool\n');
-  
+
   const app = await NestFactory.createApplicationContext(AppModule);
   const prisma = app.get(PrismaService);
   const twilioService = app.get(TwilioClientService);
@@ -40,14 +40,22 @@ async function debugWhatsApp() {
     const accountSid = config.get<string>('TWILIO_ACCOUNT_SID');
     const authToken = config.get<string>('TWILIO_AUTH_TOKEN');
     const fromNumber = config.get<string>('TWILIO_WHATSAPP_FROM');
-    
-    console.log(`   Account SID: ${accountSid ? '✅ Configurado' : '❌ No configurado'}`);
-    console.log(`   Auth Token: ${authToken ? '✅ Configurado' : '❌ No configurado'}`);
+
+    console.log(
+      `   Account SID: ${accountSid ? '✅ Configurado' : '❌ No configurado'}`,
+    );
+    console.log(
+      `   Auth Token: ${authToken ? '✅ Configurado' : '❌ No configurado'}`,
+    );
     console.log(`   From Number: ${fromNumber || '❌ No configurado'}`);
-    console.log(`   Client Initialized: ${twilioService.isInitialized() ? '✅ Sí' : '❌ No'}`);
-    
+    console.log(
+      `   Client Initialized: ${twilioService.isInitialized() ? '✅ Sí' : '❌ No'}`,
+    );
+
     if (!twilioService.isInitialized()) {
-      console.log('\n⚠️  Twilio client no está inicializado. Verifica las variables de entorno.');
+      console.log(
+        '\n⚠️  Twilio client no está inicializado. Verifica las variables de entorno.',
+      );
       await app.close();
       return;
     }
@@ -80,7 +88,9 @@ async function debugWhatsApp() {
         console.log(`     Status: ${interaction.status}`);
         console.log(`     Twilio Status: ${interaction.twilioStatus || 'N/A'}`);
         console.log(`     Recipient: ${recipientPhone}`);
-        console.log(`     Sent At: ${interaction.sentAt?.toISOString() || 'N/A'}`);
+        console.log(
+          `     Sent At: ${interaction.sentAt?.toISOString() || 'N/A'}`,
+        );
         console.log(`     Request: ${interaction.request.status}`);
         console.log('');
       });
@@ -90,11 +100,13 @@ async function debugWhatsApp() {
     if (recentInteractions.length > 0 && twilioService.isInitialized()) {
       console.log('3️⃣ Checking Message Status in Twilio:');
       const twilioClient = twilioService.getClient();
-      
+
       for (const interaction of recentInteractions.slice(0, 3)) {
         if (interaction.twilioMessageSid) {
           try {
-            const message = await twilioClient.messages(interaction.twilioMessageSid).fetch();
+            const message = await twilioClient
+              .messages(interaction.twilioMessageSid)
+              .fetch();
             console.log(`   Message ${interaction.twilioMessageSid}:`);
             console.log(`     Status: ${message.status}`);
             console.log(`     Error Code: ${message.errorCode || 'N/A'}`);
@@ -103,7 +115,9 @@ async function debugWhatsApp() {
             console.log(`     From: ${message.from}`);
             console.log('');
           } catch (error: any) {
-            console.log(`   ❌ Error fetching message ${interaction.twilioMessageSid}: ${error.message}`);
+            console.log(
+              `   ❌ Error fetching message ${interaction.twilioMessageSid}: ${error.message}`,
+            );
           }
         }
       }
@@ -129,7 +143,9 @@ async function debugWhatsApp() {
     if (usersWithPhone.length === 0) {
       console.log('   ⚠️  No hay usuarios con teléfono verificado.');
     } else {
-      console.log(`   Found ${usersWithPhone.length} users with verified phone:`);
+      console.log(
+        `   Found ${usersWithPhone.length} users with verified phone:`,
+      );
       usersWithPhone.forEach((user) => {
         console.log(`     - ${user.firstName} ${user.lastName}: ${user.phone}`);
       });
@@ -139,13 +155,22 @@ async function debugWhatsApp() {
     console.log('\n5️⃣ ⚠️  IMPORTANT: Twilio Sandbox Requirements:');
     console.log('   Para que los mensajes lleguen en modo Sandbox:');
     console.log('   1. El número debe estar registrado en Twilio Sandbox');
-    console.log('   2. El usuario debe enviar primero: "join <codigo>" al número de Sandbox');
-    console.log('   3. El código de unión está en Twilio Console → WhatsApp → Sandbox');
-    console.log(`   4. Número de Sandbox: ${fromNumber || 'Configurar TWILIO_WHATSAPP_FROM'}`);
+    console.log(
+      '   2. El usuario debe enviar primero: "join <codigo>" al número de Sandbox',
+    );
+    console.log(
+      '   3. El código de unión está en Twilio Console → WhatsApp → Sandbox',
+    );
+    console.log(
+      `   4. Número de Sandbox: ${fromNumber || 'Configurar TWILIO_WHATSAPP_FROM'}`,
+    );
     console.log('\n   Para verificar en Twilio Console:');
-    console.log('   - Ve a: https://console.twilio.com/us1/develop/sms/sandbox');
-    console.log('   - Verifica que el número esté en la lista de "Sandbox participants"');
-
+    console.log(
+      '   - Ve a: https://console.twilio.com/us1/develop/sms/sandbox',
+    );
+    console.log(
+      '   - Verifica que el número esté en la lista de "Sandbox participants"',
+    );
   } catch (error: any) {
     console.error('❌ Error:', error.message);
     console.error(error.stack);
@@ -155,4 +180,3 @@ async function debugWhatsApp() {
 }
 
 debugWhatsApp().catch(console.error);
-

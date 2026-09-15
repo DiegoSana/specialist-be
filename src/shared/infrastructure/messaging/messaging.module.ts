@@ -11,4 +11,3 @@ import { MessageTemplateService } from './message-template.service';
   exports: [TwilioClientService, MessageTemplateService],
 })
 export class MessagingModule {}
-

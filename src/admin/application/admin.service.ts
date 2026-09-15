@@ -71,7 +71,11 @@ export class AdminService {
     );
   }
 
-  async getAllRequests(page: number = 1, limit: number = 10, status?: RequestStatus) {
+  async getAllRequests(
+    page: number = 1,
+    limit: number = 10,
+    status?: RequestStatus,
+  ) {
     return this.requestService.getAllRequestsForAdmin(page, limit, status);
   }
 

@@ -61,9 +61,10 @@ export class RequestsNotificationsHandler implements OnModuleInit {
   ): Promise<void> {
     try {
       // Use new providerName field, fallback to professionalName for backward compat
-      const providerName = event.payload.providerName || event.payload.professionalName;
+      const providerName =
+        event.payload.providerName || event.payload.professionalName;
       const { requestTitle, serviceProviderId } = event.payload;
-      
+
       const title = `${providerName} mostró interés en tu solicitud`;
       const body = requestTitle
         ? `"${requestTitle}" - Revisá los especialistas interesados y elegí el que prefieras.`
@@ -97,8 +98,9 @@ export class RequestsNotificationsHandler implements OnModuleInit {
   ): Promise<void> {
     try {
       // Use providerUserId directly (no lookup needed)
-      const { requestTitle, clientName, providerUserId, serviceProviderId } = event.payload;
-      
+      const { requestTitle, clientName, providerUserId, serviceProviderId } =
+        event.payload;
+
       const title = `${clientName} te asignó a una solicitud`;
       const body = requestTitle
         ? `"${requestTitle}" - Revisá los detalles de la solicitud.`
@@ -140,9 +142,10 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         providerName,
         serviceProviderId,
       } = event.payload;
-      
+
       // Use new field or fall back to deprecated
-      const displayProviderName = providerName || event.payload.professionalName;
+      const displayProviderName =
+        providerName || event.payload.professionalName;
       const clientMadeChange = changedByUserId === event.payload.clientId;
       const statusLabel = this.statusLabel(toStatus);
       const requestRef = requestTitle ? `"${requestTitle}"` : 'la solicitud';
@@ -170,11 +173,15 @@ export class RequestsNotificationsHandler implements OnModuleInit {
 
       // Notification for provider (if assigned)
       // Use providerUserId directly if available, otherwise fall back to lookup (backward compat)
-      const effectiveProviderUserId = providerUserId || (
-        event.payload.professionalId 
-          ? (await this.professionalService.getByIdOrFail(event.payload.professionalId)).userId 
-          : null
-      );
+      const effectiveProviderUserId =
+        providerUserId ||
+        (event.payload.professionalId
+          ? (
+              await this.professionalService.getByIdOrFail(
+                event.payload.professionalId,
+              )
+            ).userId
+          : null);
 
       if (effectiveProviderUserId) {
         const providerMadeChange = changedByUserId === effectiveProviderUserId;

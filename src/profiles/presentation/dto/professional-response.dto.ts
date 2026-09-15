@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ProfessionalStatus } from '@prisma/client';
-import { ProfessionalEntity, TradeInfo } from '../../domain/entities/professional.entity';
+import { ProfessionalEntity } from '../../domain/entities/professional.entity';
 
 /**
  * Nested DTO for trade information in professional response
@@ -173,7 +173,9 @@ export class ProfessionalResponseDto {
   /**
    * Convert multiple entities to DTOs.
    */
-  static fromEntities(entities: ProfessionalEntity[]): ProfessionalResponseDto[] {
+  static fromEntities(
+    entities: ProfessionalEntity[],
+  ): ProfessionalResponseDto[] {
     return entities.map((entity) => ProfessionalResponseDto.fromEntity(entity));
   }
 }
@@ -284,8 +286,11 @@ export class ProfessionalSearchResultDto {
   /**
    * Convert multiple entities to DTOs.
    */
-  static fromEntities(entities: ProfessionalEntity[]): ProfessionalSearchResultDto[] {
-    return entities.map((entity) => ProfessionalSearchResultDto.fromEntity(entity));
+  static fromEntities(
+    entities: ProfessionalEntity[],
+  ): ProfessionalSearchResultDto[] {
+    return entities.map((entity) =>
+      ProfessionalSearchResultDto.fromEntity(entity),
+    );
   }
 }
-

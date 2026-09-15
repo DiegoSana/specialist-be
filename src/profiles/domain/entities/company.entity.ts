@@ -16,11 +16,11 @@ export interface TradeInfo {
  */
 export enum CompanyStatus {
   PENDING_VERIFICATION = 'PENDING_VERIFICATION', // Awaiting admin verification
-  ACTIVE = 'ACTIVE',                             // Verified, can operate
-  VERIFIED = 'VERIFIED',                         // Verified + special badge
-  INACTIVE = 'INACTIVE',                         // Deactivated (user has Professional active)
-  REJECTED = 'REJECTED',                         // Verification failed
-  SUSPENDED = 'SUSPENDED',                       // Admin suspended
+  ACTIVE = 'ACTIVE', // Verified, can operate
+  VERIFIED = 'VERIFIED', // Verified + special badge
+  INACTIVE = 'INACTIVE', // Deactivated (user has Professional active)
+  REJECTED = 'REJECTED', // Verification failed
+  SUSPENDED = 'SUSPENDED', // Admin suspended
 }
 
 /**
@@ -125,8 +125,10 @@ export class CompanyEntity {
    * Only ACTIVE or VERIFIED status allows operation.
    */
   canOperate(): boolean {
-    return this.status === CompanyStatus.ACTIVE ||
-           this.status === CompanyStatus.VERIFIED;
+    return (
+      this.status === CompanyStatus.ACTIVE ||
+      this.status === CompanyStatus.VERIFIED
+    );
   }
 
   /**
@@ -134,10 +136,12 @@ export class CompanyEntity {
    * Can activate from PENDING, INACTIVE, or re-activate from ACTIVE/VERIFIED.
    */
   canBeActivated(): boolean {
-    return this.status === CompanyStatus.PENDING_VERIFICATION ||
-           this.status === CompanyStatus.INACTIVE ||
-           this.status === CompanyStatus.ACTIVE ||
-           this.status === CompanyStatus.VERIFIED;
+    return (
+      this.status === CompanyStatus.PENDING_VERIFICATION ||
+      this.status === CompanyStatus.INACTIVE ||
+      this.status === CompanyStatus.ACTIVE ||
+      this.status === CompanyStatus.VERIFIED
+    );
   }
 
   /**
@@ -145,8 +149,10 @@ export class CompanyEntity {
    * Only ACTIVE or VERIFIED can be deactivated.
    */
   canBeDeactivated(): boolean {
-    return this.status === CompanyStatus.ACTIVE ||
-           this.status === CompanyStatus.VERIFIED;
+    return (
+      this.status === CompanyStatus.ACTIVE ||
+      this.status === CompanyStatus.VERIFIED
+    );
   }
 
   /**
@@ -215,7 +221,10 @@ export class CompanyEntity {
   // Helper Methods
   // ─────────────────────────────────────────────────────────────
 
-  static buildAuthContext(userId: string, isAdmin: boolean): CompanyAuthContext {
+  static buildAuthContext(
+    userId: string,
+    isAdmin: boolean,
+  ): CompanyAuthContext {
     return { userId, isAdmin };
   }
 

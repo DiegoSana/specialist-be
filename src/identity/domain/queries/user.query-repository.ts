@@ -1,9 +1,9 @@
 /**
  * User Query Repository
- * 
+ *
  * Handles read-only queries that return DTOs or statistics instead of domain entities.
  * Separated from UserRepository (aggregate repository) to maintain clear boundaries.
- * 
+ *
  * See: docs/architecture/QUERY_REPOSITORIES.md
  */
 
@@ -23,10 +23,7 @@ export interface UserQueryRepository {
   /**
    * List all users for admin (paginated)
    */
-  findAllForAdmin(params: {
-    skip: number;
-    take: number;
-  }): Promise<{
+  findAllForAdmin(params: { skip: number; take: number }): Promise<{
     users: Array<{
       id: string;
       email: string;
@@ -43,6 +40,3 @@ export interface UserQueryRepository {
 
 // Token for dependency injection
 export const USER_QUERY_REPOSITORY = Symbol('UserQueryRepository');
-
-
-

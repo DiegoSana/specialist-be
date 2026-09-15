@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CompanyEntity, CompanyStatus } from '../../domain/entities/company.entity';
+import {
+  CompanyEntity,
+  CompanyStatus,
+} from '../../domain/entities/company.entity';
 
 class CompanyTradeDto {
   @ApiProperty()
@@ -64,7 +67,9 @@ export class CompanyResponseDto {
   @ApiPropertyOptional()
   foundedYear: number | null;
 
-  @ApiPropertyOptional({ description: 'Employee count range (e.g., "1-5", "6-20")' })
+  @ApiPropertyOptional({
+    description: 'Employee count range (e.g., "1-5", "6-20")',
+  })
   employeeCount: string | null;
 
   @ApiPropertyOptional()
@@ -206,7 +211,9 @@ export class CompanySearchResultDto {
   @ApiPropertyOptional()
   foundedYear: number | null;
 
-  @ApiPropertyOptional({ description: 'Employee count range (e.g., "1-5", "6-20")' })
+  @ApiPropertyOptional({
+    description: 'Employee count range (e.g., "1-5", "6-20")',
+  })
   employeeCount: string | null;
 
   @ApiProperty()

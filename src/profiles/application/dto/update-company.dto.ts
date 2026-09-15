@@ -26,7 +26,10 @@ export class UpdateCompanyDto {
   @IsString()
   taxId?: string;
 
-  @ApiPropertyOptional({ description: 'Trade IDs the company works in', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Trade IDs the company works in',
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1, { message: 'At least one trade is required' })
@@ -45,7 +48,10 @@ export class UpdateCompanyDto {
   @Max(new Date().getFullYear())
   foundedYear?: number;
 
-  @ApiPropertyOptional({ description: 'Number of employees range (e.g., "1-5", "6-20", "21-50", "50+")' })
+  @ApiPropertyOptional({
+    description:
+      'Number of employees range (e.g., "1-5", "6-20", "21-50", "50+")',
+  })
   @IsOptional()
   @IsString()
   employeeCount?: string;
@@ -81,4 +87,3 @@ export class UpdateCompanyDto {
   @IsString({ each: true })
   gallery?: string[];
 }
-

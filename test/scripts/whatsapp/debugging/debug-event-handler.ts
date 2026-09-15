@@ -1,14 +1,14 @@
 #!/usr/bin/env ts-node
+/* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * Script para debuggear el handler de eventos
- * 
+ *
  * Uso:
  *   docker exec especialistas-api-dev npx ts-node test/scripts/whatsapp/debugging/debug-event-handler.ts <interaction-id>
  */
 
 // Load environment variables
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const dotenv = require('dotenv');
   const path = require('path');
   const envPath = path.join(__dirname, '../../../.env');
@@ -36,7 +36,9 @@ async function debugEventHandler(interactionId?: string) {
     // 1. Verificar que el EventBus está disponible
     console.log('\n1️⃣ EventBus Status:');
     console.log(`   Type: ${typeof eventBus}`);
-    console.log(`   Has 'publish' method: ${typeof eventBus?.publish === 'function'}`);
+    console.log(
+      `   Has 'publish' method: ${typeof eventBus?.publish === 'function'}`,
+    );
     console.log(`   Has 'on' method: ${typeof eventBus?.on === 'function'}`);
 
     // 2. Verificar listeners registrados
@@ -71,8 +73,12 @@ async function debugEventHandler(interactionId?: string) {
 
       if (interaction) {
         console.log(`   Status: ${interaction.status}`);
-        console.log(`   Response Intent: ${interaction.responseIntent || 'N/A'}`);
-        console.log(`   Response Content: ${interaction.responseContent || 'N/A'}`);
+        console.log(
+          `   Response Intent: ${interaction.responseIntent || 'N/A'}`,
+        );
+        console.log(
+          `   Response Content: ${interaction.responseContent || 'N/A'}`,
+        );
         console.log(`   Request ID: ${interaction.requestId}`);
         console.log(`   Request Status: ${interaction.request.status}`);
         console.log(`   Request Title: ${interaction.request.title}`);
@@ -121,10 +127,13 @@ async function debugEventHandler(interactionId?: string) {
 
     console.log('\n' + '='.repeat(60));
     console.log('\n💡 Tips:');
-    console.log('   - Check logs: docker logs especialistas-api-dev | grep -i "event\|handler"');
+    console.log(
+      '   - Check logs: docker logs especialistas-api-dev | grep -i "event\|handler"',
+    );
     console.log('   - Verify handler is registered on startup');
-    console.log('   - Check if event is being published when interaction is marked as responded\n');
-
+    console.log(
+      '   - Check if event is being published when interaction is marked as responded\n',
+    );
   } catch (error: any) {
     console.error(`\n❌ Error: ${error.message}`);
     console.error(error.stack);
@@ -135,5 +144,3 @@ async function debugEventHandler(interactionId?: string) {
 
 const interactionId = process.argv[2];
 debugEventHandler(interactionId).catch(console.error);
-
-

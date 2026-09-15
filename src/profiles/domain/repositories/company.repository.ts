@@ -14,7 +14,9 @@ export interface CompanySearchParams {
 export interface CompanyRepository {
   findById(id: string): Promise<CompanyEntity | null>;
   findByUserId(userId: string): Promise<CompanyEntity | null>;
-  findByServiceProviderId(serviceProviderId: string): Promise<CompanyEntity | null>;
+  findByServiceProviderId(
+    serviceProviderId: string,
+  ): Promise<CompanyEntity | null>;
   findByTaxId(taxId: string): Promise<CompanyEntity | null>;
   search(params: CompanySearchParams): Promise<CompanyEntity[]>;
   save(company: CompanyEntity): Promise<CompanyEntity>;
@@ -29,4 +31,3 @@ export interface CompanyRepository {
 
 // Token for dependency injection
 export const COMPANY_REPOSITORY = Symbol('CompanyRepository');
-

@@ -1,7 +1,6 @@
 import * as request from 'supertest';
 import {
   TestContext,
-  TestUser,
   createTestApp,
   closeTestApp,
   cleanDatabase,
@@ -265,7 +264,10 @@ describe('Companies (e2e)', () => {
     });
 
     it('should filter by trade', async () => {
-      const electricityTrade = await getOrCreateTrade(ctx.prisma, 'Electricidad');
+      const electricityTrade = await getOrCreateTrade(
+        ctx.prisma,
+        'Electricidad',
+      );
       await createTestCompany(ctx, {
         email: 'electrician@test.com',
         companyName: 'Electricistas Unidos',
@@ -421,4 +423,3 @@ describe('Companies (e2e)', () => {
     });
   });
 });
-

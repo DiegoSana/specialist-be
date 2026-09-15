@@ -24,15 +24,17 @@ export class ReviewsNotificationsHandler implements OnModuleInit {
       return;
     }
 
-    this.eventBus.on(ReviewApprovedEvent.EVENT_NAME, (event: ReviewApprovedEvent) =>
-      this.onReviewApproved(event),
+    this.eventBus.on(
+      ReviewApprovedEvent.EVENT_NAME,
+      (event: ReviewApprovedEvent) => this.onReviewApproved(event),
     );
   }
 
   private async onReviewApproved(event: ReviewApprovedEvent): Promise<void> {
     // Use new field, fall back to deprecated for backward compat
     const providerUserId = event.payload.providerUserId;
-    const { reviewId, rating, comment, serviceProviderId, providerType } = event.payload;
+    const { reviewId, rating, comment, serviceProviderId, providerType } =
+      event.payload;
 
     try {
       const stars = '⭐'.repeat(rating);
@@ -68,4 +70,3 @@ export class ReviewsNotificationsHandler implements OnModuleInit {
     }
   }
 }
-

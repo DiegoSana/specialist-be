@@ -68,7 +68,8 @@ export class ProfileActivationService {
     }
 
     const profileCanOperate =
-      (professional?.canOperate?.() ?? false) || (company?.canOperate?.() ?? false);
+      (professional?.canOperate?.() ?? false) ||
+      (company?.canOperate?.() ?? false);
     const hasActiveProviderProfile =
       user.isFullyVerified() && profileCanOperate;
 

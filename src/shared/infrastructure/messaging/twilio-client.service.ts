@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 /**
  * Shared Twilio client service.
  * Centralizes Twilio client initialization to avoid duplication.
- * 
+ *
  * This service provides a singleton Twilio client instance that can be
  * used by different services (Verify, Messaging, etc.).
  */
@@ -63,4 +63,3 @@ export class TwilioClientService implements OnModuleInit {
     return !!this.twilioClient;
   }
 }
-
