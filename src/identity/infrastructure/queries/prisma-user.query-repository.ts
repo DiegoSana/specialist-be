@@ -40,7 +40,12 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
     };
   }
 
-  async findAllForAdmin(params: { skip: number; take: number }): Promise<{
+  async findAllForAdmin(params: {
+    skip: number;
+    take: number;
+    search?: string;
+    type?: 'CLIENT' | 'PROFESSIONAL' | 'COMPANY';
+  }): Promise<{
     users: Array<{
       id: string;
       email: string;
@@ -48,15 +53,38 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
       lastName: string | null;
       status: string;
       createdAt: Date;
-      client: { id: string } | null;
-      professional: { id: string } | null;
+      updatedAt: Date;
+      isAdmin: boolean;
+      hasClientProfile: boolean;
+      hasProfessionalProfile: boolean;
+      hasCompanyProfile: boolean;
     }>;
     total: number;
   }> {
+    const search = params.search?.trim();
+    const where: any = search
+      ? {
+          OR: [
+            { email: { contains: search, mode: 'insensitive' } },
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+
+    if (params.type === 'CLIENT') {
+      where.client = { isNot: null };
+    } else if (params.type === 'PROFESSIONAL') {
+      where.professional = { isNot: null };
+    } else if (params.type === 'COMPANY') {
+      where.company = { isNot: null };
+    }
+
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         skip: params.skip,
         take: params.take,
+        where,
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
@@ -64,7 +92,9 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
           firstName: true,
           lastName: true,
           status: true,
+          isAdmin: true,
           createdAt: true,
+          updatedAt: true,
           client: {
             select: {
               id: true,
@@ -75,11 +105,31 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
               id: true,
             },
           },
+          company: {
+            select: {
+              id: true,
+            },
+          },
         },
       }),
-      this.prisma.user.count(),
+      this.prisma.user.count({ where }),
     ]);
 
-    return { users, total };
+    return {
+      users: users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        status: u.status,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+        isAdmin: u.isAdmin,
+        hasClientProfile: !!u.client,
+        hasProfessionalProfile: !!u.professional,
+        hasCompanyProfile: !!u.company,
+      })),
+      total,
+    };
   }
 }

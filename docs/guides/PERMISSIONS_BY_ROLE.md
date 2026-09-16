@@ -95,7 +95,8 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - Listar y ver profesionales y empresas.
 - Cambiar estado de profesionales y empresas (verificar, suspender, etc.).
 - Verificar empresas (`POST /companies/:id/verify`).
-- Listar requests con filtros (`GET /admin/requests`).
+- Listar requests con filtros (`GET /admin/requests`) y ver el detalle completo de cualquier
+  request, sin el chequeo de `canBeViewedBy` de participantes (`GET /admin/requests/:id`).
 - Listar notificaciones y ver estadísticas de delivery (`GET /admin/notifications`, `GET /admin/notifications/stats`).
 - Reenviar notificaciones fallidas (`POST /admin/notifications/:id/resend`).
 - Ver el visor de conversaciones de WhatsApp: listar conversaciones y ver el hilo completo de una

@@ -7,8 +7,10 @@ import { UserService } from '../../identity/application/services/user.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
 import { CompanyService } from '../../profiles/application/services/company.service';
 import { RequestService } from '../../requests/application/services/request.service';
+import { RequestInterestService } from '../../requests/application/services/request-interest.service';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { RequestStatus } from '@prisma/client';
+import { AdminRequestDetailResponseDto } from '../presentation/dto/admin-request-detail-response.dto';
 
 @Injectable()
 export class AdminService {
@@ -17,10 +19,16 @@ export class AdminService {
     private readonly professionalService: ProfessionalService,
     private readonly companyService: CompanyService,
     private readonly requestService: RequestService,
+    private readonly requestInterestService: RequestInterestService,
   ) {}
 
-  async getAllUsers(page: number = 1, limit: number = 10) {
-    return this.userService.getAllUsersForAdmin(page, limit);
+  async getAllUsers(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    type?: 'CLIENT' | 'PROFESSIONAL' | 'COMPANY',
+  ) {
+    return this.userService.getAllUsersForAdmin(page, limit, search, type);
   }
 
   async getUserById(userId: string, actingUser: UserEntity) {
@@ -77,6 +85,27 @@ export class AdminService {
     status?: RequestStatus,
   ) {
     return this.requestService.getAllRequestsForAdmin(page, limit, status);
+  }
+
+  /**
+   * Full admin view of a single request: no `canBeViewedBy` ownership check -
+   * any admin may view any request's full detail (client, provider, interests).
+   */
+  async getRequestByIdForAdmin(
+    requestId: string,
+    actingUser: UserEntity,
+  ): Promise<AdminRequestDetailResponseDto> {
+    const request = await this.requestService.findById(requestId);
+    const interestedProviders =
+      await this.requestInterestService.getInterestedProviders(requestId, {
+        userId: actingUser.id,
+        isAdmin: true,
+      });
+
+    return AdminRequestDetailResponseDto.fromEntity(
+      request,
+      interestedProviders,
+    );
   }
 
   async getAllCompanies(page: number = 1, limit: number = 10) {

@@ -7,7 +7,7 @@
  * See: docs/architecture/QUERY_REPOSITORIES.md
  */
 
-import { RequestStatus } from '@prisma/client';
+import { RequestStatus, ProviderType } from '@prisma/client';
 
 export type RequestStats = {
   total: number;
@@ -44,6 +44,8 @@ export interface RequestQueryRepository {
       };
       provider: {
         id: string;
+        type: ProviderType;
+        name: string;
       } | null;
       trade: {
         id: string;

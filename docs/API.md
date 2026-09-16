@@ -166,13 +166,14 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/admin/users` | List all users (paginated) |
+| `GET` | `/admin/users` | List all users (paginated, optional `search` on email/firstName/lastName, optional `type` = `CLIENT`\|`PROFESSIONAL`\|`COMPANY` to filter by profile). Each item includes `isAdmin`, `hasClientProfile`, `hasProfessionalProfile`, `hasCompanyProfile`, `updatedAt` |
 | `GET` | `/admin/users/:id` | Get user by ID |
 | `PUT` | `/admin/users/:id/status` | Update user status |
 | `PUT` | `/admin/users/:id/verification` | Manually set email/phone verified (body: `{ emailVerified?: boolean, phoneVerified?: boolean }`) |
 | `GET` | `/admin/professionals` | List all professionals (paginated) |
 | `PUT` | `/admin/professionals/:id/status` | Update professional status |
-| `GET` | `/admin/requests` | List all requests (paginated, optional status filter) |
+| `GET` | `/admin/requests` | List all requests (paginated, optional status filter). Each item's `provider` is `{ id, type: 'PROFESSIONAL' \| 'COMPANY', name } \| null` |
+| `GET` | `/admin/requests/:id` | Full request detail: `client`, `trade`, a unified `provider` (with `trades` for Professional/Company), and `interestedProviders` (`InterestedProfessionalResponseDto[]`). No participant-only ownership check - any admin can view any request |
 | `GET` | `/admin/whatsapp/config` | Get `{ devMode, availableFollowUpRules? }` |
 | `GET` | `/admin/whatsapp/conversations` | List WhatsApp conversations (paginated, optional `search`) |
 | `GET` | `/admin/whatsapp/conversations/:requestId` | Get the full WhatsApp message thread for a request |

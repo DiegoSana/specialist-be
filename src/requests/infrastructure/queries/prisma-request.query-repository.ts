@@ -4,7 +4,7 @@ import {
   RequestQueryRepository,
   RequestStats,
 } from '../../domain/queries/request.query-repository';
-import { RequestStatus } from '@prisma/client';
+import { RequestStatus, ProviderType } from '@prisma/client';
 
 @Injectable()
 export class PrismaRequestQueryRepository implements RequestQueryRepository {
@@ -78,6 +78,15 @@ export class PrismaRequestQueryRepository implements RequestQueryRepository {
           provider: {
             select: {
               id: true,
+              type: true,
+              professional: {
+                select: {
+                  user: { select: { firstName: true, lastName: true } },
+                },
+              },
+              company: {
+                select: { companyName: true },
+              },
             },
           },
           trade: {
@@ -91,6 +100,37 @@ export class PrismaRequestQueryRepository implements RequestQueryRepository {
       this.prisma.request.count({ where }),
     ]);
 
-    return { requests, total };
+    return {
+      requests: requests.map((request) => ({
+        ...request,
+        provider: this.resolveProvider(request.provider),
+      })),
+      total,
+    };
+  }
+
+  private resolveProvider(
+    provider: any,
+  ): { id: string; type: ProviderType; name: string } | null {
+    if (!provider) return null;
+
+    if (provider.professional?.user) {
+      const user = provider.professional.user;
+      return {
+        id: provider.id,
+        type: provider.type,
+        name: `${user.firstName} ${user.lastName}`.trim(),
+      };
+    }
+
+    if (provider.company) {
+      return {
+        id: provider.id,
+        type: provider.type,
+        name: provider.company.companyName,
+      };
+    }
+
+    return null;
   }
 }

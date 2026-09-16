@@ -25,6 +25,7 @@ import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guar
 import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
+import { AdminRequestDetailResponseDto } from './dto/admin-request-detail-response.dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -37,15 +38,31 @@ export class AdminController {
   @ApiOperation({ summary: 'Get all users (Admin only)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Case-insensitive match on email, firstName or lastName',
+  })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    enum: ['CLIENT', 'PROFESSIONAL', 'COMPANY'],
+    description: 'Filter to users who have this profile type',
+  })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async getAllUsers(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('type') type?: 'CLIENT' | 'PROFESSIONAL' | 'COMPANY',
   ) {
     return this.adminService.getAllUsers(
       page ? parseInt(page) : 1,
       limit ? parseInt(limit) : 10,
+      search,
+      type,
     );
   }
 
@@ -152,6 +169,23 @@ export class AdminController {
       limit ? parseInt(limit) : 10,
       status as any,
     );
+  }
+
+  @Get('requests/:id')
+  @ApiOperation({
+    summary: 'Get request by ID, full admin detail (Admin only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Request retrieved successfully',
+    type: AdminRequestDetailResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Request not found' })
+  async getRequestById(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.adminService.getRequestByIdForAdmin(id, user);
   }
 
   @Get('companies')

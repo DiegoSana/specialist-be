@@ -5,11 +5,14 @@ import { UserService } from '../../identity/application/services/user.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
 import { CompanyService } from '../../profiles/application/services/company.service';
 import { RequestService } from '../../requests/application/services/request.service';
+import { RequestInterestService } from '../../requests/application/services/request-interest.service';
+import { RequestInterestEntity } from '../../requests/domain/entities/request-interest.entity';
 import {
   createMockUser,
   createMockProfessional,
+  createMockRequest,
 } from '../../__mocks__/test-utils';
-import { UserStatus, ProfessionalStatus } from '@prisma/client';
+import { UserStatus, ProfessionalStatus, RequestStatus } from '@prisma/client';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -17,6 +20,7 @@ describe('AdminService', () => {
   let mockProfessionalService: any;
   let mockCompanyService: any;
   let mockRequestService: any;
+  let mockRequestInterestService: any;
 
   beforeEach(async () => {
     mockUserService = {
@@ -47,6 +51,11 @@ describe('AdminService', () => {
     mockRequestService = {
       getAllRequestsForAdmin: jest.fn(),
       getRequestStats: jest.fn(),
+      findById: jest.fn(),
+    };
+
+    mockRequestInterestService = {
+      getInterestedProviders: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -56,6 +65,10 @@ describe('AdminService', () => {
         { provide: ProfessionalService, useValue: mockProfessionalService },
         { provide: CompanyService, useValue: mockCompanyService },
         { provide: RequestService, useValue: mockRequestService },
+        {
+          provide: RequestInterestService,
+          useValue: mockRequestInterestService,
+        },
       ],
     }).compile();
 
@@ -108,7 +121,12 @@ describe('AdminService', () => {
       expect(result.meta.page).toBe(1);
       expect(result.meta.limit).toBe(10);
       expect(result.meta.totalPages).toBe(2);
-      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(1, 10);
+      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        undefined,
+      );
     });
 
     it('should handle empty results', async () => {
@@ -142,7 +160,12 @@ describe('AdminService', () => {
 
       await service.getAllUsers(3, 5);
 
-      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(3, 5);
+      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(
+        3,
+        5,
+        undefined,
+        undefined,
+      );
     });
 
     it('should use default pagination values', async () => {
@@ -158,7 +181,44 @@ describe('AdminService', () => {
 
       await service.getAllUsers();
 
-      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(1, 10);
+      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        undefined,
+      );
+    });
+
+    it('should pass the search term through to the user service', async () => {
+      mockUserService.getAllUsersForAdmin.mockResolvedValue({
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 0 },
+      });
+
+      await service.getAllUsers(1, 10, 'jane');
+
+      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(
+        1,
+        10,
+        'jane',
+        undefined,
+      );
+    });
+
+    it('should pass the type filter through to the user service', async () => {
+      mockUserService.getAllUsersForAdmin.mockResolvedValue({
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 0 },
+      });
+
+      await service.getAllUsers(1, 10, undefined, 'CLIENT');
+
+      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        'CLIENT',
+      );
     });
   });
 
@@ -354,6 +414,86 @@ describe('AdminService', () => {
       );
 
       expect(result.status).toBe(ProfessionalStatus.REJECTED);
+    });
+  });
+
+  describe('getRequestByIdForAdmin', () => {
+    const adminUser = createMockUser({ id: 'admin-123', isAdmin: true });
+
+    it('should return full request detail with resolved provider and interested providers', async () => {
+      const request = createMockRequest({
+        id: 'request-123',
+        title: 'Fix the sink',
+        status: RequestStatus.PENDING,
+      });
+      (request as any).client = {
+        id: 'client-1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'jane@test.com',
+        profilePictureUrl: null,
+      };
+      (request as any).trade = { id: 'trade-1', name: 'Plumbing' };
+      (request as any).provider = {
+        id: 'provider-1',
+        type: 'PROFESSIONAL',
+      };
+      (request as any).professional = {
+        trades: [{ id: 'trade-1', name: 'Plumbing' }],
+        user: { firstName: 'John', lastName: 'Smith' },
+      };
+      const interest = new RequestInterestEntity(
+        'interest-1',
+        'request-123',
+        'provider-2',
+        'Interested!',
+        new Date(),
+      );
+
+      mockRequestService.findById.mockResolvedValue(request);
+      mockRequestInterestService.getInterestedProviders.mockResolvedValue([
+        interest,
+      ]);
+
+      const result = await service.getRequestByIdForAdmin(
+        'request-123',
+        adminUser,
+      );
+
+      expect(mockRequestService.findById).toHaveBeenCalledWith('request-123');
+      expect(
+        mockRequestInterestService.getInterestedProviders,
+      ).toHaveBeenCalledWith('request-123', {
+        userId: 'admin-123',
+        isAdmin: true,
+      });
+      expect(result.id).toBe('request-123');
+      expect(result.client).toEqual({
+        id: 'client-1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'jane@test.com',
+        profilePictureUrl: null,
+      });
+      expect(result.trade).toEqual({ id: 'trade-1', name: 'Plumbing' });
+      expect(result.provider).toEqual({
+        id: 'provider-1',
+        type: 'PROFESSIONAL',
+        name: 'John Smith',
+        trades: [{ id: 'trade-1', name: 'Plumbing' }],
+      });
+      expect(result.interestedProviders).toHaveLength(1);
+      expect(result.interestedProviders[0].id).toBe('interest-1');
+    });
+
+    it('should propagate NotFoundException when the request does not exist', async () => {
+      mockRequestService.findById.mockRejectedValue(
+        new NotFoundException('Request not found'),
+      );
+
+      await expect(
+        service.getRequestByIdForAdmin('missing', adminUser),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });
