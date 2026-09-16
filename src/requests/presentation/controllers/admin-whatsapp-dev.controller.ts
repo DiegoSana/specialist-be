@@ -24,13 +24,16 @@ import { WhatsAppInteractionResponseDto } from '../dto/whatsapp-interaction-resp
  * Dev-only mutating endpoints for the local (no-Twilio) WhatsApp test loop:
  * simulate an inbound reply, or force-trigger a follow-up rule immediately.
  *
- * This controller is registered ONLY when NODE_ENV !== 'production' (see
- * requests.module.ts) so in production these routes 404 at Nest's routing
- * layer, before any handler runs. On top of that, every handler also calls
- * through AdminWhatsAppService.isDevMode() (belt-and-suspenders for a non-prod
- * environment pointed at a real/staging Twilio backend). Both cases return
- * 404 (NotFoundException), never 403, when dev mode is off - a production-like
- * environment should reveal nothing about the feature's existence.
+ * This controller is registered ONLY when NODE_ENV !== 'production' OR
+ * WHATSAPP_DEV_MODE_ENABLED === 'true' (see requests.module.ts) so on a real
+ * production deploy these routes 404 at Nest's routing layer, before any
+ * handler runs. On top of that, every handler also calls through
+ * AdminWhatsAppService.isDevMode() (belt-and-suspenders requiring
+ * WHATSAPP_PROVIDER=local, so an environment pointed at a real/staging Twilio
+ * backend never gets dev endpoints even with WHATSAPP_DEV_MODE_ENABLED set).
+ * Both cases return 404 (NotFoundException), never 403, when dev mode is off -
+ * a production-like environment should reveal nothing about the feature's
+ * existence.
  */
 @ApiTags('Admin - WhatsApp (dev)')
 @ApiBearerAuth()

@@ -32,8 +32,9 @@ Docs: `docs/guides/PERMISSIONS_BY_ROLE.md`, `docs/guides/whatsapp/README.md`,
 Admin (`/admin/whatsapp`, `JwtAuthGuard` + `AdminGuard`): `GET config`, `GET conversations`,
 `GET conversations/:requestId` always registered (`AdminWhatsAppController`); `POST
 conversations/:requestId/simulate-reply` and `POST conversations/:requestId/trigger-followup`
-live in a separate `AdminWhatsAppDevController`, registered only when `NODE_ENV !== 'production'`,
-and additionally 404 (not 403) at runtime unless `isWhatsAppDevMode()` is true.
+live in a separate `AdminWhatsAppDevController`, registered only when `NODE_ENV !== 'production'`
+OR `WHATSAPP_DEV_MODE_ENABLED=true` (pre-launch opt-in for the "production" Fly deploy, see
+below), and additionally 404 (not 403) at runtime unless `isWhatsAppDevMode()` is true.
 
 ## Domain
 
@@ -71,7 +72,8 @@ comment in the file), `PrismaRequestInterestRepository`, `PrismaRequestInteracti
 network call, `local-<uuid>` message ids) when `WHATSAPP_PROVIDER=local`. `WHATSAPP_PROVIDER`
 defaults to `twilio` so production can never silently go fake; `isWhatsAppDevMode()`
 (`application/services/whatsapp-dev-mode.ts`) additionally requires `NODE_ENV !== 'production'`
-and gates the dev-only admin endpoints (see `docs/guides/whatsapp/README.md`).
+(or the explicit `WHATSAPP_DEV_MODE_ENABLED=true` override) and gates the dev-only admin
+endpoints (see `docs/guides/whatsapp/README.md`).
 Jobs: `FollowUpSchedulerJob` (hourly; also exposes `forceTriggerRule(ruleName, requestId)` for the
 admin "trigger now" endpoint), `WhatsAppDispatchJob` (1 min), `MessageStatusCheckerJob`
 (5 min); flags `WHATSAPP_FOLLOWUP_ENABLED`, `WHATSAPP_STATUS_CHECK_ENABLED`.
