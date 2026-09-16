@@ -84,6 +84,7 @@ fly secrets list
 |----------|-------------|---------|
 | `FRONTEND_URL` | Frontend URL for redirects | `http://localhost:3000` |
 | `EMAIL_PROVIDER` | Email provider: `smtp` or `mailgun` | `smtp` |
+| `WHATSAPP_PROVIDER` | WhatsApp provider: `twilio` (real Twilio API) or `local` (no-network fake adapter for the admin conversations test loop, see `docs/guides/whatsapp/README.md`). Defaults to `twilio` so production never silently goes fake; set to `local` for dev. | `twilio` |
 | `WHATSAPP_FOLLOWUP_ENABLED` | Enable WhatsApp followup | `true` |
 | `NOTIFICATIONS_DISPATCH_ENABLED` | Enable background notification processing | `true` |
 | `NOTIFICATIONS_DISPATCH_BATCH_SIZE` | Batch size for notifications | `25` |

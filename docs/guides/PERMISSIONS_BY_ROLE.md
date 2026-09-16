@@ -98,6 +98,15 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - Listar requests con filtros (`GET /admin/requests`).
 - Listar notificaciones y ver estadísticas de delivery (`GET /admin/notifications`, `GET /admin/notifications/stats`).
 - Reenviar notificaciones fallidas (`POST /admin/notifications/:id/resend`).
+- Ver el visor de conversaciones de WhatsApp: listar conversaciones y ver el hilo completo de una
+  solicitud (`GET /admin/whatsapp/config`, `GET /admin/whatsapp/conversations`,
+  `GET /admin/whatsapp/conversations/:requestId`). Requiere solo `isAdminUser()`.
+- Simular una respuesta entrante de WhatsApp y forzar el disparo inmediato de una regla de
+  follow-up (`POST /admin/whatsapp/conversations/:requestId/simulate-reply`,
+  `POST /admin/whatsapp/conversations/:requestId/trigger-followup`). Además de `isAdminUser()`,
+  estas dos rutas requieren que el backend esté en **dev mode** (`NODE_ENV !== 'production'` **y**
+  `WHATSAPP_PROVIDER=local`); si no, responden 404 (no 403) tanto porque el controller que las
+  expone no se registra en producción como porque el servicio vuelve a validar en runtime.
 - Ver reviews pendientes de moderación (`GET /reviews/admin/pending`).
 - Aprobar o rechazar reviews (`POST /reviews/:id/approve`, `POST /reviews/:id/reject`).
 

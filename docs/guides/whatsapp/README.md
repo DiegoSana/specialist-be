@@ -19,6 +19,52 @@ El job `FollowUpSchedulerJob` corre cada hora, busca solicitudes que cumplan est
 
 ---
 
+## 🧪 Loop de testing local sin Twilio (admin conversations viewer)
+
+Para probar todo el flujo de WhatsApp (mensajes salientes, respuestas entrantes, cambios de
+estado disparados por la respuesta) sin gastar créditos de Twilio ni depender del Sandbox:
+
+1. **Activar el adapter local**: `WHATSAPP_PROVIDER=local` (además de `NODE_ENV` distinto de
+   `production`). Con esta combinación `isWhatsAppDevMode()` devuelve `true`. `WHATSAPP_PROVIDER`
+   por defecto es `twilio` (ver `docs/guides/ENVIRONMENT_VARIABLES.md`); en `docker-compose.dev.yml`
+   el default es `local` para que el loop local funcione out-of-the-box.
+2. Con `WHATSAPP_PROVIDER=local`, `LocalWhatsAppAdapter` (`src/requests/infrastructure/adapters/local-whatsapp.adapter.ts`)
+   reemplaza a `TwilioWhatsAppAdapter` detrás del mismo `WhatsAppMessagingPort`: `sendMessage`
+   genera un id `local-<uuid>`, loguea el mensaje y no hace ninguna llamada de red;
+   `getMessageStatus` siempre devuelve `delivered`. La elección se resuelve en
+   `whatsapp-messaging.factory.ts`, igual que `email-sender.factory.ts` para `EMAIL_PROVIDER`.
+3. Usar el visor de conversaciones en `/admin/whatsapp` (consumido por specialist-admin):
+   - `GET /admin/whatsapp/config` → `{ devMode, availableFollowUpRules? }` (los nombres de regla
+     solo se listan en dev mode).
+   - `GET /admin/whatsapp/conversations` → lista paginada de conversaciones (una fila por
+     solicitud con al menos una interacción), con `search` opcional por título/cliente/proveedor.
+   - `GET /admin/whatsapp/conversations/:requestId` → hilo completo de mensajes de esa solicitud.
+   - `POST /admin/whatsapp/conversations/:requestId/trigger-followup` (body `{ ruleName }`, dev
+     mode only) → dispara una regla de follow-up **ahora mismo**, sin esperar al cron horario ni
+     backdatear la solicitud: valida que el estado actual de la solicitud (o, para la regla
+     PENDING-con-interesados, que tenga interesados) cumpla la condición de la regla, y que el
+     destinatario tenga teléfono verificado; si no, responde 400 pidiendo cambiar el estado
+     primero. A diferencia del cron, **no** aplica los guards de "ya hay un follow-up pendiente" ni
+     "interacción hace menos de 1 día" (esos existen solo para que el cron automático no haga
+     spam; esto es una acción humana explícita). Envía el mensaje inmediatamente (no espera al
+     `WhatsAppDispatchJob` de cada minuto).
+   - `POST /admin/whatsapp/conversations/:requestId/simulate-reply` (body `{ body }`, dev mode
+     only) → simula la respuesta entrante del cliente/proveedor sobre el **último** mensaje
+     enviado a esa solicitud, reusando el `twilioMessageSid` real (aunque sea uno `local-...`)
+     para que `processInboundMessage` la matchee por SID exacto en vez de caer al matching más
+     amplio por teléfono. Dispara la misma detección de intención y el mismo
+     `RequestInteractionRespondedEvent` que una respuesta real de WhatsApp, así que también prueba
+     los cambios de estado de la solicitud.
+   - Las dos rutas `POST` viven en `AdminWhatsAppDevController`, registrado solo cuando
+     `NODE_ENV !== 'production'`; en producción no existen (404 de Nest, no 403), y encima cada
+     handler vuelve a chequear `isWhatsAppDevMode()` por las dudas.
+
+Con esto se puede recrear el ciclo completo — solicitud asignada → follow-up disparado → cliente
+"responde" → estado de la solicitud cambia — en segundos y sin ningún costo ni configuración de
+Twilio/ngrok.
+
+---
+
 ## 📚 Índice
 
 ### Guías Principales

@@ -173,6 +173,11 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 | `GET` | `/admin/professionals` | List all professionals (paginated) |
 | `PUT` | `/admin/professionals/:id/status` | Update professional status |
 | `GET` | `/admin/requests` | List all requests (paginated, optional status filter) |
+| `GET` | `/admin/whatsapp/config` | Get `{ devMode, availableFollowUpRules? }` |
+| `GET` | `/admin/whatsapp/conversations` | List WhatsApp conversations (paginated, optional `search`) |
+| `GET` | `/admin/whatsapp/conversations/:requestId` | Get the full WhatsApp message thread for a request |
+| `POST` | `/admin/whatsapp/conversations/:requestId/simulate-reply` | Simulate an inbound WhatsApp reply (dev mode only, 404 otherwise) |
+| `POST` | `/admin/whatsapp/conversations/:requestId/trigger-followup` | Force-trigger a follow-up rule right now (dev mode only, 404 otherwise) |
 
 ### 📁 Storage (`/storage`)
 

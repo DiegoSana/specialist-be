@@ -71,6 +71,9 @@ services:
       MAILGUN_FROM: ${MAILGUN_FROM:-}
       # Notifications dispatch
       NOTIFICATIONS_DISPATCH_ENABLED: ${NOTIFICATIONS_DISPATCH_ENABLED:-true}
+      # WhatsApp provider: 'twilio' | 'local' (default: local, for zero-cost dev testing)
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-local}
+      WHATSAPP_FOLLOWUP_ENABLED: ${WHATSAPP_FOLLOWUP_ENABLED:-true}
     depends_on:
       postgres:
         condition: service_healthy
