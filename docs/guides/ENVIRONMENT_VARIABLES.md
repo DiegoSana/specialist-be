@@ -70,6 +70,9 @@ fly secrets list
 | `MAILGUN_DOMAIN` | Mailgun domain (if using Mailgun) | |
 | `MAILGUN_FROM` | Mailgun sender email (if using Mailgun) | |
 
+`EMAIL_PROVIDER=ethereal` needs none of the above - it dynamically provisions its own throwaway
+SMTP credentials at runtime (see below).
+
 ### ✅ Non-Sensitive (In `fly.toml`)
 
 | Variable | Description | Current Value |
@@ -83,7 +86,7 @@ fly secrets list
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `FRONTEND_URL` | Frontend URL for redirects | `http://localhost:3000` |
-| `EMAIL_PROVIDER` | Email provider: `smtp` or `mailgun` | `smtp` |
+| `EMAIL_PROVIDER` | Email provider: `smtp`, `mailgun`, or `ethereal` (dynamically-provisioned ethereal.email test account via `nodemailer.createTestAccount()` - no secrets needed; nothing is really delivered, each send's preview URL is returned via `GET /admin/notifications`. Pre-launch Fly.io testing deploy only, see `docs/guides/NOTIFICATIONS.md`) | `smtp` |
 | `WHATSAPP_PROVIDER` | WhatsApp provider: `twilio` (real Twilio API) or `local` (no-network fake adapter for the admin conversations test loop, see `docs/guides/whatsapp/README.md`). Defaults to `twilio` so production never silently goes fake; set to `local` for dev. | `twilio` |
 | `WHATSAPP_DEV_MODE_ENABLED` | Explicit opt-in that turns on the WhatsApp admin dev endpoints (simulate reply, force-trigger follow-up) even when `NODE_ENV=production`, as long as `WHATSAPP_PROVIDER=local` too. For a `NODE_ENV=production` deploy that is pre-launch/testing-only (e.g. the current Fly.io `main` deploy, see `docs/guides/whatsapp/README.md`) - never set on a deploy handling real users/real WhatsApp. Kept independent of `NODE_ENV` so it doesn't also flip other prod-only behavior (Swagger, etc.). | `false` |
 | `WHATSAPP_FOLLOWUP_ENABLED` | Enable WhatsApp followup | `true` |

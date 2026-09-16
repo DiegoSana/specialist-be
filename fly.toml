@@ -26,6 +26,13 @@ primary_region = 'gru'
   # and remove WHATSAPP_DEV_MODE_ENABLED once real WhatsApp/Twilio testing starts.
   WHATSAPP_PROVIDER = 'local'
   WHATSAPP_DEV_MODE_ENABLED = 'true'
+  # Pre-launch: email delivery on this "production" Fly deploy is for functional testing only
+  # (no real users yet). EMAIL_PROVIDER='ethereal' dynamically provisions a throwaway Ethereal
+  # (ethereal.email) test-SMTP account at boot via nodemailer.createTestAccount() - zero secrets
+  # to manage, nothing is really delivered, and each send's preview URL is logged and persisted
+  # on the notification delivery (see GET /admin/notifications). Switch EMAIL_PROVIDER back to
+  # 'smtp' or 'mailgun' with real credentials (as Fly secrets) once real email testing starts.
+  EMAIL_PROVIDER = 'ethereal'
 
 [http_service]
   internal_port = 8080

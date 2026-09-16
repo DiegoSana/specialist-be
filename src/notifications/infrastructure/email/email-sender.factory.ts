@@ -3,8 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { EMAIL_SENDER, EmailSender } from '../../domain/ports/email-sender';
 import { SmtpEmailSender } from './smtp-email-sender';
 import { MailgunEmailSender } from './mailgun-email-sender';
+import { EtherealEmailSender } from './ethereal-email-sender';
 
-export type EmailProviderType = 'smtp' | 'mailgun';
+export type EmailProviderType = 'smtp' | 'mailgun' | 'ethereal';
 
 /**
  * Factory provider that creates the appropriate EmailSender
@@ -12,6 +13,9 @@ export type EmailProviderType = 'smtp' | 'mailgun';
  *
  * - 'smtp' (default): Uses SMTP/Nodemailer (works with Mailpit, Gmail, etc.)
  * - 'mailgun': Uses Mailgun API
+ * - 'ethereal': Dynamically-provisioned Ethereal (ethereal.email) test SMTP account
+ *   (nodemailer.createTestAccount()) - fake SMTP, nothing is really delivered, no config
+ *   needed. Pre-launch Fly.io testing deploy only, see fly.toml.
  */
 export const emailSenderProvider: Provider = {
   provide: EMAIL_SENDER,
@@ -21,6 +25,8 @@ export const emailSenderProvider: Provider = {
     switch (provider) {
       case 'mailgun':
         return new MailgunEmailSender(config);
+      case 'ethereal':
+        return new EtherealEmailSender(config);
       case 'smtp':
       default:
         return new SmtpEmailSender(config);

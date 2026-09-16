@@ -10,7 +10,7 @@ export class SmtpEmailSender implements EmailSender {
 
   constructor(private readonly config: ConfigService) {}
 
-  async send(message: EmailMessage): Promise<void> {
+  async send(message: EmailMessage): Promise<string | null> {
     const transporter = this.getOrCreateTransporter();
     const from = this.getFromOrThrow();
 
@@ -27,6 +27,8 @@ export class SmtpEmailSender implements EmailSender {
       text: message.text,
       html: message.html,
     });
+
+    return null;
   }
 
   private getFromOrThrow(): string {
