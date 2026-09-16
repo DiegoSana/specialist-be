@@ -5,12 +5,13 @@ import { REQUEST_REPOSITORY } from './domain/repositories/request.repository';
 import { REQUEST_QUERY_REPOSITORY } from './domain/queries/request.query-repository';
 import { REQUEST_INTEREST_REPOSITORY } from './domain/repositories/request-interest.repository';
 import { REQUEST_INTERACTION_REPOSITORY } from './domain/repositories/request-interaction.repository';
-import { WHATSAPP_MESSAGING_PORT } from './domain/ports/whatsapp-messaging.port';
+import { REQUEST_INTERACTION_QUERY_REPOSITORY } from './domain/queries/request-interaction.query-repository';
 
 // Application
 import { RequestService } from './application/services/request.service';
 import { RequestInterestService } from './application/services/request-interest.service';
 import { RequestInteractionService } from './application/services/request-interaction.service';
+import { AdminWhatsAppService } from './application/services/admin-whatsapp.service';
 import { WhatsAppDispatchJob } from './application/jobs/whatsapp-dispatch.job';
 import { FollowUpSchedulerJob } from './application/jobs/follow-up-scheduler.job';
 import { FOLLOW_UP_RULES } from './application/jobs/follow-up-scheduler.job';
@@ -32,11 +33,14 @@ import { PrismaRequestRepository } from './infrastructure/repositories/prisma-re
 import { PrismaRequestQueryRepository } from './infrastructure/queries/prisma-request.query-repository';
 import { PrismaRequestInterestRepository } from './infrastructure/repositories/prisma-request-interest.repository';
 import { PrismaRequestInteractionRepository } from './infrastructure/repositories/prisma-request-interaction.repository';
-import { TwilioWhatsAppAdapter } from './infrastructure/adapters/twilio-whatsapp.adapter';
+import { PrismaRequestInteractionQueryRepository } from './infrastructure/queries/prisma-request-interaction.query-repository';
+import { whatsAppMessagingProvider } from './infrastructure/adapters/whatsapp-messaging.factory';
 
 // Presentation
 import { RequestsController } from './presentation/requests.controller';
 import { TwilioWebhookController } from './presentation/controllers/twilio-webhook.controller';
+import { AdminWhatsAppController } from './presentation/controllers/admin-whatsapp.controller';
+import { AdminWhatsAppDevController } from './presentation/controllers/admin-whatsapp-dev.controller';
 import { TwilioWebhookGuard } from './presentation/guards/twilio-webhook.guard';
 import { TwilioRateLimitGuard } from './presentation/guards/twilio-rate-limit.guard';
 
@@ -55,11 +59,19 @@ import { ProfilesModule } from '../profiles/profiles.module';
     forwardRef(() => IdentityModule),
     forwardRef(() => ProfilesModule),
   ],
-  controllers: [RequestsController, TwilioWebhookController],
+  controllers: [
+    RequestsController,
+    TwilioWebhookController,
+    AdminWhatsAppController,
+    ...(process.env.NODE_ENV !== 'production'
+      ? [AdminWhatsAppDevController]
+      : []),
+  ],
   providers: [
     RequestService,
     RequestInterestService,
     RequestInteractionService,
+    AdminWhatsAppService,
     WhatsAppDispatchJob,
     FollowUpSchedulerJob,
     MessageStatusCheckerJob,
@@ -110,9 +122,10 @@ import { ProfilesModule } from '../profiles/profiles.module';
       useClass: PrismaRequestInteractionRepository,
     },
     {
-      provide: WHATSAPP_MESSAGING_PORT,
-      useClass: TwilioWhatsAppAdapter,
+      provide: REQUEST_INTERACTION_QUERY_REPOSITORY,
+      useClass: PrismaRequestInteractionQueryRepository,
     },
+    whatsAppMessagingProvider,
   ],
   exports: [
     RequestService,

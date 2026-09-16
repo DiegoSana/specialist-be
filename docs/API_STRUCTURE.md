@@ -147,8 +147,16 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/notifications` | `GET` | Listar todas las notificaciones |
 | `/api/admin/notifications/stats` | `GET` | Estadísticas de notificaciones |
 | `/api/admin/notifications/:id/resend` | `POST` | Reenviar notificación fallida |
+| `/api/admin/whatsapp/config` | `GET` | `{ devMode, availableFollowUpRules? }` |
+| `/api/admin/whatsapp/conversations` | `GET` | Listar conversaciones de WhatsApp (paginado, `search` opcional) |
+| `/api/admin/whatsapp/conversations/:requestId` | `GET` | Hilo completo de mensajes de WhatsApp de una solicitud |
+| `/api/admin/whatsapp/conversations/:requestId/simulate-reply` | `POST` | Simular una respuesta entrante de WhatsApp (solo dev mode, 404 si no) |
+| `/api/admin/whatsapp/conversations/:requestId/trigger-followup` | `POST` | Disparar una regla de follow-up ahora mismo (solo dev mode, 404 si no) |
 
-**Marcado con `@UseGuards(JwtAuthGuard, AdminGuard)`** en el controller.
+**Marcado con `@UseGuards(JwtAuthGuard, AdminGuard)`** en el controller. Las dos rutas `POST`
+viven en un controller separado (`AdminWhatsAppDevController`) que solo se registra cuando
+`NODE_ENV !== 'production'`, y además cada handler valida `isWhatsAppDevMode()` en runtime; ambas
+capas devuelven 404, nunca 403, cuando el modo dev está apagado.
 
 ---
 
@@ -418,6 +426,7 @@ export class TwilioWebhookController { ... }
 │  - /admin/professionals/*                                   │
 │  - /admin/requests/*                                        │
 │  - /admin/notifications/*                                   │
+│  - /admin/whatsapp/*                                        │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
