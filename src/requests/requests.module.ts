@@ -63,7 +63,8 @@ import { ProfilesModule } from '../profiles/profiles.module';
     RequestsController,
     TwilioWebhookController,
     AdminWhatsAppController,
-    ...(process.env.NODE_ENV !== 'production'
+    ...(process.env.NODE_ENV !== 'production' ||
+    process.env.WHATSAPP_DEV_MODE_ENABLED === 'true'
       ? [AdminWhatsAppDevController]
       : []),
   ],

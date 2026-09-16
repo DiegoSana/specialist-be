@@ -25,9 +25,18 @@ Para probar todo el flujo de WhatsApp (mensajes salientes, respuestas entrantes,
 estado disparados por la respuesta) sin gastar créditos de Twilio ni depender del Sandbox:
 
 1. **Activar el adapter local**: `WHATSAPP_PROVIDER=local` (además de `NODE_ENV` distinto de
-   `production`). Con esta combinación `isWhatsAppDevMode()` devuelve `true`. `WHATSAPP_PROVIDER`
-   por defecto es `twilio` (ver `docs/guides/ENVIRONMENT_VARIABLES.md`); en `docker-compose.dev.yml`
-   el default es `local` para que el loop local funcione out-of-the-box.
+   `production`, o `WHATSAPP_DEV_MODE_ENABLED=true` como opt-in explícito cuando `NODE_ENV` es
+   `production` - ver más abajo). Con esta combinación `isWhatsAppDevMode()` devuelve `true`.
+   `WHATSAPP_PROVIDER` por defecto es `twilio` (ver `docs/guides/ENVIRONMENT_VARIABLES.md`); en
+   `docker-compose.dev.yml` el default es `local` para que el loop local funcione out-of-the-box.
+
+   **Deploy de testing en Fly.io (`main`, `NODE_ENV=production`):** mientras el proyecto no esté
+   en producción real, `fly.toml` fija `WHATSAPP_PROVIDER=local` y `WHATSAPP_DEV_MODE_ENABLED=true`
+   para ese mismo deploy, así el visor `/admin/whatsapp` (specialist-admin, contra la API en la
+   nube) tiene las mismas herramientas de dev que en local - sin gastar Twilio y sin depender de
+   que alguien tenga el backend corriendo localmente. Cuando se empiece a probar con WhatsApp
+   real, sacar `WHATSAPP_DEV_MODE_ENABLED` de `fly.toml` y volver `WHATSAPP_PROVIDER` a `twilio`
+   (o dejarlo sin setear, que es el default).
 2. Con `WHATSAPP_PROVIDER=local`, `LocalWhatsAppAdapter` (`src/requests/infrastructure/adapters/local-whatsapp.adapter.ts`)
    reemplaza a `TwilioWhatsAppAdapter` detrás del mismo `WhatsAppMessagingPort`: `sendMessage`
    genera un id `local-<uuid>`, loguea el mensaje y no hace ninguna llamada de red;
