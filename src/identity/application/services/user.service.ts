@@ -274,11 +274,16 @@ export class UserService {
   /**
    * Get all users for admin (paginated)
    */
-  async getAllUsersForAdmin(page: number = 1, limit: number = 10) {
+  async getAllUsersForAdmin(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+  ) {
     const skip = (page - 1) * limit;
     const { users, total } = await this.userQueryRepository.findAllForAdmin({
       skip,
       take: limit,
+      search,
     });
 
     return {

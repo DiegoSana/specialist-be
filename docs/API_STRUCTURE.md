@@ -136,14 +136,15 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 
 | Endpoint | Método | Descripción |
 |----------|--------|-------------|
-| `/api/admin/users` | `GET` | Listar todos los usuarios (paginado) |
+| `/api/admin/users` | `GET` | Listar todos los usuarios (paginado, `search` opcional sobre email/firstName/lastName). Cada item incluye `isAdmin`, `hasClientProfile`, `hasProfessionalProfile`, `hasCompanyProfile`, `updatedAt` |
 | `/api/admin/users/:id` | `GET` | Obtener usuario por ID |
 | `/api/admin/users/:id/status` | `PUT` | Actualizar estado de usuario |
 | `/api/admin/users/:id/verification` | `PUT` | Confirmar email/teléfono manualmente (body: `emailVerified?`, `phoneVerified?`) |
 | `/api/admin/professionals` | `GET` | Listar todos los profesionales (paginado) |
 | `/api/admin/professionals/:id` | `GET` | Obtener profesional por ID |
 | `/api/admin/professionals/:id/status` | `PUT` | Actualizar estado de profesional |
-| `/api/admin/requests` | `GET` | Listar todos los requests (paginado, filtro opcional) |
+| `/api/admin/requests` | `GET` | Listar todos los requests (paginado, filtro opcional). `provider` de cada item: `{ id, type: 'PROFESSIONAL' \| 'COMPANY', name } \| null` |
+| `/api/admin/requests/:id` | `GET` | Detalle completo del request: `client`, `trade`, `provider` unificado (con `trades` para Professional/Company) e `interestedProviders`. Sin el chequeo de `canBeViewedBy` de participantes - cualquier admin puede ver cualquier request |
 | `/api/admin/notifications` | `GET` | Listar todas las notificaciones |
 | `/api/admin/notifications/stats` | `GET` | Estadísticas de notificaciones |
 | `/api/admin/notifications/:id/resend` | `POST` | Reenviar notificación fallida |

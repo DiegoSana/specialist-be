@@ -21,9 +21,13 @@ export interface UserQueryRepository {
   getUserStats(): Promise<UserStats>;
 
   /**
-   * List all users for admin (paginated)
+   * List all users for admin (paginated, optional email/firstName/lastName search)
    */
-  findAllForAdmin(params: { skip: number; take: number }): Promise<{
+  findAllForAdmin(params: {
+    skip: number;
+    take: number;
+    search?: string;
+  }): Promise<{
     users: Array<{
       id: string;
       email: string;
@@ -31,8 +35,11 @@ export interface UserQueryRepository {
       lastName: string | null;
       status: string;
       createdAt: Date;
-      client: { id: string } | null;
-      professional: { id: string } | null;
+      updatedAt: Date;
+      isAdmin: boolean;
+      hasClientProfile: boolean;
+      hasProfessionalProfile: boolean;
+      hasCompanyProfile: boolean;
     }>;
     total: number;
   }>;
