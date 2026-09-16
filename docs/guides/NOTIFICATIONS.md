@@ -68,7 +68,7 @@ User preferences are stored in `notification_preferences`:
 
 ## Email Providers
 
-The system supports two email providers, configured via `EMAIL_PROVIDER` environment variable.
+The system supports three email providers, configured via `EMAIL_PROVIDER` environment variable.
 
 ### SMTP (Default)
 
@@ -105,6 +105,25 @@ MAILGUN_API_KEY=key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 MAILGUN_DOMAIN=mg.yourdomain.com
 MAILGUN_FROM=Specialist <noreply@yourdomain.com>
 ```
+
+### Ethereal (dynamic test SMTP)
+
+For the pre-launch Fly.io testing deploy (`fly.toml`) only - **not** local dev, which uses
+Mailpit (below):
+
+```env
+EMAIL_PROVIDER=ethereal
+```
+
+No other configuration needed. On first send, `EtherealEmailSender`
+(`src/notifications/infrastructure/email/ethereal-email-sender.ts`) provisions a throwaway
+Ethereal (ethereal.email) test account via `nodemailer.createTestAccount()`, memoized for the
+process lifetime (a fresh account is created on every app boot - fine, since nothing needs to
+persist beyond each send's own preview link). Every send's preview URL is logged
+(`[Ethereal] preview: https://ethereal.email/message/...`) and stored on the notification
+delivery's `providerMessageId`, visible to admins via `GET /admin/notifications` /
+`GET /admin/notifications/:id`. Emails are never really delivered - never use this once real
+users/real email testing exist.
 
 ---
 

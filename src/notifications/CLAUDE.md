@@ -28,8 +28,13 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
 - `NotificationPreferencesEntity.effectiveFor(type)` -> `{ inAppEnabled, externalEnabled, preferredExternalChannel }`
   with per-type overrides.
 - Ports: `EMAIL_SENDER` (`SmtpEmailSender` default, `MailgunEmailSender` when
-  `EMAIL_PROVIDER=mailgun`, chosen in `email-sender.factory.ts`), `NOTIFICATION_DELIVERY_QUEUE`
-  (`PrismaNotificationDeliveryQueue`: claim pending, mark sent/failed with backoff).
+  `EMAIL_PROVIDER=mailgun`, `EtherealEmailSender` when `EMAIL_PROVIDER=ethereal` - dynamically
+  provisions a throwaway ethereal.email test account, no config needed, pre-launch Fly deploy
+  only - chosen in `email-sender.factory.ts`), `NOTIFICATION_DELIVERY_QUEUE`
+  (`PrismaNotificationDeliveryQueue`: claim pending, mark sent/failed with backoff). `send()`
+  returns the provider's message id (or a preview URL for Ethereal/Mailgun), persisted as the
+  delivery's `providerMessageId` and exposed to admins via `NotificationResponseDto.fromEntityForAdmin`
+  (`GET /admin/notifications`) - never exposed on the user-facing `/notifications` endpoints.
 
 ## Handlers (subscribe in `onModuleInit`)
 

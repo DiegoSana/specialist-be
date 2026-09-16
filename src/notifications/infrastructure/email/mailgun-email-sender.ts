@@ -31,7 +31,7 @@ export class MailgunEmailSender implements EmailSender {
         : 'https://api.mailgun.net/v3';
   }
 
-  async send(message: EmailMessage): Promise<void> {
+  async send(message: EmailMessage): Promise<string | null> {
     this.validateConfig();
     this.validateMessage(message);
 
@@ -67,6 +67,7 @@ export class MailgunEmailSender implements EmailSender {
 
       const result: MailgunResponse = await response.json();
       this.logger.log(`Email sent via Mailgun: ${result.id}`);
+      return result.id;
     } catch (error) {
       this.logger.error(`Failed to send email via Mailgun: ${error}`);
       throw error;

@@ -31,9 +31,13 @@ export class NotificationDispatchService {
   private async dispatchEmailPending(): Promise<void> {
     // If SMTP isn't configured yet, skip silently (keep deliveries as PENDING).
     // For local dev with Mailpit, only host and from are required (no auth needed).
-    const smtpHost = this.config.get<string>('NOTIFICATIONS_SMTP_HOST');
-    const smtpFrom = this.config.get<string>('NOTIFICATIONS_SMTP_FROM');
-    if (!smtpHost || !smtpFrom) return;
+    // 'ethereal' self-provisions its own account, so it needs neither.
+    const provider = this.config.get<string>('EMAIL_PROVIDER', 'smtp');
+    if (provider !== 'ethereal') {
+      const smtpHost = this.config.get<string>('NOTIFICATIONS_SMTP_HOST');
+      const smtpFrom = this.config.get<string>('NOTIFICATIONS_SMTP_FROM');
+      if (!smtpHost || !smtpFrom) return;
+    }
 
     const batchSize = Number(
       this.config.get<string>('NOTIFICATIONS_DISPATCH_BATCH_SIZE', '25'),
@@ -83,13 +87,17 @@ export class NotificationDispatchService {
         const subject = item.notification.title;
         const text = item.notification.body ?? '';
 
-        await this.emailSender.send({
+        const providerMessageId = await this.emailSender.send({
           to: item.notification.userEmail,
           subject,
           text,
         });
 
-        await this.queue.markSent(item.deliveryId, new Date(), null);
+        await this.queue.markSent(
+          item.deliveryId,
+          new Date(),
+          providerMessageId,
+        );
       } catch (err: any) {
         const attemptedAt = new Date();
         const message =

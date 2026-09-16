@@ -72,7 +72,7 @@ export class AdminNotificationsController {
     });
 
     return {
-      items: NotificationResponseDto.fromEntities(result.items),
+      items: NotificationResponseDto.fromEntitiesForAdmin(result.items),
       total: result.total,
     };
   }
@@ -119,7 +119,7 @@ export class AdminNotificationsController {
   @ApiResponse({ status: 404, description: 'Notification not found' })
   async findById(@Param('id') id: string, @CurrentUser() user: UserEntity) {
     const entity = await this.notifications.findByIdForUser(id, user);
-    return NotificationResponseDto.fromEntity(entity);
+    return NotificationResponseDto.fromEntityForAdmin(entity);
   }
 
   @Post(':id/resend')
@@ -130,6 +130,6 @@ export class AdminNotificationsController {
   @ApiResponse({ status: 404, description: 'Notification not found' })
   async resend(@Param('id') id: string, @CurrentUser() user: UserEntity) {
     const entity = await this.notifications.resendNotification(id, user);
-    return NotificationResponseDto.fromEntity(entity);
+    return NotificationResponseDto.fromEntityForAdmin(entity);
   }
 }
