@@ -22,8 +22,13 @@ export class AdminService {
     private readonly requestInterestService: RequestInterestService,
   ) {}
 
-  async getAllUsers(page: number = 1, limit: number = 10, search?: string) {
-    return this.userService.getAllUsersForAdmin(page, limit, search);
+  async getAllUsers(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    type?: 'CLIENT' | 'PROFESSIONAL' | 'COMPANY',
+  ) {
+    return this.userService.getAllUsersForAdmin(page, limit, search, type);
   }
 
   async getUserById(userId: string, actingUser: UserEntity) {

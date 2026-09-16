@@ -278,12 +278,14 @@ export class UserService {
     page: number = 1,
     limit: number = 10,
     search?: string,
+    type?: 'CLIENT' | 'PROFESSIONAL' | 'COMPANY',
   ) {
     const skip = (page - 1) * limit;
     const { users, total } = await this.userQueryRepository.findAllForAdmin({
       skip,
       take: limit,
       search,
+      type,
     });
 
     return {

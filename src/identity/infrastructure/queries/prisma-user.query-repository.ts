@@ -44,6 +44,7 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
     skip: number;
     take: number;
     search?: string;
+    type?: 'CLIENT' | 'PROFESSIONAL' | 'COMPANY';
   }): Promise<{
     users: Array<{
       id: string;
@@ -70,6 +71,14 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
           ],
         }
       : {};
+
+    if (params.type === 'CLIENT') {
+      where.client = { isNot: null };
+    } else if (params.type === 'PROFESSIONAL') {
+      where.professional = { isNot: null };
+    } else if (params.type === 'COMPANY') {
+      where.company = { isNot: null };
+    }
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({

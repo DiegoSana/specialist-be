@@ -44,17 +44,25 @@ export class AdminController {
     type: String,
     description: 'Case-insensitive match on email, firstName or lastName',
   })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    enum: ['CLIENT', 'PROFESSIONAL', 'COMPANY'],
+    description: 'Filter to users who have this profile type',
+  })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async getAllUsers(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
+    @Query('type') type?: 'CLIENT' | 'PROFESSIONAL' | 'COMPANY',
   ) {
     return this.adminService.getAllUsers(
       page ? parseInt(page) : 1,
       limit ? parseInt(limit) : 10,
       search,
+      type,
     );
   }
 

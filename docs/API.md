@@ -166,7 +166,7 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/admin/users` | List all users (paginated, optional `search` on email/firstName/lastName). Each item includes `isAdmin`, `hasClientProfile`, `hasProfessionalProfile`, `hasCompanyProfile`, `updatedAt` |
+| `GET` | `/admin/users` | List all users (paginated, optional `search` on email/firstName/lastName, optional `type` = `CLIENT`\|`PROFESSIONAL`\|`COMPANY` to filter by profile). Each item includes `isAdmin`, `hasClientProfile`, `hasProfessionalProfile`, `hasCompanyProfile`, `updatedAt` |
 | `GET` | `/admin/users/:id` | Get user by ID |
 | `PUT` | `/admin/users/:id/status` | Update user status |
 | `PUT` | `/admin/users/:id/verification` | Manually set email/phone verified (body: `{ emailVerified?: boolean, phoneVerified?: boolean }`) |

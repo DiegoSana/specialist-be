@@ -21,12 +21,14 @@ export interface UserQueryRepository {
   getUserStats(): Promise<UserStats>;
 
   /**
-   * List all users for admin (paginated, optional email/firstName/lastName search)
+   * List all users for admin (paginated, optional email/firstName/lastName search,
+   * optional filter by which profile type the user has)
    */
   findAllForAdmin(params: {
     skip: number;
     take: number;
     search?: string;
+    type?: 'CLIENT' | 'PROFESSIONAL' | 'COMPANY';
   }): Promise<{
     users: Array<{
       id: string;

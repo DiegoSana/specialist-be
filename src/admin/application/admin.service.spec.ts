@@ -125,6 +125,7 @@ describe('AdminService', () => {
         1,
         10,
         undefined,
+        undefined,
       );
     });
 
@@ -163,6 +164,7 @@ describe('AdminService', () => {
         3,
         5,
         undefined,
+        undefined,
       );
     });
 
@@ -183,6 +185,7 @@ describe('AdminService', () => {
         1,
         10,
         undefined,
+        undefined,
       );
     });
 
@@ -198,6 +201,23 @@ describe('AdminService', () => {
         1,
         10,
         'jane',
+        undefined,
+      );
+    });
+
+    it('should pass the type filter through to the user service', async () => {
+      mockUserService.getAllUsersForAdmin.mockResolvedValue({
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 0 },
+      });
+
+      await service.getAllUsers(1, 10, undefined, 'CLIENT');
+
+      expect(mockUserService.getAllUsersForAdmin).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        'CLIENT',
       );
     });
   });

@@ -7,8 +7,11 @@ those services). Docs: `docs/plans/admin-portal-plan.md` (roadmap, partly stale)
 
 ## Endpoints (`/admin`, `JwtAuthGuard` + `AdminGuard`)
 
-`GET users?search=` (isAdmin/hasClientProfile/hasProfessionalProfile/hasCompanyProfile on every
-item; `search` matches email/firstName/lastName, case-insensitive), `GET users/:id`, `PUT
+`GET users?search=&type=` (isAdmin/hasClientProfile/hasProfessionalProfile/hasCompanyProfile on
+every item; `search` matches email/firstName/lastName, case-insensitive; `type` is
+`CLIENT|PROFESSIONAL|COMPANY`, filters to users who have that profile — there's no `ADMIN` type
+since `isAdmin` is a plain boolean on `User`, not a profile relation like the other three), `GET
+users/:id`, `PUT
 users/:id/status`, `PUT users/:id/verification` (manual email/phone verified override), `GET
 professionals`, `GET professionals/:id`, `PUT professionals/:id/status`, `GET requests?status=`
 (each item's `provider` is `{ id, type, name } | null`), `GET requests/:id` (full detail: client,
