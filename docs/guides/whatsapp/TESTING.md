@@ -329,7 +329,39 @@ describe('DetectResponseIntentUseCase', () => {
 });
 ```
 
-### 2. Testing Unitario: RequestInteractionService
+> **Nota (2026-09-17):** `DetectResponseIntentUseCase` ya no es el clasificador de respuestas en
+> producción — pasó a ser el fallback determinístico detrás de `IntentDetectionPort`, usado
+> directamente cuando `INTENT_CLASSIFIER_PROVIDER=local` (default) y como fallback si el
+> clasificador LLM (`anthropic`) falla o se pasa del timeout. Los tests de arriba siguen vigentes
+> tal cual (la clase no cambió), pero ver la sección siguiente para el clasificador completo.
+
+### 2. Testing Unitario: IntentDetectionPort (clasificador LLM)
+
+Puerto nuevo (`src/requests/domain/ports/intent-detection.port.ts`) con dos adapters y una
+factory, mismo patrón que `WhatsAppMessagingPort`/`whatsapp-messaging.factory.ts`:
+
+- `local-intent-detection.adapter.spec.ts`: wrapea `DetectResponseIntentUseCase` para
+  `statusIntent`, siempre devuelve `viability: null`, `optOut: false`, `escalate: false`
+  (sin LLM no hay forma de detectar esas señales).
+- `anthropic-intent-detection.adapter.spec.ts`: `jest.mock('@anthropic-ai/sdk')` — nunca pega a
+  la red real en `npm test`. Cubre el mapeo de una respuesta válida (tool use forzado), el wrap de
+  errores del SDK en `Error` genérico, y la validación defensiva de la respuesta (statusIntent
+  inválido, falta el bloque `tool_use`, `ANTHROPIC_API_KEY` no configurada).
+- `intent-detection.factory.spec.ts`: invoca `useFactory` directo con un `ConfigService` mockeado
+  (mismo estilo que `whatsapp-messaging.factory.spec.ts`) — confirma que `INTENT_CLASSIFIER_PROVIDER`
+  sin setear, o con un valor no reconocido, **cae a `local`** (nunca al adapter real por default,
+  al revés que `WHATSAPP_PROVIDER`).
+- `request-interaction.service.spec.ts`: cubre el timeout/fallback (`Promise.race`), el downgrade
+  a `UNKNOWN` por baja confianza, y las consecuencias de `optOut`/`escalate`/`viability` (opt-out
+  del usuario, flags de atención para admin).
+
+Para probar el clasificador real (`INTENT_CLASSIFIER_PROVIDER=anthropic`) contra la API real de
+Anthropic — nunca en `npm test` — usar el loop local de WhatsApp (`WHATSAPP_PROVIDER=local`,
+`simulate-reply` desde `/admin/whatsapp`) con `ANTHROPIC_API_KEY` configurada, y calibrar
+`INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD` con mensajes ambiguos reales antes de activarlo en un
+entorno real.
+
+### 3. Testing Unitario: RequestInteractionService
 
 Ver ejemplos en el código fuente para testing de:
 - Envío de mensajes

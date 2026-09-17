@@ -154,6 +154,8 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/whatsapp/conversations/:requestId` | `GET` | Hilo completo de mensajes de WhatsApp de una solicitud |
 | `/api/admin/whatsapp/conversations/:requestId/simulate-reply` | `POST` | Simular una respuesta entrante de WhatsApp (solo dev mode, 404 si no) |
 | `/api/admin/whatsapp/conversations/:requestId/trigger-followup` | `POST` | Disparar una regla de follow-up ahora mismo (solo dev mode, 404 si no) |
+| `/api/admin/requests/attention` | `GET` | Listar `RequestAttentionFlag`s abiertos (paginado, `?page=&limit=`), con título/status del request. Razones: `AT_RISK` (escalera de follow-up agotada sin respuesta), `ABANDONED`/`ESCALATED` (señal del clasificador LLM) |
+| `/api/admin/requests/attention/:id/resolve` | `POST` | Marcar un flag como resuelto (204) - no toca el request en sí, el seguimiento es manual vía el visor de conversaciones |
 
 **Marcado con `@UseGuards(JwtAuthGuard, AdminGuard)`** en el controller. Las dos rutas `POST`
 viven en un controller separado (`AdminWhatsAppDevController`) que solo se registra cuando

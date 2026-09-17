@@ -7,7 +7,10 @@ verification. Does NOT own client/professional/company profiles (Profiles contex
 
 - `UserService`: `findById(id, includeProfiles?)`, `findByIdOrFail`, `findByEmail`, `update`,
   `exists`, `findByIdForUser`, `updateForUser`, `updateStatusForUser`, `updateVerificationForUser`
-  (admin override), `getUserStats`, `getAllUsersForAdmin` (via `UserQueryRepository`).
+  (admin override), `getUserStats`, `getAllUsersForAdmin` (via `UserQueryRepository`),
+  `setWhatsAppOptedOut(userId, optedOut)`, `findAdminUserIds()` (via `UserQueryRepository`, no
+  fixed/hardcoded admin id — used to fan out admin notifications, see Requests context's
+  `RequestAttentionFlaggedHandler`).
 - `AuthenticationService`: `register`, `login`, `validateUser`, `validateUserById`, `googleLogin`,
   `facebookLogin`. Registration activates the client profile through `ClientService`
   (Profiles), never through a repository.
@@ -27,7 +30,7 @@ verification. Does NOT own client/professional/company profiles (Profiles contex
 
 - Immutable; factories `createLocal`, `createOAuth`; mutators return copies: `withUpdatedProfile`,
   `withStatus`, `linkGoogle`, `linkFacebook`, `withPhoneVerified`, `withEmailVerified`,
-  `withVerificationOverrides`.
+  `withVerificationOverrides`, `withWhatsAppOptedOut(optedOut, now?)`.
 - Flags derived from relations at read time: `hasClientProfile`, `hasProfessionalProfile`,
   `hasCompanyProfile` (repository must `include` relations; `findById(id, true)`).
 - Predicates: `isClient()`, `isProfessional()`, `isCompany()`, `isServiceProvider()`,
@@ -40,8 +43,11 @@ verification. Does NOT own client/professional/company profiles (Profiles contex
 
 ## Invariants and gotchas
 
-- Contact data (`phone`, `email`, `phoneVerified`, `emailVerified`) lives only here. Profiles have
-  no contact fields.
+- Contact data (`phone`, `email`, `phoneVerified`, `emailVerified`, `whatsappOptedOut`,
+  `whatsappOptedOutAt`) lives only here. Profiles have no contact fields. `whatsappOptedOut` is
+  gated into `ProfileActivationService`'s "active profile" computation (Profiles context) — an
+  opted-out user can't take/request new requests, but their already-assigned requests are left
+  alone (see Requests context's WhatsApp follow-up notes).
 - `isFullyVerified()` is a fact about the user; the *permission* meaning ("active profile") is
   computed only in `ProfileActivationService` (Profiles). Do not add verification-based permission
   checks in other contexts.
