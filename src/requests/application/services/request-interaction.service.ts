@@ -5,6 +5,7 @@ import {
   Logger,
   forwardRef,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   RequestInteractionRepository,
   REQUEST_INTERACTION_REPOSITORY,
@@ -14,6 +15,8 @@ import {
   InteractionType,
   InteractionDirection,
   InteractionStatus,
+  ResponseIntent,
+  RequestStatus,
 } from '@prisma/client';
 import {
   WHATSAPP_MESSAGING_PORT,
@@ -22,6 +25,7 @@ import {
 import {
   INTENT_DETECTION_PORT,
   IntentDetectionPort,
+  IntentDetectionResult,
   IntentDetectionConversationMessage,
 } from '../../domain/ports/intent-detection.port';
 import {
@@ -67,6 +71,7 @@ export class RequestInteractionService {
     private readonly templateService: MessageTemplateService,
     @Inject(EVENT_BUS)
     private readonly eventBus: EventBus,
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -470,6 +475,50 @@ export class RequestInteractionService {
   }
 
   /**
+   * Classify an inbound message via IntentDetectionPort with a hard timeout, falling
+   * back to the deterministic keyword matcher on error or timeout. This method must
+   * never throw and must never hang the caller — processInboundMessage runs
+   * synchronously inside the Twilio webhook request, which must always return 200.
+   */
+  private async classifyIntentWithFallback(input: {
+    messageText: string;
+    currentStatus: RequestStatus;
+    triggeringTemplate: string | null;
+    conversationHistory: IntentDetectionConversationMessage[];
+  }): Promise<IntentDetectionResult> {
+    const timeoutMs = this.config.get<number>(
+      'INTENT_CLASSIFIER_TIMEOUT_MS',
+      4000,
+    );
+    let timer: NodeJS.Timeout;
+
+    try {
+      return await Promise.race([
+        this.intentDetectionPort.detectIntent(input),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('Intent detection timed out')),
+            timeoutMs,
+          );
+        }),
+      ]);
+    } catch (error: any) {
+      this.logger.warn(
+        `Intent detection failed/timed out, falling back to keyword matching: ${error.message}`,
+      );
+      return {
+        statusIntent: this.detectIntentUseCase.detectIntent(input.messageText),
+        confidence: 1,
+        viability: null,
+        optOut: false,
+        escalate: false,
+      };
+    } finally {
+      clearTimeout(timer!);
+    }
+  }
+
+  /**
    * Mark an interaction as delivered based on Twilio status update.
    * Idempotent: If the same status update is received multiple times, it will only be processed once.
    */
@@ -686,13 +735,23 @@ export class RequestInteractionService {
     );
 
     // Detect intent from message text (LLM-backed classifier, keyword fallback on error/timeout)
-    const classification = await this.intentDetectionPort.detectIntent({
+    const classification = await this.classifyIntentWithFallback({
       messageText: params.body,
       currentStatus: request.status,
       triggeringTemplate: interaction.messageTemplate,
       conversationHistory,
     });
-    const intent = classification.statusIntent;
+
+    const confidenceThreshold = this.config.get<number>(
+      'INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD',
+      0.6,
+    );
+    // Below the threshold, never trust the classification enough to change Request.status —
+    // the raw values stay in metadata for auditing, but the event carries UNKNOWN.
+    const intent =
+      classification.confidence >= confidenceThreshold
+        ? classification.statusIntent
+        : ResponseIntent.UNKNOWN;
 
     // Mark interaction as responded and store inbound message SID for idempotency
     const respondedInteraction = interaction.markAsResponded(
@@ -700,11 +759,17 @@ export class RequestInteractionService {
       intent,
     );
 
-    // Add inbound message SID to metadata for idempotency tracking
+    // Add inbound message SID to metadata for idempotency tracking, plus the full
+    // classification (raw values included, even when downgraded by the confidence gate)
     const metadata = {
       ...(interaction.metadata || {}),
       inboundMessageSid: params.messageId,
       inboundMessageProcessedAt: new Date().toISOString(),
+      rawClassifierIntent: classification.statusIntent,
+      classifierConfidence: classification.confidence,
+      viability: classification.viability,
+      optOut: classification.optOut,
+      escalate: classification.escalate,
     };
 
     const respondedInteractionWithMetadata = new RequestInteractionEntity(
@@ -752,6 +817,10 @@ export class RequestInteractionService {
       responseIntent: intent,
       respondedAt: respondedInteraction.respondedAt,
       responseTimeMinutes,
+      confidence: classification.confidence,
+      viability: classification.viability,
+      optOut: classification.optOut,
+      escalate: classification.escalate,
     });
 
     this.logger.log(

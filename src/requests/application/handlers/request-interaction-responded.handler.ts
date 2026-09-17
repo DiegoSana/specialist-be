@@ -74,8 +74,11 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
     const { requestId, responseContent } = event.payload;
 
     this.logger.log(
-      `Processing interaction response for request ${requestId} with intent ${event.payload.responseIntent}`,
+      `Processing interaction response for request ${requestId} with intent ${event.payload.responseIntent} ` +
+        `(confidence=${event.payload.confidence}, viability=${event.payload.viability}, optOut=${event.payload.optOut}, escalate=${event.payload.escalate})`,
     );
+    // TODO(request-attention): when escalate/viability=ABANDONED, flag for admin attention —
+    // see "Investigar IA para follow-up" in TODO.md, RequestAttentionService (not built yet).
 
     try {
       const request = await this.requestService.findById(requestId);

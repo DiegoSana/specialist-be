@@ -58,6 +58,7 @@ describe('RequestInteractionService', () => {
     let mockIntentDetectionPort: any;
     let mockTemplateService: any;
     let mockEventBus: any;
+    let mockConfig: any;
 
     beforeEach(() => {
       mockInteractionRepository = {
@@ -77,6 +78,9 @@ describe('RequestInteractionService', () => {
       mockIntentDetectionPort = { detectIntent: jest.fn() };
       mockTemplateService = { getTemplate: jest.fn() };
       mockEventBus = { publish: jest.fn() };
+      mockConfig = {
+        get: jest.fn((_key: string, def?: unknown) => def),
+      };
 
       service = new RequestInteractionService(
         mockInteractionRepository,
@@ -89,6 +93,7 @@ describe('RequestInteractionService', () => {
         mockIntentDetectionPort,
         mockTemplateService,
         mockEventBus,
+        mockConfig,
       );
     });
 
@@ -181,6 +186,95 @@ describe('RequestInteractionService', () => {
       // Only the 6 most recent messages, oldest of that window first, newest last
       expect(call.conversationHistory[0].content).toBe('msg-5');
       expect(call.conversationHistory[5].content).toBe('msg-0');
+    });
+
+    it('falls back to keyword matching when the classifier port rejects (covers both errors and the Promise.race timeout path)', async () => {
+      const interaction = createMockInteraction({ requestId: 'request-123' });
+      const request = createMockRequest({
+        id: 'request-123',
+        status: RequestStatus.ACCEPTED,
+      });
+      mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
+        interaction,
+      );
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockIntentDetectionPort.detectIntent.mockRejectedValue(
+        new Error('LLM unavailable'),
+      );
+      mockDetectIntentUseCase.detectIntent.mockReturnValue(
+        ResponseIntent.STARTED,
+      );
+
+      await service.processInboundMessage({
+        from: 'whatsapp:+5492944123456',
+        body: 'ya empecé',
+        messageId: 'SM123',
+      });
+
+      expect(mockDetectIntentUseCase.detectIntent).toHaveBeenCalledWith(
+        'ya empecé',
+      );
+      expect(mockInteractionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          responseIntent: ResponseIntent.STARTED,
+        }),
+      );
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            responseIntent: ResponseIntent.STARTED,
+            viability: null,
+            optOut: false,
+            escalate: false,
+          }),
+        }),
+      );
+    });
+
+    it('downgrades statusIntent to UNKNOWN when confidence is below the configured threshold, but keeps the raw values in metadata', async () => {
+      const interaction = createMockInteraction({ requestId: 'request-123' });
+      const request = createMockRequest({
+        id: 'request-123',
+        status: RequestStatus.ACCEPTED,
+      });
+      mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
+        interaction,
+      );
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockConfig.get.mockImplementation((key: string, def?: unknown) =>
+        key === 'INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD' ? 0.6 : def,
+      );
+      mockIntentDetectionPort.detectIntent.mockResolvedValue({
+        statusIntent: ResponseIntent.CANCELLED,
+        confidence: 0.3,
+        viability: 'AT_RISK',
+        optOut: false,
+        escalate: false,
+      });
+
+      await service.processInboundMessage({
+        from: 'whatsapp:+5492944123456',
+        body: 'mmm no se',
+        messageId: 'SM123',
+      });
+
+      expect(mockInteractionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          responseIntent: ResponseIntent.UNKNOWN,
+          metadata: expect.objectContaining({
+            rawClassifierIntent: ResponseIntent.CANCELLED,
+            classifierConfidence: 0.3,
+            viability: 'AT_RISK',
+          }),
+        }),
+      );
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            responseIntent: ResponseIntent.UNKNOWN,
+          }),
+        }),
+      );
     });
 
     it('returns without classifying or saving when the parent request is not found', async () => {

@@ -1,5 +1,6 @@
 import { ResponseIntent } from '@prisma/client';
 import { DomainEvent } from '../../../shared/domain/events/domain-event';
+import { RequestViabilitySignal } from '../ports/intent-detection.port';
 
 export type RequestInteractionRespondedPayload = {
   interactionId: string;
@@ -12,6 +13,14 @@ export type RequestInteractionRespondedPayload = {
    * Useful for metrics.
    */
   responseTimeMinutes?: number;
+  /** Confidence (0..1) behind responseIntent, from the classifier. */
+  confidence: number;
+  /** Signal that this request may be going nowhere, from the classifier. */
+  viability: RequestViabilitySignal;
+  /** Whether this reply asked to stop receiving WhatsApp messages. */
+  optOut: boolean;
+  /** Whether this reply needs human/admin attention beyond the normal status flow. */
+  escalate: boolean;
 };
 
 export class RequestInteractionRespondedEvent
