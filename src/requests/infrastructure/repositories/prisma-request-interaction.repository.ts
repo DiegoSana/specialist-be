@@ -119,6 +119,17 @@ export class PrismaRequestInteractionRepository
     return count > 0;
   }
 
+  async hasRespondedInteraction(requestId: string): Promise<boolean> {
+    const count = await this.prisma.requestInteraction.count({
+      where: {
+        requestId,
+        status: InteractionStatus.RESPONDED,
+      },
+    });
+
+    return count > 0;
+  }
+
   async findMostRecentByRequestId(
     requestId: string,
   ): Promise<RequestInteractionEntity | null> {

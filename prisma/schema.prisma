@@ -207,12 +207,13 @@ model Request {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  client       User                 @relation("Client", fields: [clientId], references: [id], onDelete: Cascade)
-  provider     ServiceProvider?     @relation("Provider", fields: [providerId], references: [id], onDelete: Cascade)
-  trade        Trade?               @relation(fields: [tradeId], references: [id])
-  review       Review?
-  interests    RequestInterest[]
-  interactions RequestInteraction[]
+  client         User                   @relation("Client", fields: [clientId], references: [id], onDelete: Cascade)
+  provider       ServiceProvider?       @relation("Provider", fields: [providerId], references: [id], onDelete: Cascade)
+  trade          Trade?                 @relation(fields: [tradeId], references: [id])
+  review         Review?
+  interests      RequestInterest[]
+  interactions   RequestInteraction[]
+  attentionFlags RequestAttentionFlag[]
 
   @@map("requests")
 }
@@ -402,6 +403,28 @@ enum AuthProvider {
 enum ProviderType {
   PROFESSIONAL
   COMPANY
+}
+
+model RequestAttentionFlag {
+  id               String                 @id @default(uuid())
+  requestId        String
+  reason           RequestAttentionReason
+  detail           String?
+  createdAt        DateTime               @default(now())
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+
+  request Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, reason, resolvedAt])
+  @@index([resolvedAt])
+  @@map("request_attention_flags")
+}
+
+enum RequestAttentionReason {
+  AT_RISK
+  ABANDONED
+  ESCALATED
 }
 
 model RequestInteraction {

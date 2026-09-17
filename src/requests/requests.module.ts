@@ -6,18 +6,22 @@ import { REQUEST_QUERY_REPOSITORY } from './domain/queries/request.query-reposit
 import { REQUEST_INTEREST_REPOSITORY } from './domain/repositories/request-interest.repository';
 import { REQUEST_INTERACTION_REPOSITORY } from './domain/repositories/request-interaction.repository';
 import { REQUEST_INTERACTION_QUERY_REPOSITORY } from './domain/queries/request-interaction.query-repository';
+import { REQUEST_ATTENTION_FLAG_REPOSITORY } from './domain/repositories/request-attention-flag.repository';
+import { REQUEST_ATTENTION_QUERY_REPOSITORY } from './domain/queries/request-attention.query-repository';
 
 // Application
 import { RequestService } from './application/services/request.service';
 import { RequestInterestService } from './application/services/request-interest.service';
 import { RequestInteractionService } from './application/services/request-interaction.service';
 import { AdminWhatsAppService } from './application/services/admin-whatsapp.service';
+import { AdminRequestAttentionService } from './application/services/admin-request-attention.service';
 import { WhatsAppDispatchJob } from './application/jobs/whatsapp-dispatch.job';
 import { FollowUpSchedulerJob } from './application/jobs/follow-up-scheduler.job';
 import { FOLLOW_UP_RULES } from './application/jobs/follow-up-scheduler.job';
 import { MessageStatusCheckerJob } from './application/jobs/message-status-checker.job';
 import { DetectResponseIntentUseCase } from './application/use-cases/detect-response-intent.use-case';
 import { RequestInteractionRespondedHandler } from './application/handlers/request-interaction-responded.handler';
+import { RequestAttentionService } from './application/services/request-attention.service';
 import { FollowUpQueryExecutor } from './application/follow-up/follow-up-query-executor';
 import {
   Accepted3DaysFollowUpRule,
@@ -34,6 +38,8 @@ import { PrismaRequestQueryRepository } from './infrastructure/queries/prisma-re
 import { PrismaRequestInterestRepository } from './infrastructure/repositories/prisma-request-interest.repository';
 import { PrismaRequestInteractionRepository } from './infrastructure/repositories/prisma-request-interaction.repository';
 import { PrismaRequestInteractionQueryRepository } from './infrastructure/queries/prisma-request-interaction.query-repository';
+import { PrismaRequestAttentionFlagRepository } from './infrastructure/repositories/prisma-request-attention-flag.repository';
+import { PrismaRequestAttentionQueryRepository } from './infrastructure/queries/prisma-request-attention.query-repository';
 import { whatsAppMessagingProvider } from './infrastructure/adapters/whatsapp-messaging.factory';
 import { intentDetectionProvider } from './infrastructure/adapters/intent-detection.factory';
 import { AnthropicIntentDetectionAdapter } from './infrastructure/adapters/anthropic-intent-detection.adapter';
@@ -43,6 +49,7 @@ import { RequestsController } from './presentation/requests.controller';
 import { TwilioWebhookController } from './presentation/controllers/twilio-webhook.controller';
 import { AdminWhatsAppController } from './presentation/controllers/admin-whatsapp.controller';
 import { AdminWhatsAppDevController } from './presentation/controllers/admin-whatsapp-dev.controller';
+import { AdminRequestAttentionController } from './presentation/controllers/admin-request-attention.controller';
 import { TwilioWebhookGuard } from './presentation/guards/twilio-webhook.guard';
 import { TwilioRateLimitGuard } from './presentation/guards/twilio-rate-limit.guard';
 
@@ -65,6 +72,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     RequestsController,
     TwilioWebhookController,
     AdminWhatsAppController,
+    AdminRequestAttentionController,
     ...(process.env.NODE_ENV !== 'production' ||
     process.env.WHATSAPP_DEV_MODE_ENABLED === 'true'
       ? [AdminWhatsAppDevController]
@@ -75,6 +83,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     RequestInterestService,
     RequestInteractionService,
     AdminWhatsAppService,
+    AdminRequestAttentionService,
     WhatsAppDispatchJob,
     FollowUpSchedulerJob,
     MessageStatusCheckerJob,
@@ -82,6 +91,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     TwilioRateLimitGuard,
     DetectResponseIntentUseCase,
     RequestInteractionRespondedHandler,
+    RequestAttentionService,
     FollowUpQueryExecutor,
     Accepted3DaysFollowUpRule,
     Accepted7DaysFollowUpRule,
@@ -127,6 +137,14 @@ import { ProfilesModule } from '../profiles/profiles.module';
     {
       provide: REQUEST_INTERACTION_QUERY_REPOSITORY,
       useClass: PrismaRequestInteractionQueryRepository,
+    },
+    {
+      provide: REQUEST_ATTENTION_FLAG_REPOSITORY,
+      useClass: PrismaRequestAttentionFlagRepository,
+    },
+    {
+      provide: REQUEST_ATTENTION_QUERY_REPOSITORY,
+      useClass: PrismaRequestAttentionQueryRepository,
     },
     whatsAppMessagingProvider,
     AnthropicIntentDetectionAdapter,

@@ -136,6 +136,14 @@ export class UserService {
   }
 
   /**
+   * IDs of all admin users. Used to fan out admin notifications without a fixed,
+   * hardcoded admin user id.
+   */
+  async findAdminUserIds(): Promise<string[]> {
+    return this.userQueryRepository.findAdminUserIds();
+  }
+
+  /**
    * Check if user exists
    * @param userId - User ID
    * @returns boolean

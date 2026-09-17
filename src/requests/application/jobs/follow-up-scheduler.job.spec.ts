@@ -14,11 +14,13 @@ describe('FollowUpSchedulerJob', () => {
   let mockCompanyService: any;
   let mockQueryExecutor: any;
   let mockRule: any;
+  let mockAttentionService: any;
 
   beforeEach(() => {
     mockInteractionRepository = {
-      hasPendingFollowUp: jest.fn(),
-      findMostRecentByRequestId: jest.fn(),
+      hasPendingFollowUp: jest.fn().mockResolvedValue(false),
+      findMostRecentByRequestId: jest.fn().mockResolvedValue(null),
+      hasRespondedInteraction: jest.fn().mockResolvedValue(false),
     };
     mockRequestRepository = {
       findById: jest.fn(),
@@ -31,7 +33,8 @@ describe('FollowUpSchedulerJob', () => {
     mockUserService = { findById: jest.fn() };
     mockProfessionalService = { findByServiceProviderId: jest.fn() };
     mockCompanyService = { findByServiceProviderId: jest.fn() };
-    mockQueryExecutor = { getRequests: jest.fn() };
+    mockQueryExecutor = { getRequests: jest.fn().mockResolvedValue([]) };
+    mockAttentionService = { flag: jest.fn() };
 
     mockRule = {
       getName: jest.fn().mockReturnValue('ACCEPTED_3_DAYS'),
@@ -58,6 +61,7 @@ describe('FollowUpSchedulerJob', () => {
       mockUserService,
       mockProfessionalService,
       mockCompanyService,
+      mockAttentionService,
     );
   });
 
@@ -145,6 +149,91 @@ describe('FollowUpSchedulerJob', () => {
       ).rejects.toThrow(BadRequestException);
 
       expect(mockInteractionService.createFollowUp).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('scheduleFollowUps (ladder-exhausted attention flag)', () => {
+    const eligibleRequest = createMockRequest({
+      status: RequestStatus.ACCEPTED,
+      providerId: 'service-provider-123',
+    });
+
+    beforeEach(() => {
+      mockConfig.get.mockImplementation((key: string, def?: string) =>
+        key === 'WHATSAPP_FOLLOWUP_ENABLED' ? 'true' : def,
+      );
+      mockQueryExecutor.getRequests.mockResolvedValue([eligibleRequest]);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue({
+        userId: 'provider-user-1',
+      });
+      mockUserService.findById.mockResolvedValue({
+        phone: '+5492944123456',
+        phoneVerified: true,
+        whatsappOptedOut: false,
+      });
+    });
+
+    it('flags the request AT_RISK when this is the only (thus last) rule for its status and it never got a response', async () => {
+      mockInteractionRepository.hasRespondedInteraction.mockResolvedValue(
+        false,
+      );
+
+      await job.scheduleFollowUps();
+
+      expect(mockAttentionService.flag).toHaveBeenCalledWith(
+        eligibleRequest.id,
+        'AT_RISK',
+        expect.any(String),
+      );
+    });
+
+    it('does not flag when the request already had a RESPONDED interaction', async () => {
+      mockInteractionRepository.hasRespondedInteraction.mockResolvedValue(true);
+
+      await job.scheduleFollowUps();
+
+      expect(mockAttentionService.flag).not.toHaveBeenCalled();
+    });
+
+    it('does not flag when another rule for the same status has a higher `days` (this is not the last rung)', async () => {
+      const laterRule = {
+        getName: jest.fn().mockReturnValue('ACCEPTED_7_DAYS'),
+        getQuery: jest.fn().mockReturnValue({
+          type: 'BY_STATUS',
+          status: RequestStatus.ACCEPTED,
+          days: 7,
+        }),
+        getDirection: jest
+          .fn()
+          .mockReturnValue(InteractionDirection.TO_PROVIDER),
+        getTemplate: jest.fn().mockReturnValue('follow_up_7_days'),
+        buildPayload: jest.fn().mockResolvedValue({ metadata: {} }),
+      };
+      job = new FollowUpSchedulerJob(
+        [mockRule, laterRule],
+        mockQueryExecutor,
+        mockInteractionRepository,
+        mockRequestRepository,
+        mockInteractionService,
+        mockConfig,
+        mockUserService,
+        mockProfessionalService,
+        mockCompanyService,
+        mockAttentionService,
+      );
+      // Only the non-last rule (days=3) gets a candidate; the last rung (days=7)
+      // gets none, so this isolates "is mockRule's own scheduling flagging?"
+      // from "does the ladder's actual last rung flag?" (covered by the first test).
+      mockQueryExecutor.getRequests.mockImplementation((query: any) =>
+        Promise.resolve(query.days === 3 ? [eligibleRequest] : []),
+      );
+      mockInteractionRepository.hasRespondedInteraction.mockResolvedValue(
+        false,
+      );
+
+      await job.scheduleFollowUps();
+
+      expect(mockAttentionService.flag).not.toHaveBeenCalled();
     });
   });
 });

@@ -45,6 +45,12 @@ export interface UserQueryRepository {
     }>;
     total: number;
   }>;
+
+  /**
+   * IDs of all admin users. Used to fan out admin notifications (e.g. a request flagged
+   * for attention) without a fixed/hardcoded admin user id.
+   */
+  findAdminUserIds(): Promise<string[]>;
 }
 
 // Token for dependency injection

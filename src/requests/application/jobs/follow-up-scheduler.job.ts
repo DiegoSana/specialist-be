@@ -8,7 +8,11 @@ import {
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
-import { InteractionDirection, RequestStatus } from '@prisma/client';
+import {
+  InteractionDirection,
+  RequestAttentionReason,
+  RequestStatus,
+} from '@prisma/client';
 import {
   REQUEST_INTERACTION_REPOSITORY,
   RequestInteractionRepository,
@@ -24,6 +28,7 @@ import { CompanyService } from '../../../profiles/application/services/company.s
 import type { IFollowUpRule } from '../../domain/follow-up';
 import { FollowUpQueryExecutor } from '../follow-up/follow-up-query-executor';
 import { RequestEntity } from '../../domain/entities/request.entity';
+import { RequestAttentionService } from '../services/request-attention.service';
 
 export const FOLLOW_UP_RULES = Symbol('FOLLOW_UP_RULES');
 
@@ -50,7 +55,43 @@ export class FollowUpSchedulerJob {
     private readonly professionalService: ProfessionalService,
     @Inject(forwardRef(() => CompanyService))
     private readonly companyService: CompanyService,
+    private readonly attentionService: RequestAttentionService,
   ) {}
+
+  /**
+   * Map of RequestStatus -> the highest `days` among this status's BY_STATUS rules,
+   * i.e. the last rung of the follow-up ladder for that status. Memoized once from
+   * the injected FOLLOW_UP_RULES; PENDING_WITH_INTERESTS rules are excluded (no
+   * "abandonment" concept defined for that ladder — it's about getting a provider
+   * assigned, not a terminal viability signal).
+   */
+  private get maxDaysByStatus(): Map<RequestStatus, number> {
+    if (!this._maxDaysByStatus) {
+      const map = new Map<RequestStatus, number>();
+      for (const rule of this.followUpRules) {
+        const query = rule.getQuery();
+        if (query.type !== 'BY_STATUS') {
+          continue;
+        }
+        const currentMax = map.get(query.status) ?? -1;
+        if (query.days > currentMax) {
+          map.set(query.status, query.days);
+        }
+      }
+      this._maxDaysByStatus = map;
+    }
+    return this._maxDaysByStatus;
+  }
+  private _maxDaysByStatus?: Map<RequestStatus, number>;
+
+  /** True if `rule` is the last rung of the follow-up ladder for its status. */
+  private isLastRuleForStatus(rule: IFollowUpRule): boolean {
+    const query = rule.getQuery();
+    if (query.type !== 'BY_STATUS') {
+      return false;
+    }
+    return this.maxDaysByStatus.get(query.status) === query.days;
+  }
 
   @Cron('0 * * * *')
   async scheduleFollowUps(): Promise<void> {
@@ -223,6 +264,18 @@ export class FollowUpSchedulerJob {
       `Scheduled follow-up: RequestId=${request.id}, Rule=${rule.getName()}, Template=${template}`,
     );
 
+    if (this.isLastRuleForStatus(rule)) {
+      const everResponded =
+        await this.interactionRepository.hasRespondedInteraction(request.id);
+      if (!everResponded) {
+        await this.attentionService.flag(
+          request.id,
+          RequestAttentionReason.AT_RISK,
+          `Sin respuesta tras la última regla de follow-up (${rule.getName()})`,
+        );
+      }
+    }
+
     return { scheduled: true };
   }
 
@@ -319,14 +372,22 @@ export class FollowUpSchedulerJob {
           );
         if (professional) {
           const user = await this.userService.findById(professional.userId);
-          return !!(user?.phone && user.phoneVerified);
+          return !!(
+            user?.phone &&
+            user.phoneVerified &&
+            !user.whatsappOptedOut
+          );
         }
         const company = await this.companyService.findByServiceProviderId(
           request.providerId,
         );
         if (company) {
           const user = await this.userService.findById(company.userId);
-          return !!(user?.phone && user.phoneVerified);
+          return !!(
+            user?.phone &&
+            user.phoneVerified &&
+            !user.whatsappOptedOut
+          );
         }
       } catch (error) {
         this.logger.warn(
@@ -342,7 +403,7 @@ export class FollowUpSchedulerJob {
       }
       try {
         const user = await this.userService.findById(request.clientId);
-        return !!(user?.phone && user.phoneVerified);
+        return !!(user?.phone && user.phoneVerified && !user.whatsappOptedOut);
       } catch (error) {
         this.logger.warn(
           `Error checking client phone for request ${request.id}`,

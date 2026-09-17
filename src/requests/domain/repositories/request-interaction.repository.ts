@@ -36,6 +36,12 @@ export interface RequestInteractionRepository {
   hasPendingFollowUp(requestId: string): Promise<boolean>;
 
   /**
+   * Check if this request has ever had a RESPONDED interaction. Used to detect
+   * "the follow-up ladder is exhausted and nobody ever replied" (possible abandonment).
+   */
+  hasRespondedInteraction(requestId: string): Promise<boolean>;
+
+  /**
    * Find the most recent interaction (of any type) for a request.
    * Used to calculate time since last activity.
    */

@@ -8,6 +8,7 @@ import { NOTIFICATION_REPOSITORY } from './domain/repositories/notification.repo
 import { InAppNotificationService } from './application/services/in-app-notification.service';
 import { RequestsNotificationsHandler } from './application/handlers/requests-notifications.handler';
 import { ReviewsNotificationsHandler } from './application/handlers/reviews-notifications.handler';
+import { RequestAttentionFlaggedHandler } from './application/handlers/request-attention-flagged.handler';
 import { NotificationPreferencesService } from './application/services/notification-preferences.service';
 import { NotificationService } from './application/services/notification.service';
 import { NotificationRetentionJob } from './application/jobs/notification-retention.job';
@@ -32,9 +33,14 @@ import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
 
 // Cross-context dependencies
 import { ProfilesModule } from '../profiles/profiles.module';
+import { IdentityModule } from '../identity/identity.module';
 
 @Module({
-  imports: [PrismaModule, forwardRef(() => ProfilesModule)],
+  imports: [
+    PrismaModule,
+    forwardRef(() => ProfilesModule),
+    forwardRef(() => IdentityModule),
+  ],
   controllers: [NotificationsController, AdminNotificationsController],
   providers: [
     NotificationService,
@@ -45,6 +51,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     NotificationDispatchJob,
     RequestsNotificationsHandler,
     ReviewsNotificationsHandler,
+    RequestAttentionFlaggedHandler,
     {
       provide: IN_APP_NOTIFICATION_REPOSITORY,
       useClass: PrismaInAppNotificationRepository,
