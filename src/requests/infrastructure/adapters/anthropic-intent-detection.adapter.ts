@@ -110,11 +110,17 @@ export class AnthropicIntentDetectionAdapter implements IntentDetectionPort {
       '  concretarse (ACTIVE), es ambigua/evasiva y podría estar por abandonarse (AT_RISK),',
       '  o directamente suena abandonada (ABANDONED). Usá null si el mensaje no aporta',
       '  ninguna señal sobre esto (ej. una respuesta clara tipo "sí" o "terminé").',
-      '- optOut: true si el usuario está pidiendo, de cualquier forma, que dejen de',
-      '  escribirle por WhatsApp (explícito o implícito).',
+      '- optOut: true SOLO si el usuario pide, de forma inequívoca, dejar de recibir',
+      '  CUALQUIER mensaje de WhatsApp de la plataforma de ahora en adelante (ej. "no me',
+      '  escriban más", "sáquenme de la lista", "dejen de mandarme whatsapp"). Esto tiene',
+      '  una consecuencia seria: bloquea al usuario para seguir operando en la plataforma,',
+      '  así que ante la duda usá false. Pedir hablar con una persona, quejarse de los',
+      '  mensajes automáticos/bots, o estar frustrado NO es optOut — eso es escalate. Ej:',
+      '  "no doy más con estos mensajes automáticos, quiero hablar con una persona" es',
+      '  escalate=true, optOut=false (quiere un humano, no dejar de tener contacto).',
       '- escalate: true si el mensaje necesita que un humano/administrador intervenga',
       '  (un reclamo, una situación confusa que no se resuelve con las opciones normales,',
-      '  algo urgente o fuera de lo común).',
+      '  pide explícitamente hablar con una persona, algo urgente o fuera de lo común).',
     ].join('\n');
   }
 
