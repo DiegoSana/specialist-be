@@ -132,4 +132,12 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
       total,
     };
   }
+
+  async findAdminUserIds(): Promise<string[]> {
+    const admins = await this.prisma.user.findMany({
+      where: { isAdmin: true },
+      select: { id: true },
+    });
+    return admins.map((a) => a.id);
+  }
 }

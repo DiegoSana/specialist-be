@@ -179,6 +179,8 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 | `GET` | `/admin/whatsapp/conversations/:requestId` | Get the full WhatsApp message thread for a request |
 | `POST` | `/admin/whatsapp/conversations/:requestId/simulate-reply` | Simulate an inbound WhatsApp reply (dev mode only, 404 otherwise) |
 | `POST` | `/admin/whatsapp/conversations/:requestId/trigger-followup` | Force-trigger a follow-up rule right now (dev mode only, 404 otherwise) |
+| `GET` | `/admin/requests/attention` | List open `RequestAttentionFlag`s (paginated, `?page=&limit=`), joined with request title/status. Reasons: `AT_RISK` (follow-up ladder exhausted, request never responded), `ABANDONED` (LLM-detected evasive reply), `ESCALATED` (LLM-detected `escalate`) |
+| `POST` | `/admin/requests/attention/:id/resolve` | Mark an attention flag resolved (204). Purely a status change — does not touch the underlying request; the admin follows up manually via the WhatsApp conversations viewer above |
 
 ### 📁 Storage (`/storage`)
 

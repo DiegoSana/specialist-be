@@ -92,6 +92,10 @@ async function debugEventHandler(interactionId?: string) {
             responseContent: interaction.responseContent,
             responseIntent: interaction.responseIntent as ResponseIntent,
             respondedAt: interaction.respondedAt || new Date(),
+            confidence: 1,
+            viability: null,
+            optOut: false,
+            escalate: false,
           });
 
           console.log(`   Publishing event: ${event.name}`);

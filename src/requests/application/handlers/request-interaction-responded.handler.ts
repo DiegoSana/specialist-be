@@ -5,12 +5,17 @@ import {
   OnModuleInit,
   forwardRef,
 } from '@nestjs/common';
-import { RequestStatus, ResponseIntent } from '@prisma/client';
+import {
+  RequestAttentionReason,
+  RequestStatus,
+  ResponseIntent,
+} from '@prisma/client';
 import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
 import { RequestInteractionRespondedEvent } from '../../domain/events/request-interaction-responded.event';
 import { RequestService } from '../services/request.service';
 import { RequestInteractionService } from '../services/request-interaction.service';
 import { RequestInterestService } from '../services/request-interest.service';
+import { RequestAttentionService } from '../services/request-attention.service';
 import { MessageTemplateService } from '../../../shared/infrastructure/messaging/message-template.service';
 import {
   REQUEST_INTERACTION_REPOSITORY,
@@ -34,6 +39,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
     private readonly interactionRepository: RequestInteractionRepository,
     private readonly interactionService: RequestInteractionService,
     private readonly requestInterestService: RequestInterestService,
+    private readonly attentionService: RequestAttentionService,
     private readonly templateService: MessageTemplateService,
     @Inject(forwardRef(() => ProfessionalService))
     private readonly professionalService: ProfessionalService,
@@ -74,8 +80,14 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
     const { requestId, responseContent } = event.payload;
 
     this.logger.log(
-      `Processing interaction response for request ${requestId} with intent ${event.payload.responseIntent}`,
+      `Processing interaction response for request ${requestId} with intent ${event.payload.responseIntent} ` +
+        `(confidence=${event.payload.confidence}, viability=${event.payload.viability}, optOut=${event.payload.optOut}, escalate=${event.payload.escalate})`,
     );
+    // escalate/viability=ABANDONED flagging happens upstream in
+    // RequestInteractionService.processInboundMessage, right after classification —
+    // see RequestAttentionService. This handler flags separately, for status-change
+    // attempts that the classifier inferred but the actor isn't actually authorized to
+    // make (see the two `attentionService.flag(...ESCALATED...)` calls below).
 
     try {
       const request = await this.requestService.findById(requestId);
@@ -111,6 +123,18 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
           await this.sendAssignConfirmationMessage(requestId);
           return;
         }
+        // The client's reply didn't parse as a valid specialist selection. Falling
+        // through to the standard intent->status mapping below would try to set this
+        // PENDING request straight to ACCEPTED without ever assigning a provider —
+        // RequestEntity.canChangeStatusBy correctly rejects that (ACCEPTED requires an
+        // assignment, which only assignProvider() does), so it always failed silently.
+        // Flag for a human instead of attempting a transition that can't succeed.
+        await this.attentionService.flag(
+          requestId,
+          RequestAttentionReason.ESCALATED,
+          `Cliente respondió algo que no se pudo interpretar como selección de especialista: "${responseContent}"`,
+        );
+        return;
       }
 
       // Standard flow: map intent to status change
@@ -144,9 +168,27 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
         };
       }
 
-      await this.requestService.updateStatus(requestId, context, {
-        status: newStatus,
-      });
+      try {
+        await this.requestService.updateStatus(requestId, context, {
+          status: newStatus,
+        });
+      } catch (statusError: any) {
+        // The classifier inferred a status change, but the actor isn't authorized to
+        // make it directly (e.g. a provider asking to cancel a request that's already
+        // in progress — only the client/admin can cancel). That's the domain correctly
+        // protecting an invariant, not something to retry — but silently dropping it
+        // leaves a real request stuck with no one aware the person asked for something.
+        // Flag it for a human instead of just logging and moving on.
+        this.logger.warn(
+          `Status change denied for request ${requestId} (${request.status} -> ${newStatus}, intent ${event.payload.responseIntent}): ${statusError.message}`,
+        );
+        await this.attentionService.flag(
+          requestId,
+          RequestAttentionReason.ESCALATED,
+          `El sistema detectó intención de cambiar el estado a ${newStatus} (a partir de "${responseContent}") pero no está autorizado a hacerlo automáticamente — requiere revisión manual.`,
+        );
+        return;
+      }
 
       this.logger.log(
         `Request ${requestId} status updated from ${request.status} to ${newStatus} based on intent ${event.payload.responseIntent}`,

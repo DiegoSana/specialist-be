@@ -16,10 +16,14 @@ Docs: `docs/guides/PERMISSIONS_BY_ROLE.md`, `docs/guides/whatsapp/README.md`,
   `getInterestedProviders`, `hasExpressedInterest`, `getMyInterestedRequests`, `assignProvider`,
   `unassignProvider`.
 - `RequestInteractionService`: `sendMessage`, `markAsDelivered`, `processInboundMessage`,
-  `createFollowUp`.
+  `createFollowUp`. `processInboundMessage` classifies the reply via `IntentDetectionPort`
+  (LLM, with a keyword-matching fallback on timeout/error) instead of calling
+  `DetectResponseIntentUseCase` directly — see "AI reply classification" below.
 - `AdminWhatsAppService`: `isDevMode`, `getConfig`, `listConversations`, `getThread`,
   `simulateReply` (dev mode only), `triggerFollowUp` (dev mode only). Backs the admin WhatsApp
   conversations viewer; see `docs/guides/whatsapp/README.md`.
+- `AdminRequestAttentionService`: `listOpen({page, limit})`, `resolve(id, adminUserId)`. Backs the
+  admin "needs attention" panel (`RequestAttentionFlag`) — see "Admin request attention" below.
 
 ## Endpoints (`/requests`, all JWT)
 
@@ -35,6 +39,12 @@ conversations/:requestId/simulate-reply` and `POST conversations/:requestId/trig
 live in a separate `AdminWhatsAppDevController`, registered only when `NODE_ENV !== 'production'`
 OR `WHATSAPP_DEV_MODE_ENABLED=true` (pre-launch opt-in for the "production" Fly deploy, see
 below), and additionally 404 (not 403) at runtime unless `isWhatsAppDevMode()` is true.
+
+Admin (`/admin/requests/attention`, `JwtAuthGuard` + `AdminGuard`,
+`AdminRequestAttentionController`): `GET ?page=&limit=` paginated list of open
+`RequestAttentionFlag`s joined with request title/status; `POST /:id/resolve` (204). Read-only
+otherwise — the admin follows up manually via the WhatsApp conversations viewer above; see "Admin
+request attention" below.
 
 ## Domain
 
@@ -58,7 +68,23 @@ below), and additionally 404 (not 403) at runtime unless `isWhatsAppDevMode()` i
   `providerType`, `providerName`.
 - Follow-up rules (`domain/follow-up` contracts, `application/follow-up/rules` strategies):
   ACCEPTED 3d/7d -> provider, IN_PROGRESS 5d/10d -> provider, DONE 1d -> client (review),
-  PENDING 3d with interests -> client (assign). Registered via `FOLLOW_UP_RULES` factory in the module.
+  PENDING 3d with interests -> client (assign). Registered via `FOLLOW_UP_RULES` factory in the
+  module. When the highest-`days` `BY_STATUS` rule for a request's current status fires and the
+  request has never had a `RESPONDED` interaction (`RequestInteractionRepository.hasRespondedInteraction`),
+  `FollowUpSchedulerJob` flags it `AT_RISK` via `RequestAttentionService` (see "Admin request
+  attention" below) — `PENDING_WITH_INTERESTS` is excluded from this check.
+- `RequestAttentionFlag` (association store, `domain/entities/request-attention-flag.entity.ts`):
+  `id, requestId, reason (AT_RISK|ABANDONED|ESCALATED), detail?, createdAt, resolvedAt?,
+  resolvedByUserId?`. Created only through `RequestAttentionService.flag(requestId, reason,
+  detail?)`, which is idempotent — skips creating a duplicate or renotifying while an open flag
+  with the same `(requestId, reason)` already exists (the follow-up ladder can keep re-triggering
+  roughly daily for a stalled request). Two producers: `FollowUpSchedulerJob` (silence-based
+  `AT_RISK`, see above) and `RequestInteractionService.processInboundMessage` (LLM-detected
+  `escalate` -> `ESCALATED`, `viability === 'ABANDONED'` -> `ABANDONED`). Publishes
+  `RequestAttentionFlaggedEvent`, consumed by `RequestAttentionFlaggedHandler` **in the
+  notifications context** (not here — mirrors `RequestsNotificationsHandler`'s existing
+  cross-context pattern rather than importing `NotificationsModule` into `RequestsModule`), which
+  fans the notification out to every admin via `UserService.findAdminUserIds()`.
 
 ## Infrastructure
 
@@ -78,10 +104,37 @@ Jobs: `FollowUpSchedulerJob` (hourly; also exposes `forceTriggerRule(ruleName, r
 admin "trigger now" endpoint), `WhatsAppDispatchJob` (1 min), `MessageStatusCheckerJob`
 (5 min); flags `WHATSAPP_FOLLOWUP_ENABLED`, `WHATSAPP_STATUS_CHECK_ENABLED`.
 
+**AI reply classification**: `INTENT_DETECTION_PORT` (`domain/ports/intent-detection.port.ts`) is
+provided by `intent-detection.factory.ts` (mirrors `whatsapp-messaging.factory.ts`), switching on
+`INTENT_CLASSIFIER_PROVIDER`: `LocalIntentDetectionAdapter` (default — wraps the existing
+`DetectResponseIntentUseCase` keyword matching, no network, `viability`/non-explicit `optOut`
+always the safe default) or `AnthropicIntentDetectionAdapter` (forced tool use, never free-text
+parsing; short per-request timeout + `maxRetries: 0`, since it runs inside the synchronous Twilio
+webhook path). Unlike `WHATSAPP_PROVIDER`, this one **defaults to `local`, not the real
+adapter** — deliberately inverted, because silently calling a paid third-party LLM on every
+inbound webhook in an unconfigured environment is a worse failure mode than degrading to keyword
+matching (see the factory's doc comment). `RequestInteractionService` wraps the port call in a
+`Promise.race` against `INTENT_CLASSIFIER_TIMEOUT_MS` and falls back to
+`DetectResponseIntentUseCase` directly on timeout/error; below `INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD`,
+the classified `statusIntent` is downgraded to `UNKNOWN` before it ever reaches
+`RequestInteractionRespondedEvent` (the raw classification stays in `interaction.metadata` for
+auditing). See `docs/guides/ENVIRONMENT_VARIABLES.md` for the env vars.
+
+**Admin request attention**: `REQUEST_ATTENTION_FLAG_REPOSITORY` / `PrismaRequestAttentionFlagRepository`
+(association store) and `REQUEST_ATTENTION_QUERY_REPOSITORY` / `PrismaRequestAttentionQueryRepository`
+(admin listing read model, `AttentionFlagSummary`) back `RequestAttentionFlag`. See the Domain
+section above for the flagging flow.
+
 ## Invariants and gotchas
 
 - Active-profile flags come from `ProfileActivationService.getActivationStatus`; this context
-  never calls `isFullyVerified()`/`canOperate()` for permissions.
+  never calls `isFullyVerified()`/`canOperate()` for permissions. `User.whatsappOptedOut` is
+  gated into that same computation (Profiles context) so an opted-out user can't create/take new
+  requests; this context additionally checks `whatsappOptedOut` directly in
+  `RequestInteractionService.getRecipientPhone` (refuses to return a phone, reusing the "no
+  verified phone -> `FAILED`" path) and in `FollowUpSchedulerJob.canReceiveFollowUp`, so
+  already-assigned requests simply stop receiving WhatsApp for that person (they are never
+  auto-cancelled/unassigned).
 - Controller resolves the caller's provider context (Professional or Company) in
   `resolveProviderContext`; both provider types must be supported in every provider-facing path.
 - Interested providers get the limited view (`fromEntityLimited`): no client contact/address until
@@ -105,3 +158,12 @@ admin "trigger now" endpoint), `WhatsAppDispatchJob` (1 min), `MessageStatusChec
 `whatsapp-dev-mode.spec.ts`, `admin-whatsapp.controller.spec.ts`,
 `admin-whatsapp-dev.controller.spec.ts`. Factory: `createMockRequest`. Manual WhatsApp scripts
 under `test/scripts/whatsapp`.
+
+AI classifier / attention flags: `detect-response-intent.use-case.spec.ts`,
+`local-intent-detection.adapter.spec.ts`, `anthropic-intent-detection.adapter.spec.ts` (mocks
+`@anthropic-ai/sdk`, never hits the network), `intent-detection.factory.spec.ts`,
+`request-interaction.service.spec.ts` (fallback-on-timeout, confidence downgrade, opt-out,
+attention flagging), `request-interaction-responded.handler.spec.ts`,
+`request-attention.service.spec.ts` (idempotency), `request-attention-flagged.handler.spec.ts`
+(in `src/notifications/application/handlers/`). Cross-context: `user.service.spec.ts`
+(`findAdminUserIds`/`setWhatsAppOptedOut`), `profile-activation.service.spec.ts` (opt-out gate).

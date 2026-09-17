@@ -37,6 +37,8 @@ export const createMockUser = (
     authProvider: AuthProvider;
     phoneVerified: boolean;
     emailVerified: boolean;
+    whatsappOptedOut: boolean;
+    whatsappOptedOutAt: Date | null;
   }> = {},
 ): UserEntity => {
   const defaults = {
@@ -59,6 +61,8 @@ export const createMockUser = (
     authProvider: AuthProvider.LOCAL,
     phoneVerified: false,
     emailVerified: false,
+    whatsappOptedOut: false,
+    whatsappOptedOutAt: null,
     ...overrides,
   };
 
@@ -82,6 +86,8 @@ export const createMockUser = (
     defaults.authProvider,
     defaults.phoneVerified,
     defaults.emailVerified,
+    defaults.whatsappOptedOut,
+    defaults.whatsappOptedOutAt,
   );
 };
 

@@ -5,6 +5,7 @@ import {
   Logger,
   forwardRef,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   RequestInteractionRepository,
   REQUEST_INTERACTION_REPOSITORY,
@@ -14,11 +15,20 @@ import {
   InteractionType,
   InteractionDirection,
   InteractionStatus,
+  ResponseIntent,
+  RequestStatus,
+  RequestAttentionReason,
 } from '@prisma/client';
 import {
   WHATSAPP_MESSAGING_PORT,
   WhatsAppMessagingPort,
 } from '../../domain/ports/whatsapp-messaging.port';
+import {
+  INTENT_DETECTION_PORT,
+  IntentDetectionPort,
+  IntentDetectionResult,
+  IntentDetectionConversationMessage,
+} from '../../domain/ports/intent-detection.port';
 import {
   REQUEST_REPOSITORY,
   RequestRepository,
@@ -31,11 +41,16 @@ import { MessageTemplateService } from '../../../shared/infrastructure/messaging
 import { randomUUID } from 'crypto';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { RequestInteractionRespondedEvent } from '../../domain/events/request-interaction-responded.event';
+import { RequestAttentionService } from './request-attention.service';
+import { isExplicitOptOutKeyword } from './opt-out-keywords';
 
 // Retry configuration
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY_MS = 60000; // 1 minute
 const MAX_RETRY_DELAY_MS = 3600000; // 1 hour
+
+// Intent classification: how much conversation history to feed the classifier
+const MAX_HISTORY_MESSAGES = 6;
 
 @Injectable()
 export class RequestInteractionService {
@@ -54,9 +69,13 @@ export class RequestInteractionService {
     @Inject(forwardRef(() => CompanyService))
     private readonly companyService: CompanyService,
     private readonly detectIntentUseCase: DetectResponseIntentUseCase,
+    @Inject(INTENT_DETECTION_PORT)
+    private readonly intentDetectionPort: IntentDetectionPort,
     private readonly templateService: MessageTemplateService,
     @Inject(EVENT_BUS)
     private readonly eventBus: EventBus,
+    private readonly config: ConfigService,
+    private readonly attentionService: RequestAttentionService,
   ) {}
 
   /**
@@ -392,6 +411,12 @@ export class RequestInteractionService {
         );
         return null;
       }
+      if (user.whatsappOptedOut) {
+        this.logger.debug(
+          `Client ${request.clientId} opted out of WhatsApp, skipping send`,
+        );
+        return null;
+      }
       return user.phone;
     } else {
       // Get provider's phone/whatsapp
@@ -410,7 +435,7 @@ export class RequestInteractionService {
           );
         if (professional) {
           const user = await this.userService.findById(professional.userId);
-          if (user?.phone && user.phoneVerified) {
+          if (user?.phone && user.phoneVerified && !user.whatsappOptedOut) {
             return user.phone;
           }
         }
@@ -425,7 +450,7 @@ export class RequestInteractionService {
         );
         if (company) {
           const user = await this.userService.findById(company.userId);
-          if (user?.phone && user.phoneVerified) {
+          if (user?.phone && user.phoneVerified && !user.whatsappOptedOut) {
             return user.phone;
           }
         }
@@ -436,6 +461,146 @@ export class RequestInteractionService {
       }
 
       return null;
+    }
+  }
+
+  /**
+   * Build the recent conversation history for a request, oldest -> newest, capped to
+   * the last MAX_HISTORY_MESSAGES entries. Feeds the intent classifier's context.
+   */
+  private async buildConversationHistory(
+    requestId: string,
+  ): Promise<IntentDetectionConversationMessage[]> {
+    const history = await this.interactionRepository.findByRequestId(requestId);
+
+    return history
+      .slice()
+      .reverse() // repository returns newest-first; classifier wants oldest-first
+      .slice(-MAX_HISTORY_MESSAGES)
+      .map((interaction) => ({
+        direction: interaction.direction,
+        content: interaction.responseContent ?? interaction.messageContent,
+        createdAt: interaction.createdAt,
+      }));
+  }
+
+  /**
+   * Resolve the userId of whoever replied to `interaction`, based on which side the
+   * original outbound message was addressed to.
+   */
+  private async resolveResponderUserId(
+    interaction: RequestInteractionEntity,
+    request: { clientId: string; providerId: string | null; id: string },
+  ): Promise<string | null> {
+    if (interaction.direction === InteractionDirection.TO_CLIENT) {
+      return request.clientId;
+    }
+
+    if (!request.providerId) {
+      return null;
+    }
+
+    try {
+      const professional =
+        await this.professionalService.findByServiceProviderId(
+          request.providerId,
+        );
+      if (professional) {
+        return professional.userId;
+      }
+    } catch {
+      // Not a professional, try company below
+    }
+
+    try {
+      const company = await this.companyService.findByServiceProviderId(
+        request.providerId,
+      );
+      if (company) {
+        return company.userId;
+      }
+    } catch {
+      this.logger.warn(
+        `Provider ${request.providerId} not found as professional or company while resolving WhatsApp opt-out`,
+      );
+    }
+
+    return null;
+  }
+
+  /**
+   * Persist a WhatsApp opt-out for whoever replied. Never touches requests already in
+   * flight (see ProfileActivationService for the "no new activity" enforcement) — this
+   * only stops future messages to this specific user.
+   */
+  private async recordWhatsAppOptOut(
+    interaction: RequestInteractionEntity,
+    request: { clientId: string; providerId: string | null; id: string },
+  ): Promise<void> {
+    try {
+      const responderUserId = await this.resolveResponderUserId(
+        interaction,
+        request,
+      );
+      if (!responderUserId) {
+        this.logger.warn(
+          `Could not resolve responder for WhatsApp opt-out on request ${request.id}`,
+        );
+        return;
+      }
+      await this.userService.setWhatsAppOptedOut(responderUserId, true);
+      this.logger.log(
+        `User ${responderUserId} opted out of WhatsApp (request ${request.id})`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to record WhatsApp opt-out for request ${request.id}`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * Classify an inbound message via IntentDetectionPort with a hard timeout, falling
+   * back to the deterministic keyword matcher on error or timeout. This method must
+   * never throw and must never hang the caller — processInboundMessage runs
+   * synchronously inside the Twilio webhook request, which must always return 200.
+   */
+  private async classifyIntentWithFallback(input: {
+    messageText: string;
+    currentStatus: RequestStatus;
+    triggeringTemplate: string | null;
+    conversationHistory: IntentDetectionConversationMessage[];
+  }): Promise<IntentDetectionResult> {
+    const timeoutMs = this.config.get<number>(
+      'INTENT_CLASSIFIER_TIMEOUT_MS',
+      4000,
+    );
+    let timer: NodeJS.Timeout;
+
+    try {
+      return await Promise.race([
+        this.intentDetectionPort.detectIntent(input),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('Intent detection timed out')),
+            timeoutMs,
+          );
+        }),
+      ]);
+    } catch (error: any) {
+      this.logger.warn(
+        `Intent detection failed/timed out, falling back to keyword matching: ${error.message}`,
+      );
+      return {
+        statusIntent: this.detectIntentUseCase.detectIntent(input.messageText),
+        confidence: 1,
+        viability: null,
+        optOut: false,
+        escalate: false,
+      };
+    } finally {
+      clearTimeout(timer!);
     }
   }
 
@@ -640,8 +805,67 @@ export class RequestInteractionService {
       return;
     }
 
-    // Detect intent from message text
-    const intent = this.detectIntentUseCase.detectIntent(params.body);
+    // Load the parent request for classification context (current status)
+    const request = await this.requestRepository.findById(
+      interaction.requestId,
+    );
+    if (!request) {
+      this.logger.warn(
+        `Request ${interaction.requestId} not found while processing inbound message for interaction ${interaction.id}`,
+      );
+      return;
+    }
+
+    const conversationHistory = await this.buildConversationHistory(
+      interaction.requestId,
+    );
+
+    // Detect intent from message text (LLM-backed classifier, keyword fallback on error/timeout)
+    const rawClassification = await this.classifyIntentWithFallback({
+      messageText: params.body,
+      currentStatus: request.status,
+      triggeringTemplate: interaction.messageTemplate,
+      conversationHistory,
+    });
+
+    // Explicit opt-out keywords ("BAJA"/"STOP"/"CANCELAR SUSCRIPCION") are a hard business
+    // rule checked independently of the configured classifier — the local adapter never
+    // sets optOut (it has no LLM to judge non-explicit requests), and even the real LLM
+    // adapter shouldn't be the only thing standing between a user and honoring an
+    // unambiguous opt-out request.
+    const classification = {
+      ...rawClassification,
+      optOut: rawClassification.optOut || isExplicitOptOutKeyword(params.body),
+    };
+
+    const confidenceThreshold = this.config.get<number>(
+      'INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD',
+      0.6,
+    );
+    // Below the threshold, never trust the classification enough to change Request.status —
+    // the raw values stay in metadata for auditing, but the event carries UNKNOWN.
+    const intent =
+      classification.confidence >= confidenceThreshold
+        ? classification.statusIntent
+        : ResponseIntent.UNKNOWN;
+
+    if (classification.optOut) {
+      await this.recordWhatsAppOptOut(interaction, request);
+    }
+
+    if (classification.escalate) {
+      await this.attentionService.flag(
+        request.id,
+        RequestAttentionReason.ESCALATED,
+        params.body,
+      );
+    } else if (classification.viability === 'ABANDONED') {
+      await this.attentionService.flag(
+        request.id,
+        RequestAttentionReason.ABANDONED,
+        params.body,
+      );
+    }
 
     // Mark interaction as responded and store inbound message SID for idempotency
     const respondedInteraction = interaction.markAsResponded(
@@ -649,11 +873,17 @@ export class RequestInteractionService {
       intent,
     );
 
-    // Add inbound message SID to metadata for idempotency tracking
+    // Add inbound message SID to metadata for idempotency tracking, plus the full
+    // classification (raw values included, even when downgraded by the confidence gate)
     const metadata = {
       ...(interaction.metadata || {}),
       inboundMessageSid: params.messageId,
       inboundMessageProcessedAt: new Date().toISOString(),
+      rawClassifierIntent: classification.statusIntent,
+      classifierConfidence: classification.confidence,
+      viability: classification.viability,
+      optOut: classification.optOut,
+      escalate: classification.escalate,
     };
 
     const respondedInteractionWithMetadata = new RequestInteractionEntity(
@@ -701,6 +931,10 @@ export class RequestInteractionService {
       responseIntent: intent,
       respondedAt: respondedInteraction.respondedAt,
       responseTimeMinutes,
+      confidence: classification.confidence,
+      viability: classification.viability,
+      optOut: classification.optOut,
+      escalate: classification.escalate,
     });
 
     this.logger.log(

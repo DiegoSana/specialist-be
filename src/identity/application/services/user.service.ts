@@ -119,6 +119,31 @@ export class UserService {
   }
 
   /**
+   * Set (or clear) the WhatsApp opt-out flag. Triggered by the WhatsApp reply classifier
+   * when a user asks to stop receiving messages — see ProfileActivationService, which
+   * treats an opted-out user as having no active profile (WhatsApp is the mandatory
+   * channel for coordinating requests).
+   */
+  async setWhatsAppOptedOut(
+    userId: string,
+    optedOut: boolean,
+  ): Promise<UserEntity> {
+    const user = await this.userRepository.findById(userId, true);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return this.userRepository.save(user.withWhatsAppOptedOut(optedOut));
+  }
+
+  /**
+   * IDs of all admin users. Used to fan out admin notifications without a fixed,
+   * hardcoded admin user id.
+   */
+  async findAdminUserIds(): Promise<string[]> {
+    return this.userQueryRepository.findAdminUserIds();
+  }
+
+  /**
    * Check if user exists
    * @param userId - User ID
    * @returns boolean
