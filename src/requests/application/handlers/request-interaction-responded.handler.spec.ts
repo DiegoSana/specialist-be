@@ -14,6 +14,7 @@ describe('RequestInteractionRespondedHandler', () => {
   let mockInteractionRepository: any;
   let mockInteractionService: any;
   let mockRequestInterestService: any;
+  let mockAttentionService: any;
   let mockTemplateService: any;
   let mockProfessionalService: any;
   let mockCompanyService: any;
@@ -27,6 +28,7 @@ describe('RequestInteractionRespondedHandler', () => {
     mockInteractionRepository = { findById: jest.fn() };
     mockInteractionService = { createFollowUp: jest.fn() };
     mockRequestInterestService = {};
+    mockAttentionService = { flag: jest.fn() };
     mockTemplateService = {};
     mockProfessionalService = {
       findByServiceProviderId: jest.fn().mockResolvedValue(null),
@@ -41,6 +43,7 @@ describe('RequestInteractionRespondedHandler', () => {
       mockInteractionRepository,
       mockInteractionService,
       mockRequestInterestService,
+      mockAttentionService,
       mockTemplateService,
       mockProfessionalService,
       mockCompanyService,
@@ -108,5 +111,56 @@ describe('RequestInteractionRespondedHandler', () => {
         }),
       ),
     ).resolves.not.toThrow();
+  });
+
+  it('flags for attention instead of silently dropping a status change the actor is not authorized to make', async () => {
+    const request = createMockRequest({
+      id: 'request-123',
+      status: RequestStatus.IN_PROGRESS,
+    });
+    mockRequestService.findById.mockResolvedValue(request);
+    mockInteractionRepository.findById.mockResolvedValue({
+      direction: InteractionDirection.TO_PROVIDER,
+      messageTemplate: 'follow_up_5_days_in_progress',
+      metadata: null,
+    });
+    mockRequestService.updateStatus.mockRejectedValue(
+      new Error('You do not have permission to change this request status'),
+    );
+
+    await (handler as any).handleInteractionResponded(
+      buildEvent({ responseIntent: ResponseIntent.CANCELLED }),
+    );
+
+    expect(mockAttentionService.flag).toHaveBeenCalledWith(
+      'request-123',
+      'ESCALATED',
+      expect.stringContaining('CANCELLED'),
+    );
+    expect(mockInteractionService.createFollowUp).not.toHaveBeenCalled();
+  });
+
+  it('flags for attention instead of attempting a doomed ACCEPTED transition when a client reply to the assign-by-number follow-up does not parse', async () => {
+    const request = createMockRequest({
+      id: 'request-123',
+      status: RequestStatus.PENDING,
+    });
+    mockRequestService.findById.mockResolvedValue(request);
+    mockInteractionRepository.findById.mockResolvedValue({
+      direction: InteractionDirection.TO_CLIENT,
+      messageTemplate: 'follow_up_pending_3_days_with_interests',
+      metadata: { interestedProviderIds: ['sp-1'] },
+    });
+
+    await (handler as any).handleInteractionResponded(
+      buildEvent({ responseContent: 'no entiendo bien, quien es el mejor?' }),
+    );
+
+    expect(mockAttentionService.flag).toHaveBeenCalledWith(
+      'request-123',
+      'ESCALATED',
+      expect.stringContaining('no entiendo bien'),
+    );
+    expect(mockRequestService.updateStatus).not.toHaveBeenCalled();
   });
 });
