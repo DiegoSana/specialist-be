@@ -32,7 +32,41 @@ export class AdminService {
   }
 
   async getUserById(userId: string, actingUser: UserEntity) {
-    return this.userService.findByIdForUser(userId, actingUser);
+    const user = await this.userService.findByIdForUser(userId, actingUser);
+
+    const [professionalId, companyId] = await Promise.all([
+      this.resolveProfessionalId(userId),
+      this.resolveCompanyId(userId),
+    ]);
+
+    return { ...user, professionalId, companyId };
+  }
+
+  /**
+   * Resolves the Professional profile id (not the userId) for a user, or null if the
+   * user has no professional profile. Mirrors ProfileActivationService.getActivationStatus'
+   * catch-not-found pattern since ProfessionalService.findByUserId throws when absent.
+   */
+  private async resolveProfessionalId(userId: string): Promise<string | null> {
+    try {
+      const professional = await this.professionalService.findByUserId(userId);
+      return professional.id;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Resolves the Company profile id (not the userId) for a user, or null if the user
+   * has no company profile.
+   */
+  private async resolveCompanyId(userId: string): Promise<string | null> {
+    try {
+      const company = await this.companyService.findByUserId(userId);
+      return company.id;
+    } catch {
+      return null;
+    }
   }
 
   async updateUserStatus(

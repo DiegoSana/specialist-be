@@ -4,6 +4,7 @@ import { AdminService } from './admin.service';
 import { UserService } from '../../identity/application/services/user.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
 import { CompanyService } from '../../profiles/application/services/company.service';
+import { CompanyEntity } from '../../profiles/domain/entities/company.entity';
 import { RequestService } from '../../requests/application/services/request.service';
 import { RequestInterestService } from '../../requests/application/services/request-interest.service';
 import { RequestInterestEntity } from '../../requests/domain/entities/request-interest.entity';
@@ -35,6 +36,7 @@ describe('AdminService', () => {
 
     mockProfessionalService = {
       findById: jest.fn(),
+      findByUserId: jest.fn(),
       updateStatus: jest.fn(),
       getAllProfessionalsForAdmin: jest.fn(),
       getProfessionalByIdForAdmin: jest.fn(),
@@ -42,6 +44,7 @@ describe('AdminService', () => {
     };
 
     mockCompanyService = {
+      findByUserId: jest.fn(),
       getAllCompaniesForAdmin: jest.fn(),
       getCompanyByIdForAdmin: jest.fn(),
       updateStatus: jest.fn(),
@@ -225,17 +228,59 @@ describe('AdminService', () => {
   describe('getUserById', () => {
     const adminUser = createMockUser({ id: 'admin-123', isAdmin: true });
 
-    it('should return user when found', async () => {
+    beforeEach(() => {
+      // Default: user has neither a professional nor a company profile.
+      mockProfessionalService.findByUserId.mockRejectedValue(
+        new NotFoundException('Professional profile not found'),
+      );
+      mockCompanyService.findByUserId.mockRejectedValue(
+        new NotFoundException('Company profile not found'),
+      );
+    });
+
+    it('should return user with professionalId/companyId null when neither profile exists', async () => {
       const user = createMockUser();
       mockUserService.findByIdForUser.mockResolvedValue(user);
 
       const result = await service.getUserById('user-123', adminUser);
 
-      expect(result).toEqual(user);
+      expect(result).toEqual({
+        ...user,
+        professionalId: null,
+        companyId: null,
+      });
       expect(mockUserService.findByIdForUser).toHaveBeenCalledWith(
         'user-123',
         adminUser,
       );
+      expect(mockProfessionalService.findByUserId).toHaveBeenCalledWith(
+        'user-123',
+      );
+      expect(mockCompanyService.findByUserId).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should populate professionalId and leave companyId null when the user has a professional profile', async () => {
+      const user = createMockUser();
+      const professional = createMockProfessional({ id: 'professional-1' });
+      mockUserService.findByIdForUser.mockResolvedValue(user);
+      mockProfessionalService.findByUserId.mockResolvedValue(professional);
+
+      const result = await service.getUserById('user-123', adminUser);
+
+      expect(result.professionalId).toBe('professional-1');
+      expect(result.companyId).toBeNull();
+    });
+
+    it('should populate companyId and leave professionalId null when the user has a company profile', async () => {
+      const user = createMockUser();
+      const company = { id: 'company-1' } as CompanyEntity;
+      mockUserService.findByIdForUser.mockResolvedValue(user);
+      mockCompanyService.findByUserId.mockResolvedValue(company);
+
+      const result = await service.getUserById('user-123', adminUser);
+
+      expect(result.professionalId).toBeNull();
+      expect(result.companyId).toBe('company-1');
     });
 
     it('should throw NotFoundException when user not found', async () => {
