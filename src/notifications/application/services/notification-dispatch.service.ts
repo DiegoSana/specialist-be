@@ -1,6 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EMAIL_SENDER, EmailSender } from '../../domain/ports/email-sender';
+import {
+  EMAIL_SENDER,
+  EmailSender,
+  EmailProviderStatus,
+} from '../../domain/ports/email-sender';
 import {
   NOTIFICATION_DELIVERY_QUEUE,
   NotificationDeliveryQueue,
@@ -17,6 +21,10 @@ export class NotificationDispatchService {
     @Inject(NOTIFICATION_DELIVERY_QUEUE)
     private readonly queue: NotificationDeliveryQueue,
   ) {}
+
+  async getEmailStatus(): Promise<EmailProviderStatus> {
+    return this.emailSender.describe();
+  }
 
   async dispatchPending(): Promise<void> {
     const enabled =

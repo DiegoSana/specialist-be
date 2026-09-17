@@ -15,7 +15,8 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
 ## Endpoints
 
 `/notifications` GET, `/:id/read` PATCH, `/read-all` PATCH, `/preferences` GET/PUT.
-`/admin/notifications` GET, `/stats` GET, `/:id` GET, `/:id/resend` POST (AdminGuard).
+`/admin/notifications` GET, `/stats` GET, `/email-status` GET, `/:id` GET, `/:id/resend` POST
+(AdminGuard). `/email-status` must stay declared before `/:id` (Nest route order).
 
 ## Model
 
@@ -35,6 +36,11 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
   returns the provider's message id (or a preview URL for Ethereal/Mailgun), persisted as the
   delivery's `providerMessageId` and exposed to admins via `NotificationResponseDto.fromEntityForAdmin`
   (`GET /admin/notifications`) - never exposed on the user-facing `/notifications` endpoints.
+  `EmailSender.describe(): Promise<EmailProviderStatus>` (all three adapters implement it) reports
+  the active provider and, for Ethereal, its live login credentials (lazily provisioning the
+  account if `send()` hasn't run yet); backs `GET /admin/notifications/email-status` via
+  `NotificationDispatchService.getEmailStatus()` (same-module injection into
+  `AdminNotificationsController`, no `NotificationsModule.exports` change needed).
 
 ## Handlers (subscribe in `onModuleInit`)
 

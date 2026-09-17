@@ -147,6 +147,7 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/requests/:id` | `GET` | Detalle completo del request: `client`, `trade`, `provider` unificado (con `trades` para Professional/Company) e `interestedProviders`. Sin el chequeo de `canBeViewedBy` de participantes - cualquier admin puede ver cualquier request |
 | `/api/admin/notifications` | `GET` | Listar todas las notificaciones |
 | `/api/admin/notifications/stats` | `GET` | Estadísticas de notificaciones |
+| `/api/admin/notifications/email-status` | `GET` | Proveedor de email activo: `{ provider: 'smtp' \| 'mailgun' \| 'ethereal', ethereal?: { loginUrl, user, pass } }` (credenciales live de Ethereal, se regeneran en cada boot) |
 | `/api/admin/notifications/:id/resend` | `POST` | Reenviar notificación fallida |
 | `/api/admin/whatsapp/config` | `GET` | `{ devMode, availableFollowUpRules? }` |
 | `/api/admin/whatsapp/conversations` | `GET` | Listar conversaciones de WhatsApp (paginado, `search` opcional) |
