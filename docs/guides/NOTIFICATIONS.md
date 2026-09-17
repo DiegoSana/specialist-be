@@ -125,6 +125,16 @@ delivery's `providerMessageId`, visible to admins via `GET /admin/notifications`
 `GET /admin/notifications/:id`. Emails are never really delivered - never use this once real
 users/real email testing exist.
 
+Because the account is re-created on every boot, there is no static, documented set of Ethereal
+login credentials - `GET /admin/notifications/email-status` (Admin only) reports the currently
+active `EMAIL_SENDER` provider and, when it's Ethereal, the live account's login URL/user/pass
+(lazily provisioning the account via `describe()` on the `EmailSender` port if `send()` hasn't
+been called yet in this process). Response shape:
+`{ provider: 'smtp' | 'mailgun' | 'ethereal', ethereal?: { loginUrl, user, pass } }`.
+The account-ready boot log line also includes the password now
+(`[Ethereal] test account ready: ... (user=..., pass=...)`), matching nodemailer's own examples -
+these are throwaway fake-mailbox credentials with zero real-world value.
+
 ---
 
 ## Local Development with Mailpit

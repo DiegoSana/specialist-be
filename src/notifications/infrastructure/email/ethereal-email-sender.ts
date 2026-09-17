@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
-import { EmailMessage, EmailSender } from '../../domain/ports/email-sender';
+import {
+  EmailMessage,
+  EmailSender,
+  EmailProviderStatus,
+} from '../../domain/ports/email-sender';
 
 type EtherealTestAccount = {
   user: string;
@@ -59,13 +63,25 @@ export class EtherealEmailSender implements EmailSender {
     return previewUrl || null;
   }
 
+  async describe(): Promise<EmailProviderStatus> {
+    const account = await this.getOrCreateAccount();
+    return {
+      provider: 'ethereal',
+      ethereal: {
+        loginUrl: 'https://ethereal.email/login',
+        user: account.user,
+        pass: account.pass,
+      },
+    };
+  }
+
   private async getOrCreateAccount(): Promise<EtherealTestAccount> {
     if (!this.accountPromise) {
       this.accountPromise = nodemailer
         .createTestAccount()
         .then((account: EtherealTestAccount) => {
           this.logger.log(
-            `[Ethereal] test account ready: ${account.web} (user=${account.user})`,
+            `[Ethereal] test account ready: ${account.web} (user=${account.user}, pass=${account.pass})`,
           );
           return account;
         })

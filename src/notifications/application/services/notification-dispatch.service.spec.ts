@@ -7,7 +7,7 @@ import { NotificationChannel } from '../../domain/value-objects/notification-cha
 
 describe('NotificationDispatchService', () => {
   let service: NotificationDispatchService;
-  let mockEmailSender: { send: jest.Mock };
+  let mockEmailSender: { send: jest.Mock; describe: jest.Mock };
   let mockQueue: {
     takePendingDeliveries: jest.Mock;
     markSent: jest.Mock;
@@ -41,7 +41,10 @@ describe('NotificationDispatchService', () => {
       NOTIFICATIONS_SMTP_FROM: 'noreply@example.com',
     };
 
-    mockEmailSender = { send: jest.fn().mockResolvedValue(null) };
+    mockEmailSender = {
+      send: jest.fn().mockResolvedValue(null),
+      describe: jest.fn().mockResolvedValue({ provider: 'smtp' }),
+    };
     mockQueue = {
       takePendingDeliveries: jest.fn().mockResolvedValue([]),
       markSent: jest.fn().mockResolvedValue(undefined),
@@ -66,6 +69,29 @@ describe('NotificationDispatchService', () => {
     }).compile();
 
     service = module.get(NotificationDispatchService);
+  });
+
+  it('getEmailStatus delegates to the injected EmailSender', async () => {
+    mockEmailSender.describe.mockResolvedValue({
+      provider: 'ethereal',
+      ethereal: {
+        loginUrl: 'https://ethereal.email/login',
+        user: 'jdoe123@ethereal.email',
+        pass: 'secret',
+      },
+    });
+
+    const result = await service.getEmailStatus();
+
+    expect(mockEmailSender.describe).toHaveBeenCalled();
+    expect(result).toEqual({
+      provider: 'ethereal',
+      ethereal: {
+        loginUrl: 'https://ethereal.email/login',
+        user: 'jdoe123@ethereal.email',
+        pass: 'secret',
+      },
+    });
   });
 
   it('does nothing when NOTIFICATIONS_DISPATCH_ENABLED is not true', async () => {

@@ -97,6 +97,39 @@ describe('EtherealEmailSender', () => {
     expect(result).toBeNull();
   });
 
+  it('describe() lazily creates the account and returns the ethereal status shape', async () => {
+    const sender = new EtherealEmailSender(makeConfig());
+
+    const result = await sender.describe();
+
+    expect(mockCreateTestAccount).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      provider: 'ethereal',
+      ethereal: {
+        loginUrl: 'https://ethereal.email/login',
+        user: account.user,
+        pass: account.pass,
+      },
+    });
+  });
+
+  it('describe() reuses the account already created by send() instead of creating a second one', async () => {
+    const sender = new EtherealEmailSender(makeConfig());
+
+    await sender.send({ to: 'a@b.com', subject: 'Hi', text: 'hi' });
+    const result = await sender.describe();
+
+    expect(mockCreateTestAccount).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      provider: 'ethereal',
+      ethereal: {
+        loginUrl: 'https://ethereal.email/login',
+        user: account.user,
+        pass: account.pass,
+      },
+    });
+  });
+
   it('retries account creation on the next send after a failure', async () => {
     mockCreateTestAccount.mockRejectedValueOnce(new Error('ethereal is down'));
     const sender = new EtherealEmailSender(makeConfig());

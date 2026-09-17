@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
-import { EmailMessage, EmailSender } from '../../domain/ports/email-sender';
+import {
+  EmailMessage,
+  EmailSender,
+  EmailProviderStatus,
+} from '../../domain/ports/email-sender';
 
 @Injectable()
 export class SmtpEmailSender implements EmailSender {
@@ -29,6 +33,10 @@ export class SmtpEmailSender implements EmailSender {
     });
 
     return null;
+  }
+
+  async describe(): Promise<EmailProviderStatus> {
+    return { provider: 'smtp' };
   }
 
   private getFromOrThrow(): string {

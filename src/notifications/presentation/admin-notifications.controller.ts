@@ -20,6 +20,8 @@ import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { NotificationService } from '../application/services/notification.service';
+import { NotificationDispatchService } from '../application/services/notification-dispatch.service';
+import { EmailProviderStatus } from '../domain/ports/email-sender';
 import { NotificationResponseDto } from './dto/notification-response.dto';
 
 @ApiTags('Admin - Notifications')
@@ -27,7 +29,10 @@ import { NotificationResponseDto } from './dto/notification-response.dto';
 @Controller('admin/notifications')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminNotificationsController {
-  constructor(private readonly notifications: NotificationService) {}
+  constructor(
+    private readonly notifications: NotificationService,
+    private readonly dispatch: NotificationDispatchService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List all notifications (Admin only)' })
@@ -111,6 +116,37 @@ export class AdminNotificationsController {
   })
   async getStats() {
     return this.notifications.getDeliveryStats();
+  }
+
+  @Get('email-status')
+  @ApiOperation({
+    summary: 'Get the active email provider status (Admin only)',
+    description:
+      'Reports which EmailSender is currently active. When Ethereal is active, also returns ' +
+      'its live, dynamically-provisioned login credentials (the account is re-created on every ' +
+      'process boot, so there is no static, documented set of credentials).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Active email provider status',
+    schema: {
+      type: 'object',
+      properties: {
+        provider: { type: 'string', enum: ['smtp', 'mailgun', 'ethereal'] },
+        ethereal: {
+          type: 'object',
+          nullable: true,
+          properties: {
+            loginUrl: { type: 'string' },
+            user: { type: 'string' },
+            pass: { type: 'string' },
+          },
+        },
+      },
+    },
+  })
+  async getEmailStatus(): Promise<EmailProviderStatus> {
+    return this.dispatch.getEmailStatus();
   }
 
   @Get(':id')

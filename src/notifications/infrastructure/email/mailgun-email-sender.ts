@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EmailMessage, EmailSender } from '../../domain/ports/email-sender';
+import {
+  EmailMessage,
+  EmailSender,
+  EmailProviderStatus,
+} from '../../domain/ports/email-sender';
 
 interface MailgunResponse {
   id: string;
@@ -72,6 +76,10 @@ export class MailgunEmailSender implements EmailSender {
       this.logger.error(`Failed to send email via Mailgun: ${error}`);
       throw error;
     }
+  }
+
+  async describe(): Promise<EmailProviderStatus> {
+    return { provider: 'mailgun' };
   }
 
   private validateConfig(): void {
