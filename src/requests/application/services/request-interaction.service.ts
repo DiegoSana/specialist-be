@@ -42,6 +42,7 @@ import { randomUUID } from 'crypto';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { RequestInteractionRespondedEvent } from '../../domain/events/request-interaction-responded.event';
 import { RequestAttentionService } from './request-attention.service';
+import { isExplicitOptOutKeyword } from './opt-out-keywords';
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -820,12 +821,22 @@ export class RequestInteractionService {
     );
 
     // Detect intent from message text (LLM-backed classifier, keyword fallback on error/timeout)
-    const classification = await this.classifyIntentWithFallback({
+    const rawClassification = await this.classifyIntentWithFallback({
       messageText: params.body,
       currentStatus: request.status,
       triggeringTemplate: interaction.messageTemplate,
       conversationHistory,
     });
+
+    // Explicit opt-out keywords ("BAJA"/"STOP"/"CANCELAR SUSCRIPCION") are a hard business
+    // rule checked independently of the configured classifier — the local adapter never
+    // sets optOut (it has no LLM to judge non-explicit requests), and even the real LLM
+    // adapter shouldn't be the only thing standing between a user and honoring an
+    // unambiguous opt-out request.
+    const classification = {
+      ...rawClassification,
+      optOut: rawClassification.optOut || isExplicitOptOutKeyword(params.body),
+    };
 
     const confidenceThreshold = this.config.get<number>(
       'INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD',
