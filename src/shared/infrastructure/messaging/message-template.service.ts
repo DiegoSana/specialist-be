@@ -19,27 +19,6 @@ export interface MessageTemplates {
 export class MessageTemplateService implements OnModuleInit {
   private readonly logger = new Logger(MessageTemplateService.name);
   private templates: MessageTemplates | null = null;
-  private readonly templatesPath = (() => {
-    // Try multiple possible paths
-    const possiblePaths = [
-      // Production: /app/dist/shared/infrastructure/messaging/message-templates.json
-      path.join(__dirname, 'message-templates.json'),
-      // Development: /app/src/shared/infrastructure/messaging/message-templates.json
-      path.join(__dirname.replace('/dist/', '/src/'), 'message-templates.json'),
-      // Fallback: absolute path from project root
-      path.join(
-        process.cwd(),
-        'src',
-        'shared',
-        'infrastructure',
-        'messaging',
-        'message-templates.json',
-      ),
-    ];
-
-    // Return the first path (will be checked at runtime)
-    return possiblePaths[0];
-  })();
   private loadPromise: Promise<void> | null = null;
 
   /**
@@ -71,21 +50,26 @@ export class MessageTemplateService implements OnModuleInit {
   }
 
   private async doLoadTemplates(): Promise<void> {
-    // Try multiple possible paths
+    // nest-cli.json's webpack build bundles everything into a single dist/main.js,
+    // so __dirname at runtime is just the dist/ output root, NOT the original
+    // src/shared/infrastructure/messaging/ directory structure. Asset copying still
+    // preserves that structure under dist/, so paths must be built from a known
+    // root (process.cwd(), which is the app's WORKDIR in every environment) rather
+    // than from __dirname, which only reflects the source layout in a non-bundled
+    // (ts-node/non-webpack) build.
+    const relativePath = path.join(
+      'shared',
+      'infrastructure',
+      'messaging',
+      'message-templates.json',
+    );
     const possiblePaths = [
-      // Production: /app/dist/shared/infrastructure/messaging/message-templates.json
+      // Production (webpack bundle): /app/dist/shared/infrastructure/messaging/message-templates.json
+      path.join(process.cwd(), 'dist', relativePath),
+      // Non-bundled dev build (e.g. ts-node), where __dirname mirrors src's structure
       path.join(__dirname, 'message-templates.json'),
-      // Development: /app/src/shared/infrastructure/messaging/message-templates.json
-      path.join(__dirname.replace('/dist/', '/src/'), 'message-templates.json'),
       // Fallback: absolute path from project root
-      path.join(
-        process.cwd(),
-        'src',
-        'shared',
-        'infrastructure',
-        'messaging',
-        'message-templates.json',
-      ),
+      path.join(process.cwd(), 'src', relativePath),
     ];
 
     let lastError: Error | null = null;
