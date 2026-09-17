@@ -18,6 +18,10 @@ export interface UserProfileActivationStatus {
  * Single orchestration point for "perfil activo" (cliente y proveedor).
  * Composes User (Identity) and Professional/Company (Profiles); no other service
  * should call user.isFullyVerified() for permission checks — use this service instead.
+ *
+ * A user who opted out of WhatsApp (user.whatsappOptedOut) has no active profile at all:
+ * WhatsApp is the mandatory channel for coordinating requests, so they cannot create or
+ * take on new work until they opt back in. This does not touch requests already in flight.
  */
 @Injectable()
 export class ProfileActivationService {
@@ -48,7 +52,7 @@ export class ProfileActivationService {
     }
 
     const hasActiveClientProfile =
-      user.hasClientProfile && user.isFullyVerified();
+      user.hasClientProfile && user.isFullyVerified() && !user.whatsappOptedOut;
 
     let professional: Awaited<
       ReturnType<ProfessionalService['findByUserId']>
@@ -71,7 +75,7 @@ export class ProfileActivationService {
       (professional?.canOperate?.() ?? false) ||
       (company?.canOperate?.() ?? false);
     const hasActiveProviderProfile =
-      user.isFullyVerified() && profileCanOperate;
+      user.isFullyVerified() && profileCanOperate && !user.whatsappOptedOut;
 
     const activeServiceProviderId = hasActiveProviderProfile
       ? professional?.canOperate?.()
