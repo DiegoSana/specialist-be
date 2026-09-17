@@ -104,6 +104,8 @@ export class UserEntity {
     public readonly authProvider: AuthProvider = AuthProvider.LOCAL,
     public readonly phoneVerified: boolean = false,
     public readonly emailVerified: boolean = false,
+    public readonly whatsappOptedOut: boolean = false,
+    public readonly whatsappOptedOutAt: Date | null = null,
   ) {}
 
   getFullName(): string {
@@ -211,6 +213,8 @@ export class UserEntity {
       this.authProvider,
       phoneVerified,
       emailVerified,
+      this.whatsappOptedOut,
+      this.whatsappOptedOutAt,
     );
   }
 
@@ -235,6 +239,8 @@ export class UserEntity {
       this.authProvider,
       this.phoneVerified,
       this.emailVerified,
+      this.whatsappOptedOut,
+      this.whatsappOptedOutAt,
     );
   }
 
@@ -267,6 +273,8 @@ export class UserEntity {
       this.authProvider,
       this.phoneVerified,
       true, // Google has verified this email
+      this.whatsappOptedOut,
+      this.whatsappOptedOutAt,
     );
   }
 
@@ -299,6 +307,8 @@ export class UserEntity {
       this.authProvider,
       this.phoneVerified,
       true, // Facebook has verified this email
+      this.whatsappOptedOut,
+      this.whatsappOptedOutAt,
     );
   }
 
@@ -380,6 +390,8 @@ export class UserEntity {
       this.authProvider,
       true,
       this.emailVerified,
+      this.whatsappOptedOut,
+      this.whatsappOptedOutAt,
     );
   }
 
@@ -407,6 +419,8 @@ export class UserEntity {
       this.authProvider,
       this.phoneVerified,
       true,
+      this.whatsappOptedOut,
+      this.whatsappOptedOutAt,
     );
   }
 
@@ -445,6 +459,39 @@ export class UserEntity {
       this.authProvider,
       phoneVerified,
       emailVerified,
+      this.whatsappOptedOut,
+      this.whatsappOptedOutAt,
+    );
+  }
+
+  /**
+   * Set the WhatsApp opt-out flag. WhatsApp is the mandatory communication channel for
+   * operating on the platform (see ProfileActivationService), so opting out blocks future
+   * activity without touching requests already in flight.
+   */
+  withWhatsAppOptedOut(optedOut: boolean, now: Date = new Date()): UserEntity {
+    return new UserEntity(
+      this.id,
+      this.email,
+      this.password,
+      this.firstName,
+      this.lastName,
+      this.phone,
+      this.profilePictureUrl,
+      this.isAdmin,
+      this.status,
+      this.createdAt,
+      this.updatedAt,
+      this.hasClientProfile,
+      this.hasProfessionalProfile,
+      this.hasCompanyProfile,
+      this.googleId,
+      this.facebookId,
+      this.authProvider,
+      this.phoneVerified,
+      this.emailVerified,
+      optedOut,
+      optedOut ? now : null,
     );
   }
 

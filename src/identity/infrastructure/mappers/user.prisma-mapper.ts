@@ -29,6 +29,8 @@ export class PrismaUserMapper {
     authProvider?: AuthProvider | null;
     phoneVerified?: boolean | null;
     emailVerified?: boolean | null;
+    whatsappOptedOut?: boolean | null;
+    whatsappOptedOutAt?: Date | null;
   }): UserEntity {
     return new UserEntity(
       user.id,
@@ -50,6 +52,8 @@ export class PrismaUserMapper {
       user.authProvider || AuthProvider.LOCAL,
       user.phoneVerified ?? false,
       user.emailVerified ?? false,
+      user.whatsappOptedOut ?? false,
+      user.whatsappOptedOutAt ?? null,
     );
   }
 
@@ -110,6 +114,8 @@ export class PrismaUserMapper {
     authProvider: AuthProvider;
     phoneVerified: boolean;
     emailVerified: boolean;
+    whatsappOptedOut: boolean;
+    whatsappOptedOutAt: Date | null;
   } {
     return {
       email: user.email,
@@ -125,6 +131,8 @@ export class PrismaUserMapper {
       authProvider: user.authProvider,
       phoneVerified: user.phoneVerified,
       emailVerified: user.emailVerified,
+      whatsappOptedOut: user.whatsappOptedOut,
+      whatsappOptedOutAt: user.whatsappOptedOutAt,
     };
   }
 
@@ -139,6 +147,8 @@ export class PrismaUserMapper {
       authProvider?: AuthProvider | null;
       phoneVerified?: boolean;
       emailVerified?: boolean;
+      whatsappOptedOut?: boolean;
+      whatsappOptedOutAt?: Date | null;
     },
   ): Record<string, unknown> {
     const updateData: Record<string, unknown> = {};
@@ -162,6 +172,10 @@ export class PrismaUserMapper {
       updateData.phoneVerified = partial.phoneVerified;
     if (partial.emailVerified !== undefined)
       updateData.emailVerified = partial.emailVerified;
+    if (partial.whatsappOptedOut !== undefined)
+      updateData.whatsappOptedOut = partial.whatsappOptedOut;
+    if (partial.whatsappOptedOutAt !== undefined)
+      updateData.whatsappOptedOutAt = partial.whatsappOptedOutAt;
 
     return updateData;
   }
