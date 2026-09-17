@@ -20,6 +20,11 @@ import {
   WhatsAppMessagingPort,
 } from '../../domain/ports/whatsapp-messaging.port';
 import {
+  INTENT_DETECTION_PORT,
+  IntentDetectionPort,
+  IntentDetectionConversationMessage,
+} from '../../domain/ports/intent-detection.port';
+import {
   REQUEST_REPOSITORY,
   RequestRepository,
 } from '../../domain/repositories/request.repository';
@@ -36,6 +41,9 @@ import { RequestInteractionRespondedEvent } from '../../domain/events/request-in
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY_MS = 60000; // 1 minute
 const MAX_RETRY_DELAY_MS = 3600000; // 1 hour
+
+// Intent classification: how much conversation history to feed the classifier
+const MAX_HISTORY_MESSAGES = 6;
 
 @Injectable()
 export class RequestInteractionService {
@@ -54,6 +62,8 @@ export class RequestInteractionService {
     @Inject(forwardRef(() => CompanyService))
     private readonly companyService: CompanyService,
     private readonly detectIntentUseCase: DetectResponseIntentUseCase,
+    @Inject(INTENT_DETECTION_PORT)
+    private readonly intentDetectionPort: IntentDetectionPort,
     private readonly templateService: MessageTemplateService,
     @Inject(EVENT_BUS)
     private readonly eventBus: EventBus,
@@ -440,6 +450,26 @@ export class RequestInteractionService {
   }
 
   /**
+   * Build the recent conversation history for a request, oldest -> newest, capped to
+   * the last MAX_HISTORY_MESSAGES entries. Feeds the intent classifier's context.
+   */
+  private async buildConversationHistory(
+    requestId: string,
+  ): Promise<IntentDetectionConversationMessage[]> {
+    const history = await this.interactionRepository.findByRequestId(requestId);
+
+    return history
+      .slice()
+      .reverse() // repository returns newest-first; classifier wants oldest-first
+      .slice(-MAX_HISTORY_MESSAGES)
+      .map((interaction) => ({
+        direction: interaction.direction,
+        content: interaction.responseContent ?? interaction.messageContent,
+        createdAt: interaction.createdAt,
+      }));
+  }
+
+  /**
    * Mark an interaction as delivered based on Twilio status update.
    * Idempotent: If the same status update is received multiple times, it will only be processed once.
    */
@@ -640,8 +670,29 @@ export class RequestInteractionService {
       return;
     }
 
-    // Detect intent from message text
-    const intent = this.detectIntentUseCase.detectIntent(params.body);
+    // Load the parent request for classification context (current status)
+    const request = await this.requestRepository.findById(
+      interaction.requestId,
+    );
+    if (!request) {
+      this.logger.warn(
+        `Request ${interaction.requestId} not found while processing inbound message for interaction ${interaction.id}`,
+      );
+      return;
+    }
+
+    const conversationHistory = await this.buildConversationHistory(
+      interaction.requestId,
+    );
+
+    // Detect intent from message text (LLM-backed classifier, keyword fallback on error/timeout)
+    const classification = await this.intentDetectionPort.detectIntent({
+      messageText: params.body,
+      currentStatus: request.status,
+      triggeringTemplate: interaction.messageTemplate,
+      conversationHistory,
+    });
+    const intent = classification.statusIntent;
 
     // Mark interaction as responded and store inbound message SID for idempotency
     const respondedInteraction = interaction.markAsResponded(
