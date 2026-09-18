@@ -22,7 +22,7 @@ import {
 import {
   WHATSAPP_MESSAGING_PORT,
   WhatsAppMessagingPort,
-} from '../../domain/ports/whatsapp-messaging.port';
+} from '../../../shared/domain/ports/whatsapp-messaging.port';
 import {
   INTENT_DETECTION_PORT,
   IntentDetectionPort,

@@ -40,7 +40,6 @@ import { PrismaRequestInteractionRepository } from './infrastructure/repositorie
 import { PrismaRequestInteractionQueryRepository } from './infrastructure/queries/prisma-request-interaction.query-repository';
 import { PrismaRequestAttentionFlagRepository } from './infrastructure/repositories/prisma-request-attention-flag.repository';
 import { PrismaRequestAttentionQueryRepository } from './infrastructure/queries/prisma-request-attention.query-repository';
-import { whatsAppMessagingProvider } from './infrastructure/adapters/whatsapp-messaging.factory';
 import { intentDetectionProvider } from './infrastructure/adapters/intent-detection.factory';
 import { AnthropicIntentDetectionAdapter } from './infrastructure/adapters/anthropic-intent-detection.adapter';
 
@@ -146,7 +145,6 @@ import { ProfilesModule } from '../profiles/profiles.module';
       provide: REQUEST_ATTENTION_QUERY_REPOSITORY,
       useClass: PrismaRequestAttentionQueryRepository,
     },
-    whatsAppMessagingProvider,
     AnthropicIntentDetectionAdapter,
     intentDetectionProvider,
   ],
