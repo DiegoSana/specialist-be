@@ -75,6 +75,7 @@ export class AuthenticationService {
         status: userWithProfiles!.status,
         hasClientProfile: userWithProfiles!.hasClientProfile,
         hasProfessionalProfile: userWithProfiles!.hasProfessionalProfile,
+        hasCompanyProfile: userWithProfiles!.hasCompanyProfile,
         isAdmin: userWithProfiles!.isAdminUser(),
       },
     };
@@ -114,6 +115,7 @@ export class AuthenticationService {
         status: user.status,
         hasClientProfile: user.hasClientProfile,
         hasProfessionalProfile: user.hasProfessionalProfile,
+        hasCompanyProfile: user.hasCompanyProfile,
         isAdmin: user.isAdminUser(),
       },
     };
@@ -219,6 +221,7 @@ export class AuthenticationService {
         status: user.status,
         hasClientProfile: user.hasClientProfile,
         hasProfessionalProfile: user.hasProfessionalProfile,
+        hasCompanyProfile: user.hasCompanyProfile,
         isAdmin: user.isAdminUser(),
       },
       redirectUrl: frontendUrl,
@@ -311,6 +314,7 @@ export class AuthenticationService {
         status: user.status,
         hasClientProfile: user.hasClientProfile,
         hasProfessionalProfile: user.hasProfessionalProfile,
+        hasCompanyProfile: user.hasCompanyProfile,
         isAdmin: user.isAdminUser(),
       },
       redirectUrl: frontendUrl,

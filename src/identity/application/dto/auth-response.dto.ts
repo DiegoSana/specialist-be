@@ -14,6 +14,7 @@ export class AuthResponseDto {
     status: UserStatus;
     hasClientProfile: boolean;
     hasProfessionalProfile: boolean;
+    hasCompanyProfile: boolean;
     isAdmin: boolean;
   };
 }
