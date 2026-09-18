@@ -200,6 +200,40 @@ Migrations in `prisma/migrations/` don't match the database. Common cases:
    - Example: `postgresql://postgres.mheycpmaagmtpabtciks:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:5432/postgres`
 3. Check firewall/network; if you use Supabase network restrictions, allow your IP (or temporarily allow all for testing)
 
+### Error P3006: shadow database fails to apply an existing migration
+
+`npx prisma migrate dev` replays every migration in `prisma/migrations/` **in filename order**
+against a throwaway shadow database before diffing your schema change. This repo has one migration
+folder whose timestamp doesn't sort where it was actually applied historically -
+`20250127000000_add_request_interactions` (year `2025`) sorts *before*
+`20251215200251_init`, which is the migration that creates the `requests` table
+`request_interactions` has a foreign key to. Replaying from empty therefore fails with:
+
+```
+Error: P3006
+Migration `20250127000000_add_request_interactions` failed to apply cleanly to the shadow database.
+Error code: P1014
+Error: The underlying table for model `requests` does not exist.
+```
+
+This is pre-existing and unrelated to whatever change you're making - do **not** rename or reorder
+that migration folder (`scripts/baseline-migrations.sh` lists it first for a reason, and it's
+already applied in every real environment under that exact name; renaming it risks P3015
+elsewhere, see above). Work around the broken shadow database instead: diff directly against the
+live database (no shadow DB involved) and apply/record the result yourself:
+
+```bash
+npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script \
+  > prisma/migrations/<timestamp>_<name>/migration.sql
+npx prisma db execute --file prisma/migrations/<timestamp>_<name>/migration.sql --schema prisma/schema.prisma
+npx prisma migrate resolve --applied <timestamp>_<name>
+npx prisma migrate status   # should report "Database schema is up to date!"
+npx prisma generate
+```
+
+(This was used to create `20260918113336_add_support_context`.) Then continue as usual - review the
+generated SQL, run `npm test`, etc.
+
 ### PgBouncer Issues
 
 If using Supabase with connection pooling:
@@ -237,12 +271,26 @@ Main models:
 - `Review` - Reviews and ratings
 - `File` - Uploaded files
 - `Contact` - Contact requests
+- `RequestInteraction` - WhatsApp follow-up automation ledger (requests context)
+- `RequestAttentionFlag` - requests needing admin attention (AT_RISK/ABANDONED/ESCALATED)
+- `SupportConversation` / `SupportMessage` - general WhatsApp support channel (support context,
+  independent of any Request; no FK on `SupportConversation.userId`/`relatedRequestId` - soft
+  references, see `docs/decisions/ADR-005-SUPPORT-CONVERSATIONS.md`)
 
 ### Recent migration: profile contact and status (2026-02)
 
 - **Professional**: removed `whatsapp`; contact = `User.phone`. Removed `active`; “can operate” = `status` in (ACTIVE, VERIFIED).
 - **Company**: removed `phone`, `email`, `active`; contact = User; “can operate” = `status` in (ACTIVE, VERIFIED).
 - Migration: `20260206000000_remove_profile_contact_and_active`.
+
+### Recent migration: support context (2026-09)
+
+- New tables `support_conversations` / `support_messages`, new enums
+  `SupportConversationStatus` (`OPEN`/`RESOLVED`), `SupportMessageDirection`
+  (`INBOUND`/`OUTBOUND`). Purely additive - no changes to `RequestInteraction` or
+  `RequestAttentionFlag`.
+- Migration: `20260918113336_add_support_context` (created via the `migrate diff --from-url`
+  workaround above, due to the pre-existing shadow-database P3006 issue).
 
 ---
 

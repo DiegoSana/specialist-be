@@ -182,6 +182,11 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 | `POST` | `/admin/whatsapp/conversations/:requestId/trigger-followup` | Force-trigger a follow-up rule right now (dev mode only, 404 otherwise) |
 | `GET` | `/admin/requests/attention` | List open `RequestAttentionFlag`s (paginated, `?page=&limit=`), joined with request title/status. Reasons: `AT_RISK` (follow-up ladder exhausted, request never responded), `ABANDONED` (LLM-detected evasive reply), `ESCALATED` (LLM-detected `escalate`) |
 | `POST` | `/admin/requests/attention/:id/resolve` | Mark an attention flag resolved (204). Purely a status change — does not touch the underlying request; the admin follows up manually via the WhatsApp conversations viewer above |
+| `GET` | `/admin/support/conversations` | List support conversations (paginated, `?status=OPEN\|RESOLVED\|ALL&page=&limit=`). Each item includes `canReplyNow`, computed server-side from the WhatsApp 24h reply window |
+| `GET` | `/admin/support/conversations/:id` | `{ conversation, messages }` — messages chronological (oldest first) |
+| `POST` | `/admin/support/conversations/:id/reply` | Send an admin reply (body: `message`, 1-1500 chars). 201 with the created message, or 400 `{ code: 'WHATSAPP_WINDOW_EXPIRED', message, lastInboundAt }` outside the 24h window |
+| `POST` | `/admin/support/conversations/:id/resolve` | Mark a support conversation resolved (204, idempotent) |
+| `POST` | `/admin/support/conversations/:id/reopen` | Reopen a resolved support conversation (204, idempotent) |
 
 ### 📁 Storage (`/storage`)
 

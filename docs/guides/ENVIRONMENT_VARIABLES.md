@@ -95,6 +95,8 @@ SMTP credentials at runtime (see below).
 | `ANTHROPIC_INTENT_MODEL` | Claude model id used for WhatsApp reply classification when `INTENT_CLASSIFIER_PROVIDER=anthropic`. | `claude-haiku-4-5-20251001` |
 | `INTENT_CLASSIFIER_TIMEOUT_MS` | Hard timeout (ms) for the LLM classification call before falling back to keyword matching; the synchronous Twilio webhook must never hang on this. | `4000` (service-level `Promise.race`); the Anthropic SDK call itself uses a shorter internal timeout (`3500`ms) |
 | `INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD` | Below this confidence (0-1), the classifier's `statusIntent` is downgraded to `UNKNOWN` rather than risk a wrong `Request.status` transition. | `0.6` |
+| `WHATSAPP_REPLY_MATCH_WINDOW_DAYS` | How many days back an inbound WhatsApp reply can match a pending automated `FOLLOW_UP` interaction (`RequestInteractionRepository.findMostRecentByPhone`). Covers the longest follow-up cadence (10 days) plus margin. | `14` |
+| `SUPPORT_CONVERSATIONS_ENABLED` | Gate for the Support context fork in `RequestInteractionService.processInboundMessage`: when an inbound WhatsApp message doesn't match any pending automated follow-up, `true` routes it to `SupportConversationService.receiveInboundMessage` instead of the previous silent drop. Defaults to `false` for a safe, explicit rollout - flip it on once the admin panel screen exists. See `docs/guides/whatsapp/README.md`. | `false` |
 | `NOTIFICATIONS_DISPATCH_ENABLED` | Enable background notification processing | `true` |
 | `NOTIFICATIONS_DISPATCH_BATCH_SIZE` | Batch size for notifications | `25` |
 | `NOTIFICATIONS_DISPATCH_MAX_ATTEMPTS` | Max retry attempts | `5` |

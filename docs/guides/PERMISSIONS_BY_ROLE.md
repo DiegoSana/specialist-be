@@ -115,6 +115,14 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
   expone no se registra en producción como porque el servicio vuelve a validar en runtime.
 - Ver reviews pendientes de moderación (`GET /reviews/admin/pending`).
 - Aprobar o rechazar reviews (`POST /reviews/:id/approve`, `POST /reviews/:id/reject`).
+- Ver y responder el canal de soporte por WhatsApp: listar conversaciones, ver el hilo completo,
+  responder, resolver y reabrir (`GET /admin/support/conversations`,
+  `GET /admin/support/conversations/:id`, `POST /admin/support/conversations/:id/reply`,
+  `POST /admin/support/conversations/:id/resolve`,
+  `POST /admin/support/conversations/:id/reopen`). Requiere solo `isAdminUser()` - a diferencia
+  de las dos rutas dev-only de WhatsApp arriba, responder acá **no** está dev-gated (es una
+  capacidad real de producción); su red de seguridad es el chequeo de la ventana de 24hs (400
+  `WHATSAPP_WINDOW_EXPIRED` si expiró) y el límite de 1500 caracteres por mensaje.
 
 ### No puede (en el MVP)
 

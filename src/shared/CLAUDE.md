@@ -11,8 +11,12 @@ it belongs in that context.
   (`publish` + non-port `on` used by handlers). Swapping to an outbox/queue means implementing
   `EventBus` and keeping `on` semantics for handlers or migrating them.
 - `infrastructure/messaging/`: `MessagingModule` with `TwilioClientService` (single Twilio client,
-  used by WhatsApp adapter and Twilio Verify) and `MessageTemplateService` + `message-templates.json`
-  (WhatsApp copy, Spanish es-AR, `{{var}}` placeholders).
+  used by WhatsApp adapter and Twilio Verify), `MessageTemplateService` + `message-templates.json`
+  (WhatsApp copy, Spanish es-AR, `{{var}}` placeholders), and `WHATSAPP_MESSAGING_PORT`
+  (`domain/ports/whatsapp-messaging.port.ts` + `whatsapp-messaging.factory.ts`: `TwilioWhatsAppAdapter`
+  by default, `LocalWhatsAppAdapter` when `WHATSAPP_PROVIDER=local`) - promoted here from
+  `requests/` so the `support` context can send WhatsApp messages too, without depending on
+  `requests`. Both `RequestsModule` and `SupportModule` import `MessagingModule`.
 - `presentation/decorators/`: `@CurrentUser()`, `@Public()`, `@Roles()`.
 - `presentation/guards/`: `AdminGuard`, `ProfessionalGuard`, `RolesGuard`, and a duplicate
   `JwtAuthGuard` that controllers do NOT use (they import the Identity one). Do not add a third.

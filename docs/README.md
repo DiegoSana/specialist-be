@@ -46,7 +46,8 @@
 - [**ADR-002-REPOSITORY-ENCAPSULATION.md**](./decisions/ADR-002-REPOSITORY-ENCAPSULATION.md) - Repositories are internal to their bounded context; cross-context via Services (fitness function)
 - [**ADR-002-DDD-PERSISTENCE-BOUNDARIES.md**](./decisions/ADR-002-DDD-PERSISTENCE-BOUNDARIES.md) - Aggregate repositories with `save`, association stores, infrastructure ports
 - [**ADR-003-NOTIFICATIONS-DELIVERY-RETRY-RETENTION.md**](./decisions/ADR-003-NOTIFICATIONS-DELIVERY-RETRY-RETENTION.md) - Notification deliveries, retry with backoff, retention
-- [**ADR-004-SERVICE-PROVIDER-ABSTRACTION.md**](./decisions/ADR-004-SERVICE-PROVIDER-ABSTRACTION.md) - ServiceProvider polymorphic pattern ⭐ NEW
+- [**ADR-004-SERVICE-PROVIDER-ABSTRACTION.md**](./decisions/ADR-004-SERVICE-PROVIDER-ABSTRACTION.md) - ServiceProvider polymorphic pattern
+- [**ADR-005-SUPPORT-CONVERSATIONS.md**](./decisions/ADR-005-SUPPORT-CONVERSATIONS.md) - Support conversations as a separate bounded context, WhatsApp messaging port promoted to `shared/` ⭐ NEW
 
 ---
 

@@ -16,8 +16,16 @@ Docs: `docs/guides/PERMISSIONS_BY_ROLE.md`, `docs/guides/whatsapp/README.md`,
   `getInterestedProviders`, `hasExpressedInterest`, `getMyInterestedRequests`, `assignProvider`,
   `unassignProvider`.
 - `RequestInteractionService`: `sendMessage`, `markAsDelivered`, `processInboundMessage`,
-  `createFollowUp`. `processInboundMessage` classifies the reply via `IntentDetectionPort`
-  (LLM, with a keyword-matching fallback on timeout/error) instead of calling
+  `createFollowUp`. `processInboundMessage` is a thin orchestrator over four private methods
+  (`matchInboundMessage`, `classifyInboundReply`, `applyClassificationSideEffects`,
+  `buildRespondedInteraction` - each unit-tested individually) that: matches the inbound message
+  against a pending automated `FOLLOW_UP` interaction within `WHATSAPP_REPLY_MATCH_WINDOW_DAYS`
+  days (`RequestInteractionRepository.findMostRecentByPhone`, which explicitly filters
+  `interactionType: FOLLOW_UP` - see "Ruteo de mensajes entrantes" in
+  `docs/guides/whatsapp/README.md`); when nothing matches and
+  `SUPPORT_CONVERSATIONS_ENABLED=true`, forks to `SupportConversationService.receiveInboundMessage`
+  (Support context) instead of the previous silent drop; otherwise classifies the reply via
+  `IntentDetectionPort` (LLM, with a keyword-matching fallback on timeout/error) instead of calling
   `DetectResponseIntentUseCase` directly — see "AI reply classification" below.
 - `AdminWhatsAppService`: `isDevMode`, `getConfig`, `listConversations`, `getThread`,
   `simulateReply` (dev mode only), `triggerFollowUp` (dev mode only). Backs the admin WhatsApp
@@ -93,7 +101,8 @@ trade), `PrismaRequestQueryRepository` (stats/admin), `PrismaRequestInteractionQ
 (admin conversations list, one row per request with >=1 interaction; `search` is pushed into
 Prisma's `groupBy` only when absent, otherwise fetched unfiltered and filtered in memory - see the
 comment in the file), `PrismaRequestInterestRepository`, `PrismaRequestInteractionRepository`.
-`WHATSAPP_MESSAGING_PORT` is provided by `whatsapp-messaging.factory.ts` (mirrors
+`WHATSAPP_MESSAGING_PORT` is provided by `shared/infrastructure/messaging/whatsapp-messaging.factory.ts`
+(promoted there from this context so the `support` context can also send WhatsApp messages, mirrors
 `email-sender.factory.ts`): `TwilioWhatsAppAdapter` by default, or `LocalWhatsAppAdapter` (no
 network call, `local-<uuid>` message ids) when `WHATSAPP_PROVIDER=local`. `WHATSAPP_PROVIDER`
 defaults to `twilio` so production can never silently go fake; `isWhatsAppDevMode()`
@@ -154,8 +163,9 @@ section above for the flagging flow.
 
 `request.service.spec.ts`, `request-interest.service.spec.ts` (mock `ProfileActivationService`),
 `follow-up-scheduler.job.spec.ts`, `admin-whatsapp.service.spec.ts`,
-`local-whatsapp.adapter.spec.ts`, `whatsapp-messaging.factory.spec.ts`,
-`whatsapp-dev-mode.spec.ts`, `admin-whatsapp.controller.spec.ts`,
+`prisma-request-interaction.repository.spec.ts` (asserts the actual Prisma `where` clause includes
+`interactionType: FOLLOW_UP` - this repo's first repository-level spec, added specifically to
+protect that invariant), `whatsapp-dev-mode.spec.ts`, `admin-whatsapp.controller.spec.ts`,
 `admin-whatsapp-dev.controller.spec.ts`. Factory: `createMockRequest`. Manual WhatsApp scripts
 under `test/scripts/whatsapp`.
 
@@ -163,7 +173,8 @@ AI classifier / attention flags: `detect-response-intent.use-case.spec.ts`,
 `local-intent-detection.adapter.spec.ts`, `anthropic-intent-detection.adapter.spec.ts` (mocks
 `@anthropic-ai/sdk`, never hits the network), `intent-detection.factory.spec.ts`,
 `request-interaction.service.spec.ts` (fallback-on-timeout, confidence downgrade, opt-out,
-attention flagging), `request-interaction-responded.handler.spec.ts`,
+attention flagging, staleness window, support fork on/off, plus a dedicated describe block unit-
+testing each extracted `processInboundMessage` method), `request-interaction-responded.handler.spec.ts`,
 `request-attention.service.spec.ts` (idempotency), `request-attention-flagged.handler.spec.ts`
 (in `src/notifications/application/handlers/`). Cross-context: `user.service.spec.ts`
 (`findAdminUserIds`/`setWhatsAppOptedOut`), `profile-activation.service.spec.ts` (opt-out gate).

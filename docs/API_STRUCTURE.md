@@ -156,6 +156,11 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/whatsapp/conversations/:requestId/trigger-followup` | `POST` | Disparar una regla de follow-up ahora mismo (solo dev mode, 404 si no) |
 | `/api/admin/requests/attention` | `GET` | Listar `RequestAttentionFlag`s abiertos (paginado, `?page=&limit=`), con título/status del request. Razones: `AT_RISK` (escalera de follow-up agotada sin respuesta), `ABANDONED`/`ESCALATED` (señal del clasificador LLM) |
 | `/api/admin/requests/attention/:id/resolve` | `POST` | Marcar un flag como resuelto (204) - no toca el request en sí, el seguimiento es manual vía el visor de conversaciones |
+| `/api/admin/support/conversations` | `GET` | Listar conversaciones de soporte (paginado, `?status=OPEN\|RESOLVED\|ALL&page=&limit=`). Cada item incluye `canReplyNow` (ventana de 24hs, calculado en el server) |
+| `/api/admin/support/conversations/:id` | `GET` | `{ conversation, messages }` - mensajes en orden cronológico (viejo→nuevo), a diferencia de `/admin/whatsapp/conversations/:requestId` |
+| `/api/admin/support/conversations/:id/reply` | `POST` | Responder (body: `message`, 1-1500 caracteres) - 201 con el mensaje creado, o 400 `{ code: 'WHATSAPP_WINDOW_EXPIRED', message, lastInboundAt }` fuera de la ventana de 24hs |
+| `/api/admin/support/conversations/:id/resolve` | `POST` | Marcar la conversación como resuelta (204, idempotente) |
+| `/api/admin/support/conversations/:id/reopen` | `POST` | Reabrir una conversación resuelta (204, idempotente) |
 
 **Marcado con `@UseGuards(JwtAuthGuard, AdminGuard)`** en el controller. Las dos rutas `POST`
 viven en un controller separado (`AdminWhatsAppDevController`) que solo se registra cuando
@@ -182,7 +187,9 @@ capas devuelven 404, nunca 403, cuando el modo dev está apagado.
 
 **Tipos de webhooks manejados:**
 1. **Status Updates**: Actualización de estado de mensajes (`MessageStatus`)
-2. **Inbound Messages**: Mensajes entrantes desde WhatsApp
+2. **Inbound Messages**: Mensajes entrantes desde WhatsApp - si no matchean ningún follow-up
+   automático pendiente/reciente y `SUPPORT_CONVERSATIONS_ENABLED=true`, se enrutan al contexto
+   `support` en vez de descartarse (ver `docs/guides/whatsapp/README.md`)
 
 ---
 
