@@ -47,6 +47,11 @@ class AdminRequestProviderDto {
   @ApiProperty()
   name: string;
 
+  @ApiPropertyOptional({
+    description: 'Owning user id, for linking to /admin/users/:id',
+  })
+  userId?: string;
+
   @ApiPropertyOptional({ type: [AdminRequestProviderTradeDto] })
   trades?: AdminRequestProviderTradeDto[];
 }
@@ -144,6 +149,7 @@ export class AdminRequestDetailResponseDto {
         id: entityAny.provider.id,
         type: entityAny.provider.type,
         name: user ? `${user.firstName} ${user.lastName}`.trim() : '',
+        userId: entityAny.professional.userId,
         trades: (entityAny.professional.trades || []).map((t: any) => ({
           id: t.id,
           name: t.name,
@@ -156,6 +162,7 @@ export class AdminRequestDetailResponseDto {
         id: entityAny.provider.id,
         type: entityAny.provider.type,
         name: entityAny.company.companyName,
+        userId: entityAny.company.userId,
         trades: (entityAny.company.trades || []).map((t: any) => ({
           id: t.id,
           name: t.name,
