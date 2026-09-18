@@ -189,6 +189,25 @@ This repository follows a Clean Architecture + DDD-inspired structure. For the p
 
 ---
 
+### 8. 🎧 Support (Soporte)
+
+**Responsabilidad**: Canal general de soporte/conversación por WhatsApp, independiente de
+cualquier `Request`. Existe como bounded context separado deliberadamente, para que el
+clasificador de intención de `requests` nunca corra sobre una conversación humana libre. Ver
+`src/support/CLAUDE.md` y `docs/decisions/ADR-005-SUPPORT-CONVERSATIONS.md`.
+
+**Entidades**:
+- `SupportConversation` - una fila por número de teléfono, estado `OPEN`/`RESOLVED`,
+  `userId`/`relatedRequestId` opcionales sin FK real (soft references).
+- `SupportMessage` - mensajes de la conversación, append-only (sin lifecycle).
+
+**Reglas**:
+- Un mensaje entrante que no matchea ningún follow-up automático de `requests` se enruta acá
+  (flag `SUPPORT_CONVERSATIONS_ENABLED`), en vez de descartarse en silencio.
+- Responder desde el panel de admin respeta la ventana real de 24hs de WhatsApp Business API.
+
+---
+
 ## Estructura de Directorios
 
 ```
@@ -556,6 +575,7 @@ Bounded contexts must communicate through **Services**, never by directly access
 | Profiles | `ProfessionalService` | `findById()`, `findByUserId()` |
 | Profiles | `TradeService` | `findAll()`, `findById()` |
 | Requests | `RequestService` | `findById()`, `create()`, `update()` |
+| Support | `SupportConversationService` | `receiveInboundMessage()`, `listForAdmin()`, `getForAdmin()`, `replyForAdmin()`, `resolve()`, `reopen()` |
 
 > See ADR-002 for more details about this decision.
 

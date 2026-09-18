@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WhatsAppMessagingPort } from '../../domain/ports/whatsapp-messaging.port';
-import { TwilioClientService } from '../../../shared/infrastructure/messaging/twilio-client.service';
+import { TwilioClientService } from './twilio-client.service';
 
 /**
  * Twilio WhatsApp adapter.

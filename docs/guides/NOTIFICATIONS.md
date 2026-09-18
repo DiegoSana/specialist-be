@@ -193,6 +193,7 @@ A daily job deletes notifications older than:
 | `REQUEST_ATTENTION_FLAGGED` | A request is flagged `AT_RISK`/`ABANDONED`/`ESCALATED` | Every admin |
 | `WHATSAPP_OPTED_OUT` | `User.whatsappOptedOut` transitions `false -> true` (WhatsApp reply "STOP" or admin override via `PUT /admin/users/:id/whatsapp-opt-out`) | The opted-out user, forced to `EMAIL` regardless of their `preferredExternalChannel` (see below) |
 | `WHATSAPP_REACTIVATED` | `User.whatsappOptedOut` transitions `true -> false` (today only via admin override, `PUT /admin/users/:id/whatsapp-opt-out`) | The reactivated user, forced to `EMAIL` regardless of their `preferredExternalChannel` (see below) |
+| `SUPPORT_CONVERSATION_NEEDS_ATTENTION` | A `SupportConversation` (Support context) is created, or reopened by a new inbound message after being `RESOLVED` - never on message 2..N of an already-`OPEN` conversation | Every admin, in-app only (`includeExternal: false`) |
 
 > **Note**: Service Provider can be either a Professional (individual) or a Company.
 > The notification system uses `providerUserId` to send notifications to the correct user.

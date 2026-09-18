@@ -58,9 +58,14 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
   type `WHATSAPP_REACTIVATED`. Both force `includeExternal: true, requireExternal: true,
   forceExternalChannel: NotificationChannel.EMAIL` — never WhatsApp, since that's the whole point
   being communicated; see "Forcing the external channel" in `docs/guides/NOTIFICATIONS.md`.
+- `SupportConversationAttentionFlaggedHandler`: `support.conversation.attention_flagged` (Support
+  context) -> every admin (`UserService.findAdminUserIds()`), type
+  `SUPPORT_CONVERSATION_NEEDS_ATTENTION`, in-app only (`includeExternal: false`) — mirrors
+  `RequestAttentionFlaggedHandler`, not `UserWhatsAppOptedOutHandler`: the admin already lives in
+  the panel, no email needed.
 Types in use: `REQUEST_STATUS_CHANGED`, `REQUEST_INTEREST_EXPRESSED`, `REQUEST_PROFESSIONAL_ASSIGNED`,
-`REVIEW_APPROVED`, `REQUEST_ATTENTION_FLAGGED`, `WHATSAPP_OPTED_OUT`, `WHATSAPP_REACTIVATED`. Copy
-is Spanish (es-AR).
+`REVIEW_APPROVED`, `REQUEST_ATTENTION_FLAGGED`, `WHATSAPP_OPTED_OUT`, `WHATSAPP_REACTIVATED`,
+`SUPPORT_CONVERSATION_NEEDS_ATTENTION`. Copy is Spanish (es-AR).
 
 ## Jobs
 
@@ -81,4 +86,4 @@ exponential backoff `*_RETRY_BASE_SECONDS`/`*_RETRY_MAX_SECONDS`), `Notification
 ## Tests
 
 `notification.service.spec.ts`, `request-attention-flagged.handler.spec.ts`,
-`user-whatsapp-opted-out.handler.spec.ts`.
+`user-whatsapp-opted-out.handler.spec.ts`, `support-conversation-attention-flagged.handler.spec.ts`.

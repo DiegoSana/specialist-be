@@ -22,7 +22,7 @@ import {
 import {
   WHATSAPP_MESSAGING_PORT,
   WhatsAppMessagingPort,
-} from '../../domain/ports/whatsapp-messaging.port';
+} from '../../../shared/domain/ports/whatsapp-messaging.port';
 import {
   INTENT_DETECTION_PORT,
   IntentDetectionPort,
@@ -43,6 +43,7 @@ import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { RequestInteractionRespondedEvent } from '../../domain/events/request-interaction-responded.event';
 import { RequestAttentionService } from './request-attention.service';
 import { isExplicitOptOutKeyword } from './opt-out-keywords';
+import { SupportConversationService } from '../../../support/application/services/support-conversation.service';
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -76,6 +77,7 @@ export class RequestInteractionService {
     private readonly eventBus: EventBus,
     private readonly config: ConfigService,
     private readonly attentionService: RequestAttentionService,
+    private readonly supportConversationService: SupportConversationService,
   ) {}
 
   /**
@@ -727,8 +729,204 @@ export class RequestInteractionService {
   }
 
   /**
+   * How far back an inbound reply can match an automated FOLLOW_UP interaction (see
+   * matchInboundMessage / RequestInteractionRepository.findMostRecentByPhone).
+   * Default 14 days covers the longest follow-up cadence (10 days) plus margin.
+   */
+  private computeMatchCutoff(now: Date = new Date()): Date {
+    const windowDays = this.config.get<number>(
+      'WHATSAPP_REPLY_MATCH_WINDOW_DAYS',
+      14,
+    );
+    return new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
+  }
+
+  /**
+   * Try to match an inbound message to a pending RequestInteraction via two
+   * strategies: (1) direct match by Twilio message SID, covering a retried webhook
+   * delivery for the same interaction; (2) the most recent automated FOLLOW_UP
+   * interaction sent to this phone number within the reply window (see
+   * RequestInteractionRepository.findMostRecentByPhone's doc comment for the
+   * FOLLOW_UP-only invariant this enforces). No side effects, and does not decide
+   * what to do when nothing matches - that is the caller's responsibility.
+   */
+  private async matchInboundMessage(
+    phoneNumber: string,
+    messageId: string,
+    matchCutoff: Date,
+  ): Promise<RequestInteractionEntity | null> {
+    const byTwilioSid =
+      await this.interactionRepository.findByTwilioMessageSid(messageId);
+    if (byTwilioSid) {
+      return byTwilioSid;
+    }
+
+    return this.interactionRepository.findMostRecentByPhone(
+      phoneNumber,
+      matchCutoff,
+    );
+  }
+
+  /**
+   * Nothing in `requests` matched this inbound message: it isn't a reply to any
+   * pending/recent automated follow-up. This used to be a silent drop (the original
+   * bug). When SUPPORT_CONVERSATIONS_ENABLED, fork the message to the support
+   * context instead, so it's recorded and an admin can see/reply to it from the
+   * admin panel; the flag defaults to false, so rollout is explicit and this stays a
+   * no-op (current behavior, just logged) until turned on.
+   */
+  private async forkUnmatchedInboundMessage(
+    phoneNumber: string,
+    params: { body: string; messageId: string },
+  ): Promise<void> {
+    const supportEnabled =
+      this.config.get<string>('SUPPORT_CONVERSATIONS_ENABLED', 'false') ===
+      'true';
+
+    if (!supportEnabled) {
+      this.logger.warn(
+        `Could not match inbound message to an interaction: Phone=${phoneNumber}, MessageId=${params.messageId}`,
+      );
+      return;
+    }
+
+    await this.supportConversationService.receiveInboundMessage({
+      phoneNumber,
+      body: params.body,
+      twilioMessageSid: params.messageId,
+    });
+  }
+
+  /**
+   * Classify an inbound reply and derive the final ResponseIntent: runs
+   * classifyIntentWithFallback, then applies the explicit opt-out keyword override
+   * and the confidence-threshold downgrade to UNKNOWN.
+   */
+  private async classifyInboundReply(input: {
+    messageText: string;
+    currentStatus: RequestStatus;
+    triggeringTemplate: string | null;
+    conversationHistory: IntentDetectionConversationMessage[];
+  }): Promise<{
+    classification: IntentDetectionResult;
+    intent: ResponseIntent;
+  }> {
+    const rawClassification = await this.classifyIntentWithFallback(input);
+
+    // Explicit opt-out keywords ("BAJA"/"STOP"/"CANCELAR SUSCRIPCION") are a hard business
+    // rule checked independently of the configured classifier — the local adapter never
+    // sets optOut (it has no LLM to judge non-explicit requests), and even the real LLM
+    // adapter shouldn't be the only thing standing between a user and honoring an
+    // unambiguous opt-out request.
+    const classification: IntentDetectionResult = {
+      ...rawClassification,
+      optOut:
+        rawClassification.optOut || isExplicitOptOutKeyword(input.messageText),
+    };
+
+    const confidenceThreshold = this.config.get<number>(
+      'INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD',
+      0.6,
+    );
+    // Below the threshold, never trust the classification enough to change Request.status —
+    // the raw values stay in metadata for auditing, but the event carries UNKNOWN.
+    const intent =
+      classification.confidence >= confidenceThreshold
+        ? classification.statusIntent
+        : ResponseIntent.UNKNOWN;
+
+    return { classification, intent };
+  }
+
+  /**
+   * Side effects that follow from the classification: recording an explicit
+   * WhatsApp opt-out, and flagging the request for admin attention
+   * (ESCALATED/ABANDONED). Never throws - opt-out recording already swallows its
+   * own errors (see recordWhatsAppOptOut).
+   */
+  private async applyClassificationSideEffects(
+    interaction: RequestInteractionEntity,
+    request: { clientId: string; providerId: string | null; id: string },
+    classification: IntentDetectionResult,
+    messageBody: string,
+  ): Promise<void> {
+    if (classification.optOut) {
+      await this.recordWhatsAppOptOut(interaction, request);
+    }
+
+    if (classification.escalate) {
+      await this.attentionService.flag(
+        request.id,
+        RequestAttentionReason.ESCALATED,
+        messageBody,
+      );
+    } else if (classification.viability === 'ABANDONED') {
+      await this.attentionService.flag(
+        request.id,
+        RequestAttentionReason.ABANDONED,
+        messageBody,
+      );
+    }
+  }
+
+  /**
+   * Pure: merge the classification into a new RESPONDED RequestInteractionEntity
+   * (response content/intent + metadata for idempotency and auditing), without
+   * persisting it.
+   */
+  private buildRespondedInteraction(
+    interaction: RequestInteractionEntity,
+    params: { body: string; messageId: string },
+    classification: IntentDetectionResult,
+    intent: ResponseIntent,
+  ): RequestInteractionEntity {
+    const respondedInteraction = interaction.markAsResponded(
+      params.body,
+      intent,
+    );
+
+    // Add inbound message SID to metadata for idempotency tracking, plus the full
+    // classification (raw values included, even when downgraded by the confidence gate)
+    const metadata = {
+      ...(interaction.metadata || {}),
+      inboundMessageSid: params.messageId,
+      inboundMessageProcessedAt: new Date().toISOString(),
+      rawClassifierIntent: classification.statusIntent,
+      classifierConfidence: classification.confidence,
+      viability: classification.viability,
+      optOut: classification.optOut,
+      escalate: classification.escalate,
+    };
+
+    return new RequestInteractionEntity(
+      respondedInteraction.id,
+      respondedInteraction.requestId,
+      respondedInteraction.interactionType,
+      respondedInteraction.status,
+      respondedInteraction.direction,
+      respondedInteraction.channel,
+      respondedInteraction.messageTemplate,
+      respondedInteraction.messageContent,
+      respondedInteraction.responseContent,
+      respondedInteraction.responseIntent,
+      respondedInteraction.scheduledFor,
+      respondedInteraction.sentAt,
+      respondedInteraction.deliveredAt,
+      respondedInteraction.respondedAt,
+      respondedInteraction.twilioMessageSid,
+      respondedInteraction.twilioStatus,
+      metadata,
+      respondedInteraction.createdAt,
+      new Date(),
+    );
+  }
+
+  /**
    * Process an inbound WhatsApp message.
-   * Finds the related interaction and updates it with the response.
+   * Finds the related automated follow-up interaction and updates it with the
+   * response; when nothing matches and SUPPORT_CONVERSATIONS_ENABLED, forks to the
+   * support context instead of silently dropping the message (see
+   * forkUnmatchedInboundMessage).
    * Idempotent: If the same inbound message is received multiple times, it will only be processed once.
    */
   async processInboundMessage(params: {
@@ -759,23 +957,15 @@ export class RequestInteractionService {
       }
     }
 
-    // Try multiple strategies to find the matching interaction
-
-    // Strategy 1: Find by Twilio message SID (if this is a status update or reply)
-    let interaction = await this.interactionRepository.findByTwilioMessageSid(
+    const matchCutoff = this.computeMatchCutoff();
+    const interaction = await this.matchInboundMessage(
+      phoneNumber,
       params.messageId,
+      matchCutoff,
     );
 
-    // Strategy 2: Find by phone number in metadata (most recent pending/delivered)
     if (!interaction) {
-      interaction =
-        await this.interactionRepository.findMostRecentByPhone(phoneNumber);
-    }
-
-    if (!interaction) {
-      this.logger.warn(
-        `Could not match inbound message to an interaction: Phone=${phoneNumber}, MessageId=${params.messageId}`,
-      );
+      await this.forkUnmatchedInboundMessage(phoneNumber, params);
       return;
     }
 
@@ -821,91 +1011,26 @@ export class RequestInteractionService {
     );
 
     // Detect intent from message text (LLM-backed classifier, keyword fallback on error/timeout)
-    const rawClassification = await this.classifyIntentWithFallback({
+    const { classification, intent } = await this.classifyInboundReply({
       messageText: params.body,
       currentStatus: request.status,
       triggeringTemplate: interaction.messageTemplate,
       conversationHistory,
     });
 
-    // Explicit opt-out keywords ("BAJA"/"STOP"/"CANCELAR SUSCRIPCION") are a hard business
-    // rule checked independently of the configured classifier — the local adapter never
-    // sets optOut (it has no LLM to judge non-explicit requests), and even the real LLM
-    // adapter shouldn't be the only thing standing between a user and honoring an
-    // unambiguous opt-out request.
-    const classification = {
-      ...rawClassification,
-      optOut: rawClassification.optOut || isExplicitOptOutKeyword(params.body),
-    };
-
-    const confidenceThreshold = this.config.get<number>(
-      'INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD',
-      0.6,
+    await this.applyClassificationSideEffects(
+      interaction,
+      request,
+      classification,
+      params.body,
     );
-    // Below the threshold, never trust the classification enough to change Request.status —
-    // the raw values stay in metadata for auditing, but the event carries UNKNOWN.
-    const intent =
-      classification.confidence >= confidenceThreshold
-        ? classification.statusIntent
-        : ResponseIntent.UNKNOWN;
-
-    if (classification.optOut) {
-      await this.recordWhatsAppOptOut(interaction, request);
-    }
-
-    if (classification.escalate) {
-      await this.attentionService.flag(
-        request.id,
-        RequestAttentionReason.ESCALATED,
-        params.body,
-      );
-    } else if (classification.viability === 'ABANDONED') {
-      await this.attentionService.flag(
-        request.id,
-        RequestAttentionReason.ABANDONED,
-        params.body,
-      );
-    }
 
     // Mark interaction as responded and store inbound message SID for idempotency
-    const respondedInteraction = interaction.markAsResponded(
-      params.body,
+    const respondedInteractionWithMetadata = this.buildRespondedInteraction(
+      interaction,
+      params,
+      classification,
       intent,
-    );
-
-    // Add inbound message SID to metadata for idempotency tracking, plus the full
-    // classification (raw values included, even when downgraded by the confidence gate)
-    const metadata = {
-      ...(interaction.metadata || {}),
-      inboundMessageSid: params.messageId,
-      inboundMessageProcessedAt: new Date().toISOString(),
-      rawClassifierIntent: classification.statusIntent,
-      classifierConfidence: classification.confidence,
-      viability: classification.viability,
-      optOut: classification.optOut,
-      escalate: classification.escalate,
-    };
-
-    const respondedInteractionWithMetadata = new RequestInteractionEntity(
-      respondedInteraction.id,
-      respondedInteraction.requestId,
-      respondedInteraction.interactionType,
-      respondedInteraction.status,
-      respondedInteraction.direction,
-      respondedInteraction.channel,
-      respondedInteraction.messageTemplate,
-      respondedInteraction.messageContent,
-      respondedInteraction.responseContent,
-      respondedInteraction.responseIntent,
-      respondedInteraction.scheduledFor,
-      respondedInteraction.sentAt,
-      respondedInteraction.deliveredAt,
-      respondedInteraction.respondedAt,
-      respondedInteraction.twilioMessageSid,
-      respondedInteraction.twilioStatus,
-      metadata,
-      respondedInteraction.createdAt,
-      new Date(),
     );
 
     await this.interactionRepository.save(respondedInteractionWithMetadata);
@@ -913,7 +1038,7 @@ export class RequestInteractionService {
     // Calculate response time
     const responseTimeMinutes = interaction.sentAt
       ? Math.round(
-          (respondedInteraction.respondedAt.getTime() -
+          (respondedInteractionWithMetadata.respondedAt.getTime() -
             interaction.sentAt.getTime()) /
             (1000 * 60),
         )
@@ -929,7 +1054,7 @@ export class RequestInteractionService {
       requestId: interaction.requestId,
       responseContent: params.body,
       responseIntent: intent,
-      respondedAt: respondedInteraction.respondedAt,
+      respondedAt: respondedInteractionWithMetadata.respondedAt,
       responseTimeMinutes,
       confidence: classification.confidence,
       viability: classification.viability,

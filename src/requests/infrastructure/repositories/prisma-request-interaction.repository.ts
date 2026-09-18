@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { RequestInteractionRepository } from '../../domain/repositories/request-interaction.repository';
 import { RequestInteractionEntity } from '../../domain/entities/request-interaction.entity';
-import { InteractionStatus } from '@prisma/client';
+import { InteractionStatus, InteractionType } from '@prisma/client';
 import { PrismaRequestInteractionMapper } from '../mappers/request-interaction.prisma-mapper';
 
 @Injectable()
@@ -82,9 +82,12 @@ export class PrismaRequestInteractionRepository
 
   async findMostRecentByPhone(
     phoneNumber: string,
+    notOlderThan: Date,
   ): Promise<RequestInteractionEntity | null> {
-    // Find most recent interaction (pending or delivered) for this phone number
-    // This is used when we receive a message but don't know which request it's for
+    // Find most recent interaction (pending or delivered) for this phone number,
+    // within the reply window, and - deliberately, see the interface doc comment -
+    // only among automated FOLLOW_UP interactions. This is used when we receive a
+    // message but don't know which request it's for.
     const interaction = await this.prisma.requestInteraction.findFirst({
       where: {
         metadata: {
@@ -98,6 +101,8 @@ export class PrismaRequestInteractionRepository
             InteractionStatus.DELIVERED,
           ],
         },
+        interactionType: InteractionType.FOLLOW_UP,
+        createdAt: { gte: notOlderThan },
       },
       orderBy: { createdAt: 'desc' },
     });

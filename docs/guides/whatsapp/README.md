@@ -19,6 +19,28 @@ El job `FollowUpSchedulerJob` corre cada hora, busca solicitudes que cumplan est
 
 ---
 
+## Ruteo de mensajes entrantes: follow-up vs. soporte general
+
+`TwilioWebhookController.handleInboundMessage` siempre llama a
+`RequestInteractionService.processInboundMessage`, que intenta matchear el mensaje contra una
+`RequestInteraction` de tipo `FOLLOW_UP` automática (`matchInboundMessage`, dos estrategias: por
+`twilioMessageSid` exacto, o la más reciente enviada a ese teléfono dentro de
+`WHATSAPP_REPLY_MATCH_WINDOW_DAYS` días - default 14, cubre la cadencia más larga de follow-up de
+10 días más margen). El filtro `interactionType: FOLLOW_UP` es explícito en el query de
+`RequestInteractionRepository.findMostRecentByPhone` - **nunca** matchea otro tipo de interacción,
+ni siquiera si alguna vez existiera (`RESPONSE`/`STATUS_UPDATE` son código muerto hoy).
+
+Si nada matchea (el usuario escribe espontáneamente, o responde fuera de la ventana) y
+`SUPPORT_CONVERSATIONS_ENABLED=true`, el mensaje se enruta a
+`SupportConversationService.receiveInboundMessage` (contexto `support`, ver
+`src/support/CLAUDE.md`) en vez de descartarse en silencio - ese descarte silencioso era el bug
+original que motivó separar este contexto. Con el flag en `false` (default), el comportamiento es
+el de siempre: se loguea un warning y no se persiste nada. Deliberadamente **no** se hace nunca al
+revés: una conversación de soporte nunca alimenta el clasificador de intención de `requests` ni
+puede cambiar `Request.status` - por diseño, `support` no depende de los internals de `requests`.
+
+---
+
 ## 🧪 Loop de testing local sin Twilio (admin conversations viewer)
 
 Para probar todo el flujo de WhatsApp (mensajes salientes, respuestas entrantes, cambios de
@@ -37,11 +59,13 @@ estado disparados por la respuesta) sin gastar créditos de Twilio ni depender d
    que alguien tenga el backend corriendo localmente. Cuando se empiece a probar con WhatsApp
    real, sacar `WHATSAPP_DEV_MODE_ENABLED` de `fly.toml` y volver `WHATSAPP_PROVIDER` a `twilio`
    (o dejarlo sin setear, que es el default).
-2. Con `WHATSAPP_PROVIDER=local`, `LocalWhatsAppAdapter` (`src/requests/infrastructure/adapters/local-whatsapp.adapter.ts`)
+2. Con `WHATSAPP_PROVIDER=local`, `LocalWhatsAppAdapter` (`src/shared/infrastructure/messaging/local-whatsapp.adapter.ts`)
    reemplaza a `TwilioWhatsAppAdapter` detrás del mismo `WhatsAppMessagingPort`: `sendMessage`
    genera un id `local-<uuid>`, loguea el mensaje y no hace ninguna llamada de red;
    `getMessageStatus` siempre devuelve `delivered`. La elección se resuelve en
-   `whatsapp-messaging.factory.ts`, igual que `email-sender.factory.ts` para `EMAIL_PROVIDER`.
+   `whatsapp-messaging.factory.ts`, igual que `email-sender.factory.ts` para `EMAIL_PROVIDER`. El
+   puerto y sus adapters viven en `shared/` (promovidos desde `requests/`) para que el contexto
+   `support` también pueda enviar WhatsApp sin depender de `requests` - ver la sección siguiente.
 3. Usar el visor de conversaciones en `/admin/whatsapp` (consumido por specialist-admin):
    - `GET /admin/whatsapp/config` → `{ devMode, availableFollowUpRules? }` (los nombres de regla
      solo se listan en dev mode).

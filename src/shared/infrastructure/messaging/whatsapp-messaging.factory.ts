@@ -6,7 +6,7 @@ import {
 } from '../../domain/ports/whatsapp-messaging.port';
 import { TwilioWhatsAppAdapter } from './twilio-whatsapp.adapter';
 import { LocalWhatsAppAdapter } from './local-whatsapp.adapter';
-import { TwilioClientService } from '../../../shared/infrastructure/messaging/twilio-client.service';
+import { TwilioClientService } from './twilio-client.service';
 
 export type WhatsAppProviderType = 'twilio' | 'local';
 

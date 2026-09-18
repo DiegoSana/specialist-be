@@ -46,10 +46,12 @@ presentation/   controllers, response dto/, presentation guards
 
 Bounded contexts: `identity` (users, auth, verification), `profiles` (Client, Professional,
 Company, ServiceProvider, Trade, ProfileActivationService), `requests` (service requests,
-interests, WhatsApp follow-up interactions), `reputation` (reviews + moderation),
+interests, WhatsApp follow-up interactions), `support` (general WhatsApp support/conversation
+channel, independent of any Request - see `src/support/CLAUDE.md` and
+`docs/decisions/ADR-005-SUPPORT-CONVERSATIONS.md`), `reputation` (reviews + moderation),
 `notifications` (in-app + email/whatsapp deliveries), `storage` (files), `admin`, `contact`,
-`health`. `shared/` holds the Prisma module, in-memory EventBus, messaging (Twilio), decorators
-and guards.
+`health`. `shared/` holds the Prisma module, in-memory EventBus, messaging (Twilio, including the
+`WhatsAppMessagingPort` shared by `requests` and `support`), decorators and guards.
 
 ## Non-negotiable rules (enforced by `src/__tests__/architecture.spec.ts`)
 
