@@ -15,6 +15,7 @@ import {
 import { UserEntity, UserAuthContext } from '../../domain/entities/user.entity';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { UserWhatsAppOptedOutEvent } from '../../domain/events/user-whatsapp-opted-out.event';
+import { UserWhatsAppReactivatedEvent } from '../../domain/events/user-whatsapp-reactivated.event';
 
 /**
  * UserService exposes user operations to other bounded contexts.
@@ -128,9 +129,10 @@ export class UserService {
    * treats an opted-out user as having no active profile (WhatsApp is the mandatory
    * channel for coordinating requests).
    *
-   * Publishes UserWhatsAppOptedOutEvent only on the false -> true transition (never when
-   * clearing the flag), so the user is told exactly once per opt-out, regardless of which
-   * caller triggered it.
+   * Publishes UserWhatsAppOptedOutEvent on the false -> true transition and
+   * UserWhatsAppReactivatedEvent on the true -> false transition (never both, never when the
+   * value doesn't actually change), so the user is told exactly once per transition, regardless
+   * of which caller triggered it.
    */
   async setWhatsAppOptedOut(
     userId: string,
@@ -147,6 +149,10 @@ export class UserService {
     if (optedOut && !wasOptedOut) {
       await this.eventBus.publish(
         new UserWhatsAppOptedOutEvent({ userId: saved.id }),
+      );
+    } else if (!optedOut && wasOptedOut) {
+      await this.eventBus.publish(
+        new UserWhatsAppReactivatedEvent({ userId: saved.id }),
       );
     }
     return saved;
@@ -304,9 +310,9 @@ export class UserService {
   /**
    * Admin only: manually set/clear a user's WhatsApp opt-out flag. No-op (and skips the
    * notification event) when the flag already matches the requested value, so an admin
-   * re-saving the same state never re-triggers the "you were opted out" notification.
-   * Delegates the actual persistence + transition-detection to setWhatsAppOptedOut, the
-   * same method the automatic WhatsApp reply classifier uses.
+   * re-saving the same state never re-triggers the "you were opted out"/"you're reactivated"
+   * notification. Delegates the actual persistence + transition-detection to
+   * setWhatsAppOptedOut, the same method the automatic WhatsApp reply classifier uses.
    */
   async updateWhatsAppOptOutForUser(
     targetUserId: string,

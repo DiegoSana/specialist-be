@@ -18,8 +18,9 @@ for linking to `/admin/professionals/:id` / `/admin/companies/:id`), `PUT
 users/:id/status`, `PUT users/:id/verification` (manual email/phone verified override), `PUT
 users/:id/whatsapp-opt-out` (manual `User.whatsappOptedOut` override, body `{ whatsappOptedOut:
 boolean }` via `UpdateUserWhatsAppOptOutDto`; no-op if unchanged; setting `false -> true`
-publishes `UserWhatsAppOptedOutEvent`, same as the automatic WhatsApp reply path — see Identity
-context's CLAUDE.md), `GET
+publishes `UserWhatsAppOptedOutEvent` (same as the automatic WhatsApp reply path), setting
+`true -> false` publishes `UserWhatsAppReactivatedEvent` (admin-only path, no automatic producer)
+— see Identity context's CLAUDE.md), `GET
 professionals`, `GET professionals/:id`, `PUT professionals/:id/status`, `GET requests?status=`
 (each item's `provider` is `{ id, type, name } | null`), `GET requests/:id` (full detail: client,
 trade, unified `provider` with `trades`, `interestedProviders` via

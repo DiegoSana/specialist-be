@@ -50,15 +50,17 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
 - `ReviewsNotificationsHandler`: `review.approved` -> provider user.
 - `RequestAttentionFlaggedHandler`: `requests.request_attention.flagged` -> every admin
   (`UserService.findAdminUserIds()`), in-app only (`includeExternal: false`).
-- `UserWhatsAppOptedOutHandler`: `identity.user.whatsapp_opted_out` -> the opted-out user
-  (`REQUIRES_EXTERNAL: true`, `forceExternalChannel: NotificationChannel.EMAIL` — never WhatsApp,
-  since that's unavailable to this user by definition; see "Forcing the external channel" in
-  `docs/guides/NOTIFICATIONS.md`). Event comes from the Identity context
-  (`src/identity/domain/events/user-whatsapp-opted-out.event.ts`), published only on the
-  `false -> true` transition, whether triggered by the WhatsApp reply classifier or the admin
-  override (`PUT /admin/users/:id/whatsapp-opt-out`).
+- `UserWhatsAppOptedOutHandler`: handles both sides of `User.whatsappOptedOut`. On
+  `identity.user.whatsapp_opted_out` (Identity, `false -> true` transition, whether triggered by
+  the WhatsApp reply classifier or the admin override `PUT /admin/users/:id/whatsapp-opt-out`) ->
+  the opted-out user, type `WHATSAPP_OPTED_OUT`. On `identity.user.whatsapp_reactivated` (Identity,
+  `true -> false` transition — today only reachable via the admin override) -> the same user,
+  type `WHATSAPP_REACTIVATED`. Both force `includeExternal: true, requireExternal: true,
+  forceExternalChannel: NotificationChannel.EMAIL` — never WhatsApp, since that's the whole point
+  being communicated; see "Forcing the external channel" in `docs/guides/NOTIFICATIONS.md`.
 Types in use: `REQUEST_STATUS_CHANGED`, `REQUEST_INTEREST_EXPRESSED`, `REQUEST_PROFESSIONAL_ASSIGNED`,
-`REVIEW_APPROVED`, `REQUEST_ATTENTION_FLAGGED`, `WHATSAPP_OPTED_OUT`. Copy is Spanish (es-AR).
+`REVIEW_APPROVED`, `REQUEST_ATTENTION_FLAGGED`, `WHATSAPP_OPTED_OUT`, `WHATSAPP_REACTIVATED`. Copy
+is Spanish (es-AR).
 
 ## Jobs
 

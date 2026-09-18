@@ -52,12 +52,16 @@ verification. Does NOT own client/professional/company profiles (Profiles contex
   alone (see Requests context's WhatsApp follow-up notes).
 - `domain/events/user-whatsapp-opted-out.event.ts` (`UserWhatsAppOptedOutEvent`,
   `identity.user.whatsapp_opted_out`) is the first domain event from this context. Published from
-  `UserService.setWhatsAppOptedOut` only on the `false -> true` transition (never when clearing
-  the flag), regardless of whether the caller was the WhatsApp reply classifier (Requests context)
-  or the admin manual override (`updateWhatsAppOptOutForUser`, `PUT
-  /admin/users/:id/whatsapp-opt-out`). Consumed by `UserWhatsAppOptedOutHandler` in the
-  Notifications context (mirrors `RequestAttentionFlaggedHandler`'s cross-context pattern — do not
-  import `NotificationsModule` into `IdentityModule`).
+  `UserService.setWhatsAppOptedOut` on the `false -> true` transition, regardless of whether the
+  caller was the WhatsApp reply classifier (Requests context) or the admin manual override
+  (`updateWhatsAppOptOutForUser`, `PUT /admin/users/:id/whatsapp-opt-out`). Its sibling
+  `domain/events/user-whatsapp-reactivated.event.ts` (`UserWhatsAppReactivatedEvent`,
+  `identity.user.whatsapp_reactivated`) is published from the same method on the `true -> false`
+  transition — today only reachable via the admin override, there's no self-service/automatic
+  reactivation path. Neither fires when the value doesn't actually change. Both are consumed by
+  `UserWhatsAppOptedOutHandler` in the Notifications context (mirrors
+  `RequestAttentionFlaggedHandler`'s cross-context pattern — do not import `NotificationsModule`
+  into `IdentityModule`).
 - `isFullyVerified()` is a fact about the user; the *permission* meaning ("active profile") is
   computed only in `ProfileActivationService` (Profiles). Do not add verification-based permission
   checks in other contexts.

@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { createMockUser } from '../../../__mocks__/test-utils';
 import { UserWhatsAppOptedOutEvent } from '../../domain/events/user-whatsapp-opted-out.event';
+import { UserWhatsAppReactivatedEvent } from '../../domain/events/user-whatsapp-reactivated.event';
 
 describe('UserService', () => {
   describe('setWhatsAppOptedOut', () => {
@@ -86,8 +87,22 @@ describe('UserService', () => {
       expect(mockEventBus.publish).not.toHaveBeenCalled();
     });
 
-    it('does not publish when clearing the opt-out (true -> false)', async () => {
+    it('publishes UserWhatsAppReactivatedEvent on the true -> false transition', async () => {
       const user = createMockUser({ id: 'user-123', whatsappOptedOut: true });
+      mockUserRepository.findById.mockResolvedValue(user);
+
+      await service.setWhatsAppOptedOut('user-123', false);
+
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: UserWhatsAppReactivatedEvent.EVENT_NAME,
+          payload: { userId: 'user-123' },
+        }),
+      );
+    });
+
+    it('does not publish when the user was already opted in', async () => {
+      const user = createMockUser({ id: 'user-123', whatsappOptedOut: false });
       mockUserRepository.findById.mockResolvedValue(user);
 
       await service.setWhatsAppOptedOut('user-123', false);
@@ -160,7 +175,7 @@ describe('UserService', () => {
       );
     });
 
-    it('clears the flag without publishing when transitioning true -> false', async () => {
+    it('clears the flag and publishes the reactivation event when transitioning true -> false', async () => {
       const target = createMockUser({
         id: 'target-1',
         whatsappOptedOut: true,
@@ -174,7 +189,12 @@ describe('UserService', () => {
       );
 
       expect(result.whatsappOptedOut).toBe(false);
-      expect(mockEventBus.publish).not.toHaveBeenCalled();
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: UserWhatsAppReactivatedEvent.EVENT_NAME,
+          payload: { userId: 'target-1' },
+        }),
+      );
     });
 
     it('is a no-op and does not touch the repository save/event bus when the value is unchanged', async () => {
