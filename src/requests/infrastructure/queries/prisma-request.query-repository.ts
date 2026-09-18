@@ -54,10 +54,52 @@ export class PrismaRequestQueryRepository implements RequestQueryRepository {
     skip: number;
     take: number;
     status?: RequestStatus;
+    title?: string;
+    client?: string;
+    provider?: string;
   }) {
     const where: any = {};
     if (params.status) {
       where.status = params.status;
+    }
+    if (params.title) {
+      where.title = { contains: params.title, mode: 'insensitive' };
+    }
+    const clientTerms = this.splitTerms(params.client);
+    if (clientTerms.length) {
+      where.client = {
+        AND: clientTerms.map((term) => ({
+          OR: [
+            { firstName: { contains: term, mode: 'insensitive' } },
+            { lastName: { contains: term, mode: 'insensitive' } },
+            { email: { contains: term, mode: 'insensitive' } },
+          ],
+        })),
+      };
+    }
+    const providerTerms = this.splitTerms(params.provider);
+    if (providerTerms.length) {
+      where.provider = {
+        AND: providerTerms.map((term) => ({
+          OR: [
+            {
+              professional: {
+                user: {
+                  OR: [
+                    { firstName: { contains: term, mode: 'insensitive' } },
+                    { lastName: { contains: term, mode: 'insensitive' } },
+                  ],
+                },
+              },
+            },
+            {
+              company: {
+                companyName: { contains: term, mode: 'insensitive' },
+              },
+            },
+          ],
+        })),
+      };
     }
 
     const [requests, total] = await Promise.all([
@@ -107,6 +149,10 @@ export class PrismaRequestQueryRepository implements RequestQueryRepository {
       })),
       total,
     };
+  }
+
+  private splitTerms(value?: string): string[] {
+    return (value ?? '').split(/\s+/).filter(Boolean);
   }
 
   private resolveProvider(

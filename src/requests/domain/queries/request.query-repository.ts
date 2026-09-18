@@ -23,12 +23,17 @@ export interface RequestQueryRepository {
   getRequestStats(): Promise<RequestStats>;
 
   /**
-   * List all requests for admin (paginated, with optional status filter)
+   * List all requests for admin (paginated). Optional filters: status, title,
+   * client (name/email) and provider (professional name / company name); free-text
+   * ones are case-insensitive and every whitespace-separated term must match.
    */
   findAllForAdmin(params: {
     skip: number;
     take: number;
     status?: RequestStatus;
+    title?: string;
+    client?: string;
+    provider?: string;
   }): Promise<{
     requests: Array<{
       id: string;

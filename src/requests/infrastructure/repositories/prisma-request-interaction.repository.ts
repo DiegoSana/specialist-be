@@ -80,6 +80,17 @@ export class PrismaRequestInteractionRepository
     return PrismaRequestInteractionMapper.toDomain(interaction);
   }
 
+  async findMostRecentRequestIdByPhone(
+    phoneNumber: string,
+  ): Promise<string | null> {
+    const interaction = await this.prisma.requestInteraction.findFirst({
+      where: { metadata: { path: ['recipientPhone'], equals: phoneNumber } },
+      orderBy: { createdAt: 'desc' },
+      select: { requestId: true },
+    });
+    return interaction?.requestId ?? null;
+  }
+
   async findMostRecentByPhone(
     phoneNumber: string,
     notOlderThan: Date,

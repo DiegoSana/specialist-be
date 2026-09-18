@@ -457,6 +457,7 @@ export class RequestService {
     page: number = 1,
     limit: number = 10,
     status?: RequestStatus,
+    filters: { title?: string; client?: string; provider?: string } = {},
   ) {
     const skip = (page - 1) * limit;
     const { requests, total } =
@@ -464,6 +465,7 @@ export class RequestService {
         skip,
         take: limit,
         status,
+        ...filters,
       });
 
     return {

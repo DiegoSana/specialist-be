@@ -150,28 +150,25 @@ export class RequestsNotificationsHandler implements OnModuleInit {
       const statusLabel = this.statusLabel(toStatus);
       const requestRef = requestTitle ? `"${requestTitle}"` : 'la solicitud';
 
-      // Notification for client
-      const clientTitle = clientMadeChange
-        ? `Moviste ${requestRef} a "${statusLabel}"`
-        : `${displayProviderName || 'El especialista'} movió ${requestRef} a "${statusLabel}"`;
+      // The author of a status change is never notified about their own action.
+      if (!clientMadeChange) {
+        await this.notifications.createForUser({
+          userId: event.payload.clientId,
+          type: 'REQUEST_STATUS_CHANGED',
+          title: `${displayProviderName || 'El especialista'} movió ${requestRef} a "${statusLabel}"`,
+          body: this.statusChangeBody(toStatus),
+          data: {
+            requestId: event.payload.requestId,
+            fromStatus: event.payload.fromStatus,
+            toStatus: event.payload.toStatus,
+            serviceProviderId,
+          },
+          idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.clientId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
+          includeExternal: true,
+          requireExternal: true,
+        });
+      }
 
-      await this.notifications.createForUser({
-        userId: event.payload.clientId,
-        type: 'REQUEST_STATUS_CHANGED',
-        title: clientTitle,
-        body: this.statusChangeBody(toStatus, clientMadeChange),
-        data: {
-          requestId: event.payload.requestId,
-          fromStatus: event.payload.fromStatus,
-          toStatus: event.payload.toStatus,
-          serviceProviderId,
-        },
-        idempotencyKey: `${event.name}:${event.payload.requestId}:${event.payload.clientId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
-        includeExternal: !clientMadeChange,
-        requireExternal: !clientMadeChange,
-      });
-
-      // Notification for provider (if assigned)
       // Use providerUserId directly if available, otherwise fall back to lookup (backward compat)
       const effectiveProviderUserId =
         providerUserId ||
@@ -183,18 +180,15 @@ export class RequestsNotificationsHandler implements OnModuleInit {
             ).userId
           : null);
 
-      if (effectiveProviderUserId) {
-        const providerMadeChange = changedByUserId === effectiveProviderUserId;
-
-        const providerTitle = providerMadeChange
-          ? `Moviste ${requestRef} a "${statusLabel}"`
-          : `${clientName} movió ${requestRef} a "${statusLabel}"`;
-
+      if (
+        effectiveProviderUserId &&
+        changedByUserId !== effectiveProviderUserId
+      ) {
         await this.notifications.createForUser({
           userId: effectiveProviderUserId,
           type: 'REQUEST_STATUS_CHANGED',
-          title: providerTitle,
-          body: this.statusChangeBody(toStatus, providerMadeChange),
+          title: `${clientName} movió ${requestRef} a "${statusLabel}"`,
+          body: this.statusChangeBody(toStatus),
           data: {
             requestId: event.payload.requestId,
             fromStatus: event.payload.fromStatus,
@@ -202,8 +196,8 @@ export class RequestsNotificationsHandler implements OnModuleInit {
             serviceProviderId,
           },
           idempotencyKey: `${event.name}:${event.payload.requestId}:${effectiveProviderUserId}:${event.payload.fromStatus}->${event.payload.toStatus}`,
-          includeExternal: !providerMadeChange,
-          requireExternal: !providerMadeChange,
+          includeExternal: true,
+          requireExternal: true,
         });
       }
     } catch (err) {
@@ -225,12 +219,7 @@ export class RequestsNotificationsHandler implements OnModuleInit {
     return labels[status] || status;
   }
 
-  private statusChangeBody(status: RequestStatus, selfAction: boolean): string {
-    if (selfAction) {
-      // User made the change themselves
-      return '';
-    }
-    // Someone else made the change
+  private statusChangeBody(status: RequestStatus): string {
     if (status === RequestStatus.IN_PROGRESS) {
       return 'El trabajo ha comenzado.';
     }

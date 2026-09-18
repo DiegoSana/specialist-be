@@ -173,7 +173,7 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 | `PUT` | `/admin/users/:id/whatsapp-opt-out` | Manually set/clear `User.whatsappOptedOut` (body: `{ whatsappOptedOut: boolean }`). Setting it `true` (from `false`) sends the user a `WHATSAPP_OPTED_OUT` notification (forced to email); clearing it does not notify. No-op if the value is already what was requested |
 | `GET` | `/admin/professionals` | List all professionals (paginated) |
 | `PUT` | `/admin/professionals/:id/status` | Update professional status |
-| `GET` | `/admin/requests` | List all requests (paginated, optional status filter). Each item's `provider` is `{ id, type: 'PROFESSIONAL' \| 'COMPANY', name } \| null` |
+| `GET` | `/admin/requests` | List all requests (paginated; optional filters `?status=`, `?title=`, `?client=` (name/email), `?provider=` (professional or company name) - text filters are case-insensitive, every word must match). Each item's `provider` is `{ id, type: 'PROFESSIONAL' \| 'COMPANY', name } \| null` |
 | `GET` | `/admin/requests/:id` | Full request detail: `client`, `trade`, a unified `provider` (with `trades` for Professional/Company), and `interestedProviders` (`InterestedProfessionalResponseDto[]`). No participant-only ownership check - any admin can view any request |
 | `GET` | `/admin/whatsapp/config` | Get `{ devMode, availableFollowUpRules? }` |
 | `GET` | `/admin/whatsapp/conversations` | List WhatsApp conversations (paginated, optional `search`) |

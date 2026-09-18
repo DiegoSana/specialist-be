@@ -129,8 +129,14 @@ export class AdminService {
     page: number = 1,
     limit: number = 10,
     status?: RequestStatus,
+    filters: { title?: string; client?: string; provider?: string } = {},
   ) {
-    return this.requestService.getAllRequestsForAdmin(page, limit, status);
+    return this.requestService.getAllRequestsForAdmin(
+      page,
+      limit,
+      status,
+      filters,
+    );
   }
 
   /**

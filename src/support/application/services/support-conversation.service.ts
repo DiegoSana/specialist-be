@@ -62,6 +62,7 @@ export class SupportConversationService {
     phoneNumber: string;
     body: string;
     twilioMessageSid: string;
+    relatedRequestId?: string | null;
   }): Promise<void> {
     const alreadyRecorded = await this.messageRepository.findByTwilioMessageSid(
       params.twilioMessageSid,
@@ -85,7 +86,7 @@ export class SupportConversationService {
         id: randomUUID(),
         phoneNumber: params.phoneNumber,
         userId,
-        relatedRequestId: null,
+        relatedRequestId: params.relatedRequestId ?? null,
         now,
       });
       notifyNeeded = true;
@@ -94,6 +95,9 @@ export class SupportConversationService {
         conversation.recordInboundMessage(now);
       conversation = updated;
       notifyNeeded = reopened;
+      conversation = conversation.withRelatedRequestId(
+        params.relatedRequestId ?? null,
+      );
     }
 
     conversation = await this.conversationRepository.save(conversation);
