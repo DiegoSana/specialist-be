@@ -84,6 +84,18 @@ export class UserService {
   }
 
   /**
+   * Best-effort lookup by phone number (no unique constraint on `phone`; returns the
+   * first match). Used by other contexts to opportunistically link a phone number to
+   * a known user (e.g. the support context resolving an inbound WhatsApp conversation)
+   * - never for authentication.
+   * @param phone - Phone number in E.164 format
+   * @returns User entity or null
+   */
+  async findByPhone(phone: string): Promise<UserEntity | null> {
+    return this.userRepository.findByPhone(phone);
+  }
+
+  /**
    * Update user data
    * @param userId - User ID
    * @param data - Partial user data to update

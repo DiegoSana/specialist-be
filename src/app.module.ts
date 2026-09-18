@@ -11,6 +11,7 @@ import { AdminModule } from './admin/admin.module';
 import { StorageModule } from './storage/storage.module';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SupportModule } from './support/support.module';
 // Shared Infrastructure
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
 import { EventsModule } from './shared/infrastructure/events/events.module';
@@ -30,6 +31,7 @@ import { EventsModule } from './shared/infrastructure/events/events.module';
     ProfilesModule,
     RequestsModule,
     NotificationsModule,
+    SupportModule,
     // Supporting Bounded Contexts
     ReputationModule,
     ContactModule,

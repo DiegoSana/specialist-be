@@ -22,6 +22,7 @@ const CONTEXTS = {
   storage: 'src/storage',
   admin: 'src/admin',
   contact: 'src/contact',
+  support: 'src/support',
 };
 
 // Pattern to extract context from import path

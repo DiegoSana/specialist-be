@@ -48,6 +48,16 @@ export class PrismaUserRepository implements UserRepository {
     return PrismaUserMapper.toDomain(user);
   }
 
+  async findByPhone(phone: string): Promise<UserEntity | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { phone },
+    });
+
+    if (!user) return null;
+
+    return PrismaUserMapper.toDomain(user);
+  }
+
   async findByGoogleId(googleId: string): Promise<UserEntity | null> {
     const user = await this.prisma.user.findUnique({
       where: { googleId },
