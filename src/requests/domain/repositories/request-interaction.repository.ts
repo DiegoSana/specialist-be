@@ -22,11 +22,20 @@ export interface RequestInteractionRepository {
   ): Promise<RequestInteractionEntity | null>;
 
   /**
-   * Find the most recent pending or delivered interaction for a phone number.
+   * Find the most recent pending or delivered interaction for a phone number,
+   * created no earlier than `notOlderThan`.
+   *
+   * Deliberate invariant, not just an implementation detail: this only matches an
+   * automated FOLLOW_UP interaction (`interactionType: InteractionType.FOLLOW_UP`) -
+   * never `RESPONSE`/`STATUS_UPDATE` or any other type, even though today those are
+   * never actually created. An inbound WhatsApp reply may only be treated as a reply
+   * to something we automatically sent; a human-authored message (e.g. from the
+   * support context) must never be matched here and fed to the intent classifier.
    * Used when matching inbound messages where we don't know the requestId.
    */
   findMostRecentByPhone(
     phoneNumber: string,
+    notOlderThan: Date,
   ): Promise<RequestInteractionEntity | null>;
 
   /**

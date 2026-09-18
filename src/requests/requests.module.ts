@@ -59,6 +59,7 @@ import { MessagingModule } from '../shared/infrastructure/messaging/messaging.mo
 // Cross-context dependencies
 import { IdentityModule } from '../identity/identity.module';
 import { ProfilesModule } from '../profiles/profiles.module';
+import { SupportModule } from '../support/support.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     MessagingModule,
     forwardRef(() => IdentityModule),
     forwardRef(() => ProfilesModule),
+    SupportModule,
   ],
   controllers: [
     RequestsController,

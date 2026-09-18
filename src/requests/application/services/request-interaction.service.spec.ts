@@ -60,6 +60,7 @@ describe('RequestInteractionService', () => {
     let mockEventBus: any;
     let mockConfig: any;
     let mockAttentionService: any;
+    let mockSupportConversationService: any;
 
     beforeEach(() => {
       mockInteractionRepository = {
@@ -83,6 +84,9 @@ describe('RequestInteractionService', () => {
         get: jest.fn((_key: string, def?: unknown) => def),
       };
       mockAttentionService = { flag: jest.fn() };
+      mockSupportConversationService = {
+        receiveInboundMessage: jest.fn(),
+      };
 
       service = new RequestInteractionService(
         mockInteractionRepository,
@@ -97,6 +101,7 @@ describe('RequestInteractionService', () => {
         mockEventBus,
         mockConfig,
         mockAttentionService,
+        mockSupportConversationService,
       );
     });
 
@@ -433,6 +438,388 @@ describe('RequestInteractionService', () => {
       expect(mockInteractionRepository.save).not.toHaveBeenCalled();
       expect(mockEventBus.publish).not.toHaveBeenCalled();
     });
+
+    it('matches via strategy 2 (findMostRecentByPhone) when no interaction has this twilioMessageSid', async () => {
+      const interaction = createMockInteraction({
+        requestId: 'request-123',
+        twilioMessageSid: 'SM_OUTBOUND',
+      });
+      const request = createMockRequest({
+        id: 'request-123',
+        status: RequestStatus.ACCEPTED,
+      });
+      mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(null);
+      mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(
+        interaction,
+      );
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockIntentDetectionPort.detectIntent.mockResolvedValue({
+        statusIntent: ResponseIntent.CONFIRMED,
+        confidence: 1,
+        viability: null,
+        optOut: false,
+        escalate: false,
+      });
+
+      await service.processInboundMessage({
+        from: 'whatsapp:+5492944123456',
+        body: 'si dale',
+        messageId: 'SM_INBOUND',
+      });
+
+      expect(
+        mockInteractionRepository.findMostRecentByPhone,
+      ).toHaveBeenCalledWith('+5492944123456', expect.any(Date));
+      expect(mockInteractionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: InteractionStatus.RESPONDED }),
+      );
+    });
+
+    it('computes the findMostRecentByPhone cutoff from WHATSAPP_REPLY_MATCH_WINDOW_DAYS (default 14 days)', async () => {
+      mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(null);
+      mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(null);
+      mockConfig.get.mockImplementation((key: string, def?: unknown) =>
+        key === 'WHATSAPP_REPLY_MATCH_WINDOW_DAYS' ? 14 : def,
+      );
+
+      const before = Date.now();
+      await service.processInboundMessage({
+        from: 'whatsapp:+5492944123456',
+        body: 'hola',
+        messageId: 'SM123',
+      });
+      const after = Date.now();
+
+      const cutoff: Date =
+        mockInteractionRepository.findMostRecentByPhone.mock.calls[0][1];
+      const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+      expect(before - cutoff.getTime()).toBeGreaterThanOrEqual(
+        fourteenDaysMs - 5,
+      );
+      expect(after - cutoff.getTime()).toBeLessThanOrEqual(fourteenDaysMs + 5);
+    });
+
+    it('when nothing matches and SUPPORT_CONVERSATIONS_ENABLED is unset (default false), only logs - does not fork to support', async () => {
+      mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(null);
+      mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(null);
+
+      await service.processInboundMessage({
+        from: 'whatsapp:+5492944123456',
+        body: 'hola, alguien?',
+        messageId: 'SM123',
+      });
+
+      expect(
+        mockSupportConversationService.receiveInboundMessage,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('when nothing matches and SUPPORT_CONVERSATIONS_ENABLED=true, forks the message to SupportConversationService', async () => {
+      mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(null);
+      mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(null);
+      mockConfig.get.mockImplementation((key: string, def?: unknown) =>
+        key === 'SUPPORT_CONVERSATIONS_ENABLED' ? 'true' : def,
+      );
+
+      await service.processInboundMessage({
+        from: 'whatsapp:+5492944123456',
+        body: 'hola, alguien?',
+        messageId: 'SM123',
+      });
+
+      expect(
+        mockSupportConversationService.receiveInboundMessage,
+      ).toHaveBeenCalledWith({
+        phoneNumber: '+5492944123456',
+        body: 'hola, alguien?',
+        twilioMessageSid: 'SM123',
+      });
+    });
+  });
+
+  describe('processInboundMessage refactor - extracted methods', () => {
+    let service: RequestInteractionService;
+    let mockInteractionRepository: any;
+    let mockConfig: any;
+    let mockAttentionService: any;
+    let mockUserService: any;
+    let mockSupportConversationService: any;
+
+    beforeEach(() => {
+      mockInteractionRepository = {
+        findByTwilioMessageSid: jest.fn(),
+        findMostRecentByPhone: jest.fn(),
+        save: jest.fn(),
+      };
+      mockConfig = { get: jest.fn((_k: string, def?: unknown) => def) };
+      mockAttentionService = { flag: jest.fn() };
+      mockUserService = { setWhatsAppOptedOut: jest.fn() };
+      mockSupportConversationService = { receiveInboundMessage: jest.fn() };
+
+      service = new RequestInteractionService(
+        mockInteractionRepository,
+        {} as any,
+        {} as any,
+        mockUserService,
+        {} as any,
+        {} as any,
+        { detectIntent: jest.fn() } as any,
+        {
+          detectIntent: jest.fn().mockRejectedValue(new Error('unused')),
+        } as any,
+        {} as any,
+        { publish: jest.fn() } as any,
+        mockConfig,
+        mockAttentionService,
+        mockSupportConversationService,
+      );
+    });
+
+    describe('matchInboundMessage', () => {
+      it('returns the interaction found by twilioMessageSid without consulting findMostRecentByPhone', async () => {
+        const interaction = createMockInteraction();
+        mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
+          interaction,
+        );
+
+        const result = await (service as any).matchInboundMessage(
+          '+5492944123456',
+          'SM123',
+          new Date(),
+        );
+
+        expect(result).toBe(interaction);
+        expect(
+          mockInteractionRepository.findMostRecentByPhone,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('falls back to findMostRecentByPhone with the given cutoff when no twilioMessageSid match exists', async () => {
+        const interaction = createMockInteraction();
+        mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
+          null,
+        );
+        mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(
+          interaction,
+        );
+        const cutoff = new Date('2026-09-01T00:00:00.000Z');
+
+        const result = await (service as any).matchInboundMessage(
+          '+5492944123456',
+          'SM123',
+          cutoff,
+        );
+
+        expect(result).toBe(interaction);
+        expect(
+          mockInteractionRepository.findMostRecentByPhone,
+        ).toHaveBeenCalledWith('+5492944123456', cutoff);
+      });
+
+      it('returns null when neither strategy matches', async () => {
+        mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
+          null,
+        );
+        mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(null);
+
+        const result = await (service as any).matchInboundMessage(
+          '+5492944123456',
+          'SM123',
+          new Date(),
+        );
+
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('classifyInboundReply', () => {
+      it('downgrades to UNKNOWN below the confidence threshold and keeps the raw classification', async () => {
+        const intentPort = {
+          detectIntent: jest.fn().mockResolvedValue({
+            statusIntent: ResponseIntent.CANCELLED,
+            confidence: 0.2,
+            viability: 'AT_RISK',
+            optOut: false,
+            escalate: false,
+          }),
+        };
+        (service as any).intentDetectionPort = intentPort;
+        mockConfig.get.mockImplementation((key: string, def?: unknown) =>
+          key === 'INTENT_CLASSIFIER_CONFIDENCE_THRESHOLD' ? 0.6 : def,
+        );
+
+        const result = await (service as any).classifyInboundReply({
+          messageText: 'mmm no se',
+          currentStatus: RequestStatus.ACCEPTED,
+          triggeringTemplate: null,
+          conversationHistory: [],
+        });
+
+        expect(result.intent).toBe(ResponseIntent.UNKNOWN);
+        expect(result.classification.statusIntent).toBe(
+          ResponseIntent.CANCELLED,
+        );
+      });
+
+      it('forces optOut=true when the message contains an explicit opt-out keyword, even if the classifier said false', async () => {
+        const intentPort = {
+          detectIntent: jest.fn().mockResolvedValue({
+            statusIntent: ResponseIntent.UNKNOWN,
+            confidence: 1,
+            viability: null,
+            optOut: false,
+            escalate: false,
+          }),
+        };
+        (service as any).intentDetectionPort = intentPort;
+
+        const result = await (service as any).classifyInboundReply({
+          messageText: 'STOP',
+          currentStatus: RequestStatus.ACCEPTED,
+          triggeringTemplate: null,
+          conversationHistory: [],
+        });
+
+        expect(result.classification.optOut).toBe(true);
+      });
+    });
+
+    describe('applyClassificationSideEffects', () => {
+      it('records opt-out when classification.optOut is true', async () => {
+        const interaction = createMockInteraction({
+          direction: InteractionDirection.TO_CLIENT,
+        });
+        const request = {
+          id: 'request-123',
+          clientId: 'client-1',
+          providerId: null,
+        };
+
+        await (service as any).applyClassificationSideEffects(
+          interaction,
+          request,
+          { optOut: true, escalate: false, viability: null },
+          'dejen de escribirme',
+        );
+
+        expect(mockUserService.setWhatsAppOptedOut).toHaveBeenCalledWith(
+          'client-1',
+          true,
+        );
+      });
+
+      it('flags ESCALATED when classification.escalate is true', async () => {
+        const interaction = createMockInteraction();
+        const request = {
+          id: 'request-123',
+          clientId: 'client-1',
+          providerId: null,
+        };
+
+        await (service as any).applyClassificationSideEffects(
+          interaction,
+          request,
+          { optOut: false, escalate: true, viability: null },
+          'quiero hablar con un humano YA',
+        );
+
+        expect(mockAttentionService.flag).toHaveBeenCalledWith(
+          'request-123',
+          'ESCALATED',
+          'quiero hablar con un humano YA',
+        );
+      });
+
+      it('flags ABANDONED when classification.viability is ABANDONED (and escalate is false)', async () => {
+        const interaction = createMockInteraction();
+        const request = {
+          id: 'request-123',
+          clientId: 'client-1',
+          providerId: null,
+        };
+
+        await (service as any).applyClassificationSideEffects(
+          interaction,
+          request,
+          { optOut: false, escalate: false, viability: 'ABANDONED' },
+          'ya no me interesa',
+        );
+
+        expect(mockAttentionService.flag).toHaveBeenCalledWith(
+          'request-123',
+          'ABANDONED',
+          'ya no me interesa',
+        );
+      });
+
+      it('does nothing when optOut/escalate are false and viability is not ABANDONED', async () => {
+        const interaction = createMockInteraction();
+        const request = {
+          id: 'request-123',
+          clientId: 'client-1',
+          providerId: null,
+        };
+
+        await (service as any).applyClassificationSideEffects(
+          interaction,
+          request,
+          { optOut: false, escalate: false, viability: null },
+          'todo bien',
+        );
+
+        expect(mockUserService.setWhatsAppOptedOut).not.toHaveBeenCalled();
+        expect(mockAttentionService.flag).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('buildRespondedInteraction', () => {
+      it('merges classification and inbound message sid into metadata, and marks the interaction RESPONDED with the given intent', () => {
+        const interaction = createMockInteraction();
+
+        const result = (service as any).buildRespondedInteraction(
+          interaction,
+          { body: 'ya arranque', messageId: 'SM999' },
+          {
+            statusIntent: ResponseIntent.STARTED,
+            confidence: 0.9,
+            viability: null,
+            optOut: false,
+            escalate: false,
+          },
+          ResponseIntent.STARTED,
+        );
+
+        expect(result.status).toBe(InteractionStatus.RESPONDED);
+        expect(result.responseIntent).toBe(ResponseIntent.STARTED);
+        expect(result.responseContent).toBe('ya arranque');
+        expect(result.metadata).toEqual(
+          expect.objectContaining({
+            inboundMessageSid: 'SM999',
+            rawClassifierIntent: ResponseIntent.STARTED,
+            classifierConfidence: 0.9,
+          }),
+        );
+      });
+
+      it('is pure: does not call the repository or any other side effect', () => {
+        const interaction = createMockInteraction();
+
+        (service as any).buildRespondedInteraction(
+          interaction,
+          { body: 'ok', messageId: 'SM1' },
+          {
+            statusIntent: ResponseIntent.UNKNOWN,
+            confidence: 1,
+            viability: null,
+            optOut: false,
+            escalate: false,
+          },
+          ResponseIntent.UNKNOWN,
+        );
+
+        expect(mockInteractionRepository.save).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('sendMessage (WhatsApp opt-out gate)', () => {
@@ -477,6 +864,7 @@ describe('RequestInteractionService', () => {
         { publish: jest.fn() } as any,
         { get: jest.fn((_k: string, def?: unknown) => def) } as any,
         { flag: jest.fn() } as any,
+        { receiveInboundMessage: jest.fn() } as any,
       );
     });
 
