@@ -523,6 +523,7 @@ describe('AdminService', () => {
         type: 'PROFESSIONAL',
       };
       (request as any).professional = {
+        userId: 'provider-user-1',
         trades: [{ id: 'trade-1', name: 'Plumbing' }],
         user: { firstName: 'John', lastName: 'Smith' },
       };
@@ -564,6 +565,7 @@ describe('AdminService', () => {
         id: 'provider-1',
         type: 'PROFESSIONAL',
         name: 'John Smith',
+        userId: 'provider-user-1',
         trades: [{ id: 'trade-1', name: 'Plumbing' }],
       });
       expect(result.interestedProviders).toHaveLength(1);
