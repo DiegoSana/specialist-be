@@ -6,8 +6,8 @@ cd "$(dirname "$0")/.."
 
 # Order: same as prisma/migrations (chronological by name)
 MIGRATIONS=(
-  "20250127000000_add_request_interactions"
   "20251215200251_init"
+  "20251215200252_add_request_interactions"
   "20251223030000_add_in_app_notifications"
   "20251223031000_add_notification_preferences"
   "20251223033000_add_notifications_and_deliveries"
