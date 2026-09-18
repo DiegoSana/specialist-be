@@ -181,16 +181,33 @@ export class AdminController {
     required: false,
     enum: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DONE', 'CANCELLED'],
   })
+  @ApiQuery({ name: 'title', required: false, type: String })
+  @ApiQuery({
+    name: 'client',
+    required: false,
+    type: String,
+    description: 'Client first name, last name or email (case-insensitive)',
+  })
+  @ApiQuery({
+    name: 'provider',
+    required: false,
+    type: String,
+    description: 'Professional name or company name (case-insensitive)',
+  })
   @ApiResponse({ status: 200, description: 'Requests retrieved successfully' })
   async getAllRequests(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('status') status?: string,
+    @Query('title') title?: string,
+    @Query('client') client?: string,
+    @Query('provider') provider?: string,
   ) {
     return this.adminService.getAllRequests(
       page ? parseInt(page) : 1,
       limit ? parseInt(limit) : 10,
       status as any,
+      { title, client, provider },
     );
   }
 

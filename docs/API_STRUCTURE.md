@@ -143,7 +143,7 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/professionals` | `GET` | Listar todos los profesionales (paginado) |
 | `/api/admin/professionals/:id` | `GET` | Obtener profesional por ID |
 | `/api/admin/professionals/:id/status` | `PUT` | Actualizar estado de profesional |
-| `/api/admin/requests` | `GET` | Listar todos los requests (paginado, filtro opcional). `provider` de cada item: `{ id, type: 'PROFESSIONAL' \| 'COMPANY', name } \| null` |
+| `/api/admin/requests` | `GET` | Listar todos los requests (paginado; filtros opcionales `?status=`, `?title=`, `?client=` (nombre/email), `?provider=` (profesional o empresa), texto case-insensitive). `provider` de cada item: `{ id, type: 'PROFESSIONAL' \| 'COMPANY', name } \| null` |
 | `/api/admin/requests/:id` | `GET` | Detalle completo del request: `client`, `trade`, `provider` unificado (con `trades` para Professional/Company) e `interestedProviders`. Sin el chequeo de `canBeViewedBy` de participantes - cualquier admin puede ver cualquier request |
 | `/api/admin/notifications` | `GET` | Listar todas las notificaciones |
 | `/api/admin/notifications/stats` | `GET` | Estadísticas de notificaciones |
