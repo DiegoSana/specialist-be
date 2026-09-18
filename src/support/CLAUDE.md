@@ -12,7 +12,7 @@ full rationale.
 `SupportConversationService`: `receiveInboundMessage({ phoneNumber, body, twilioMessageSid })`
 (entry point from `RequestInteractionService.processInboundMessage` when an inbound WhatsApp
 message doesn't match any pending automated follow-up - see `requests/CLAUDE.md`),
-`listForAdmin({ status?, page, limit })`, `getForAdmin(id)`, `replyForAdmin(id, adminUserId,
+`hasOpenConversation(phoneNumber)` (used by `FollowUpSchedulerJob`: while a phone has an OPEN conversation, automated follow-ups to it are skipped and retried by the hourly cron once it is resolved; `forceTriggerRule` bypasses it), `listForAdmin({ status?, page, limit })`, `getForAdmin(id)`, `replyForAdmin(id, adminUserId,
 message)`, `resolve(id, adminUserId)`, `reopen(id)`.
 
 ## Endpoints (`/admin/support/conversations`, `JwtAuthGuard` + `AdminGuard`)

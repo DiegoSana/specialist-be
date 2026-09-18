@@ -15,6 +15,7 @@ describe('FollowUpSchedulerJob', () => {
   let mockQueryExecutor: any;
   let mockRule: any;
   let mockAttentionService: any;
+  let mockSupportConversationService: any;
 
   beforeEach(() => {
     mockInteractionRepository = {
@@ -35,6 +36,9 @@ describe('FollowUpSchedulerJob', () => {
     mockCompanyService = { findByServiceProviderId: jest.fn() };
     mockQueryExecutor = { getRequests: jest.fn().mockResolvedValue([]) };
     mockAttentionService = { flag: jest.fn() };
+    mockSupportConversationService = {
+      hasOpenConversation: jest.fn().mockResolvedValue(false),
+    };
 
     mockRule = {
       getName: jest.fn().mockReturnValue('ACCEPTED_3_DAYS'),
@@ -62,6 +66,7 @@ describe('FollowUpSchedulerJob', () => {
       mockProfessionalService,
       mockCompanyService,
       mockAttentionService,
+      mockSupportConversationService,
     );
   });
 
@@ -152,6 +157,59 @@ describe('FollowUpSchedulerJob', () => {
     });
   });
 
+  describe('scheduleFollowUps (open support conversation guard)', () => {
+    const request = createMockRequest({
+      status: RequestStatus.ACCEPTED,
+      providerId: 'service-provider-123',
+    });
+
+    beforeEach(() => {
+      mockConfig.get.mockImplementation((key: string, def?: string) =>
+        key === 'WHATSAPP_FOLLOWUP_ENABLED' ? 'true' : def,
+      );
+      mockQueryExecutor.getRequests.mockResolvedValue([request]);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue({
+        userId: 'provider-user-1',
+      });
+      mockUserService.findById.mockResolvedValue({
+        phone: '+5492944123456',
+        phoneVerified: true,
+        whatsappOptedOut: false,
+      });
+    });
+
+    it('skips scheduling while the recipient phone has an OPEN support conversation', async () => {
+      mockSupportConversationService.hasOpenConversation.mockResolvedValue(
+        true,
+      );
+
+      await job.scheduleFollowUps();
+
+      expect(
+        mockSupportConversationService.hasOpenConversation,
+      ).toHaveBeenCalledWith('+5492944123456');
+      expect(mockInteractionService.createFollowUp).not.toHaveBeenCalled();
+    });
+
+    it('schedules normally when there is no open support conversation', async () => {
+      await job.scheduleFollowUps();
+
+      expect(mockInteractionService.createFollowUp).toHaveBeenCalledTimes(1);
+    });
+
+    it('forceTriggerRule ignores the guard (explicit admin action)', async () => {
+      mockSupportConversationService.hasOpenConversation.mockResolvedValue(
+        true,
+      );
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockInteractionService.createFollowUp.mockResolvedValue({ id: 'i-1' });
+
+      await job.forceTriggerRule('ACCEPTED_3_DAYS', request.id);
+
+      expect(mockInteractionService.sendMessage).toHaveBeenCalledWith('i-1');
+    });
+  });
+
   describe('scheduleFollowUps (ladder-exhausted attention flag)', () => {
     const eligibleRequest = createMockRequest({
       status: RequestStatus.ACCEPTED,
@@ -220,6 +278,7 @@ describe('FollowUpSchedulerJob', () => {
         mockProfessionalService,
         mockCompanyService,
         mockAttentionService,
+        mockSupportConversationService,
       );
       // Only the non-last rule (days=3) gets a candidate; the last rung (days=7)
       // gets none, so this isolates "is mockRule's own scheduling flagging?"

@@ -124,6 +124,17 @@ export class SupportConversationService {
   }
 
   /**
+   * True while an OPEN support conversation exists for this phone. Used by the
+   * follow-up scheduler to avoid sending an automated template into the same
+   * WhatsApp chat an admin is (or should be) answering.
+   */
+  async hasOpenConversation(phoneNumber: string): Promise<boolean> {
+    const conversation =
+      await this.conversationRepository.findByPhoneNumber(phoneNumber);
+    return conversation?.status === SupportConversationStatus.OPEN;
+  }
+
+  /**
    * Best-effort phone -> user resolution. Never blocks conversation creation:
    * on any lookup failure, the conversation is simply created with userId=null.
    */
