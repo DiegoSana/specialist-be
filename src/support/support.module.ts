@@ -11,6 +11,9 @@ import { SupportConversationService } from './application/services/support-conve
 import { PrismaSupportConversationRepository } from './infrastructure/repositories/prisma-support-conversation.repository';
 import { PrismaSupportMessageRepository } from './infrastructure/repositories/prisma-support-message.repository';
 
+// Presentation
+import { AdminSupportConversationController } from './presentation/controllers/admin-support-conversation.controller';
+
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
 import { MessagingModule } from '../shared/infrastructure/messaging/messaging.module';
@@ -20,7 +23,7 @@ import { IdentityModule } from '../identity/identity.module';
 
 @Module({
   imports: [PrismaModule, MessagingModule, forwardRef(() => IdentityModule)],
-  controllers: [],
+  controllers: [AdminSupportConversationController],
   providers: [
     SupportConversationService,
     {
