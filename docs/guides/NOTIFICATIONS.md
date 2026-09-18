@@ -190,6 +190,9 @@ A daily job deletes notifications older than:
 | `REQUEST_INTEREST_EXPRESSED` | Provider shows interest | Client |
 | `REQUEST_PROFESSIONAL_ASSIGNED` | Provider assigned | Service Provider |
 | `REVIEW_APPROVED` | Admin approves review | Service Provider |
+| `REQUEST_ATTENTION_FLAGGED` | A request is flagged `AT_RISK`/`ABANDONED`/`ESCALATED` | Every admin |
+| `WHATSAPP_OPTED_OUT` | `User.whatsappOptedOut` transitions `false -> true` (WhatsApp reply "STOP" or admin override via `PUT /admin/users/:id/whatsapp-opt-out`) | The opted-out user, forced to `EMAIL` regardless of their `preferredExternalChannel` (see below) |
+| `WHATSAPP_REACTIVATED` | `User.whatsappOptedOut` transitions `true -> false` (today only via admin override, `PUT /admin/users/:id/whatsapp-opt-out`) | The reactivated user, forced to `EMAIL` regardless of their `preferredExternalChannel` (see below) |
 
 > **Note**: Service Provider can be either a Professional (individual) or a Company.
 > The notification system uses `providerUserId` to send notifications to the correct user.
@@ -238,3 +241,32 @@ All provider-related events include:
 | `providerType` | `PROFESSIONAL` \| `COMPANY` | Type of provider |
 | `providerName` | string | Display name for notifications |
 | `professionalId` | string | (Deprecated) Backward compatibility |
+
+### Forcing the external channel
+
+`NotificationService.createForUser` normally derives the external channel from the recipient's
+own `preferredExternalChannel` preference (`EMAIL` by default, or `WHATSAPP` if they opted into
+it). Pass `forceExternalChannel: NotificationChannel.EMAIL` (or `.WHATSAPP`) to bypass that and
+guarantee a specific channel — used by both `WHATSAPP_OPTED_OUT` and `WHATSAPP_REACTIVATED`
+(`UserWhatsAppOptedOutHandler`,
+`src/notifications/application/handlers/user-whatsapp-opted-out.handler.ts`) so neither notice is
+ever itself routed through WhatsApp: unusable by definition for the opted-out case, and the whole
+point being communicated in the reactivation case.
+
+```typescript
+// Identity context: UserService.setWhatsAppOptedOut publishes one of these on each transition
+// (never both, never when the value doesn't change), whether triggered by the WhatsApp reply
+// classifier or the admin override (UserService.updateWhatsAppOptOutForUser).
+await this.eventBus.publish(new UserWhatsAppOptedOutEvent({ userId })); // false -> true
+await this.eventBus.publish(new UserWhatsAppReactivatedEvent({ userId })); // true -> false
+
+// Handler (Notifications context) forces EMAIL for either:
+await this.notifications.createForUser({
+  userId,
+  type: 'WHATSAPP_OPTED_OUT', // or 'WHATSAPP_REACTIVATED'
+  title: 'Te diste de baja de WhatsApp', // or 'Volviste a habilitar WhatsApp'
+  includeExternal: true,
+  requireExternal: true,
+  forceExternalChannel: NotificationChannel.EMAIL,
+});
+```

@@ -123,4 +123,34 @@ describe('NotificationService', () => {
       }),
     );
   });
+
+  it('forces EMAIL via forceExternalChannel even when preferredExternalChannel is WHATSAPP', async () => {
+    mockPreferences.getForUser.mockResolvedValue({
+      effectiveFor: () => ({
+        inAppEnabled: true,
+        externalEnabled: true,
+        preferredExternalChannel: ExternalNotificationChannel.WHATSAPP,
+      }),
+    });
+
+    await service.createForUser({
+      userId: 'user-1',
+      type: 'WHATSAPP_OPTED_OUT',
+      title: 'Hello',
+      includeExternal: true,
+      requireExternal: true,
+      forceExternalChannel: NotificationChannel.EMAIL,
+    });
+
+    expect(mockRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryChannels: [
+          NotificationChannel.IN_APP,
+          NotificationChannel.EMAIL,
+        ],
+        emailStatus: 'PENDING',
+        whatsappStatus: 'SKIPPED',
+      }),
+    );
+  });
 });

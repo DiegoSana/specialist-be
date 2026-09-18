@@ -15,7 +15,12 @@ users/:id` (adds `professionalId`/`companyId`, `string | null` — the Professio
 own `id`, resolved via `professionalService.findByUserId`/`companyService.findByUserId`, catching
 their not-found throw as `null`, same pattern as `ProfileActivationService.getActivationStatus`;
 for linking to `/admin/professionals/:id` / `/admin/companies/:id`), `PUT
-users/:id/status`, `PUT users/:id/verification` (manual email/phone verified override), `GET
+users/:id/status`, `PUT users/:id/verification` (manual email/phone verified override), `PUT
+users/:id/whatsapp-opt-out` (manual `User.whatsappOptedOut` override, body `{ whatsappOptedOut:
+boolean }` via `UpdateUserWhatsAppOptOutDto`; no-op if unchanged; setting `false -> true`
+publishes `UserWhatsAppOptedOutEvent` (same as the automatic WhatsApp reply path), setting
+`true -> false` publishes `UserWhatsAppReactivatedEvent` (admin-only path, no automatic producer)
+— see Identity context's CLAUDE.md), `GET
 professionals`, `GET professionals/:id`, `PUT professionals/:id/status`, `GET requests?status=`
 (each item's `provider` is `{ id, type, name } | null`), `GET requests/:id` (full detail: client,
 trade, unified `provider` with `trades`, `interestedProviders` via
@@ -33,7 +38,8 @@ notification admin in `/admin/notifications` (Notifications); company verificati
 - Status changes go through the owning entity's `canChangeStatusBy` + `withStatus`/`updateStatus`
   in the owning service, with the admin `UserEntity` passed as acting user.
 - DTOs: `update-user-status.dto.ts`, `update-user-verification.dto.ts`,
-  `update-professional-status.dto.ts`, `update-company-status.dto.ts`.
+  `update-user-whatsapp-opt-out.dto.ts`, `update-professional-status.dto.ts`,
+  `update-company-status.dto.ts`.
 
 ## Backlog
 

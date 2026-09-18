@@ -7,9 +7,11 @@ verification. Does NOT own client/professional/company profiles (Profiles contex
 
 - `UserService`: `findById(id, includeProfiles?)`, `findByIdOrFail`, `findByEmail`, `update`,
   `exists`, `findByIdForUser`, `updateForUser`, `updateStatusForUser`, `updateVerificationForUser`
-  (admin override), `getUserStats`, `getAllUsersForAdmin` (via `UserQueryRepository`),
-  `setWhatsAppOptedOut(userId, optedOut)`, `findAdminUserIds()` (via `UserQueryRepository`, no
-  fixed/hardcoded admin id — used to fan out admin notifications, see Requests context's
+  (admin override), `getUserStats`, `getAllUsersForAdmin` (via `UserQueryRepository`, includes
+  `whatsappOptedOut`/`whatsappOptedOutAt` per row), `setWhatsAppOptedOut(userId, optedOut)`,
+  `updateWhatsAppOptOutForUser(targetUserId, actingUser, optedOut)` (admin override, no-op if
+  unchanged, delegates to `setWhatsAppOptedOut`), `findAdminUserIds()` (via `UserQueryRepository`,
+  no fixed/hardcoded admin id — used to fan out admin notifications, see Requests context's
   `RequestAttentionFlaggedHandler`).
 - `AuthenticationService`: `register`, `login`, `validateUser`, `validateUserById`, `googleLogin`,
   `facebookLogin`. Registration activates the client profile through `ClientService`
@@ -48,6 +50,18 @@ verification. Does NOT own client/professional/company profiles (Profiles contex
   gated into `ProfileActivationService`'s "active profile" computation (Profiles context) — an
   opted-out user can't take/request new requests, but their already-assigned requests are left
   alone (see Requests context's WhatsApp follow-up notes).
+- `domain/events/user-whatsapp-opted-out.event.ts` (`UserWhatsAppOptedOutEvent`,
+  `identity.user.whatsapp_opted_out`) is the first domain event from this context. Published from
+  `UserService.setWhatsAppOptedOut` on the `false -> true` transition, regardless of whether the
+  caller was the WhatsApp reply classifier (Requests context) or the admin manual override
+  (`updateWhatsAppOptOutForUser`, `PUT /admin/users/:id/whatsapp-opt-out`). Its sibling
+  `domain/events/user-whatsapp-reactivated.event.ts` (`UserWhatsAppReactivatedEvent`,
+  `identity.user.whatsapp_reactivated`) is published from the same method on the `true -> false`
+  transition — today only reachable via the admin override, there's no self-service/automatic
+  reactivation path. Neither fires when the value doesn't actually change. Both are consumed by
+  `UserWhatsAppOptedOutHandler` in the Notifications context (mirrors
+  `RequestAttentionFlaggedHandler`'s cross-context pattern — do not import `NotificationsModule`
+  into `IdentityModule`).
 - `isFullyVerified()` is a fact about the user; the *permission* meaning ("active profile") is
   computed only in `ProfileActivationService` (Profiles). Do not add verification-based permission
   checks in other contexts.

@@ -6,7 +6,7 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
 
 ## Public API (exported by `NotificationsModule`)
 
-- `NotificationService`: `createForUser({ userId, type, title, body?, data?, idempotencyKey?, includeExternal?, requireExternal? })`,
+- `NotificationService`: `createForUser({ userId, type, title, body?, data?, idempotencyKey?, includeExternal?, requireExternal?, forceExternalChannel? })`,
   `listForUser`, `markRead(user, id)`, `markAllRead`, `findByIdForUser`, `listAll` (admin),
   `getDeliveryStats`, `resendNotification` (admin).
 - `NotificationPreferencesService`: `getForUser`, `upsertForUser`.
@@ -48,8 +48,19 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
   -> provider user (`providerUserId`); `status_changed` -> counterpart. `request.created` is
   subscribed but intentionally silent.
 - `ReviewsNotificationsHandler`: `review.approved` -> provider user.
+- `RequestAttentionFlaggedHandler`: `requests.request_attention.flagged` -> every admin
+  (`UserService.findAdminUserIds()`), in-app only (`includeExternal: false`).
+- `UserWhatsAppOptedOutHandler`: handles both sides of `User.whatsappOptedOut`. On
+  `identity.user.whatsapp_opted_out` (Identity, `false -> true` transition, whether triggered by
+  the WhatsApp reply classifier or the admin override `PUT /admin/users/:id/whatsapp-opt-out`) ->
+  the opted-out user, type `WHATSAPP_OPTED_OUT`. On `identity.user.whatsapp_reactivated` (Identity,
+  `true -> false` transition — today only reachable via the admin override) -> the same user,
+  type `WHATSAPP_REACTIVATED`. Both force `includeExternal: true, requireExternal: true,
+  forceExternalChannel: NotificationChannel.EMAIL` — never WhatsApp, since that's the whole point
+  being communicated; see "Forcing the external channel" in `docs/guides/NOTIFICATIONS.md`.
 Types in use: `REQUEST_STATUS_CHANGED`, `REQUEST_INTEREST_EXPRESSED`, `REQUEST_PROFESSIONAL_ASSIGNED`,
-`REVIEW_APPROVED`. Copy is Spanish (es-AR).
+`REVIEW_APPROVED`, `REQUEST_ATTENTION_FLAGGED`, `WHATSAPP_OPTED_OUT`, `WHATSAPP_REACTIVATED`. Copy
+is Spanish (es-AR).
 
 ## Jobs
 
@@ -69,4 +80,5 @@ exponential backoff `*_RETRY_BASE_SECONDS`/`*_RETRY_MAX_SECONDS`), `Notification
 
 ## Tests
 
-`notification.service.spec.ts`.
+`notification.service.spec.ts`, `request-attention-flagged.handler.spec.ts`,
+`user-whatsapp-opted-out.handler.spec.ts`.

@@ -50,6 +50,16 @@ export class NotificationService {
      * Useful for "must-not-miss" product notifications.
      */
     requireExternal?: boolean;
+    /**
+     * Bypasses the user's preferredExternalChannel and forces this channel instead, when an
+     * external delivery is created. For notification types where the user's own preference
+     * would be nonsensical or unusable — e.g. WHATSAPP_OPTED_OUT must go by EMAIL even if the
+     * user's preferred external channel is WhatsApp, since WhatsApp is unavailable to them by
+     * definition.
+     */
+    forceExternalChannel?:
+      | NotificationChannel.EMAIL
+      | NotificationChannel.WHATSAPP;
   }): Promise<NotificationEntity> {
     const now = new Date();
     const prefs = await this.preferences.getForUser(input.userId);
@@ -68,9 +78,10 @@ export class NotificationService {
 
     if (shouldCreateExternal) {
       externalChannel =
-        effective.preferredExternalChannel === 'WHATSAPP'
+        input.forceExternalChannel ??
+        (effective.preferredExternalChannel === 'WHATSAPP'
           ? NotificationChannel.WHATSAPP
-          : NotificationChannel.EMAIL;
+          : NotificationChannel.EMAIL);
       channels.push(externalChannel);
     }
 
