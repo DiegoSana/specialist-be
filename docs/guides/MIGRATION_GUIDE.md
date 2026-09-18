@@ -203,24 +203,23 @@ Migrations in `prisma/migrations/` don't match the database. Common cases:
 ### Error P3006: shadow database fails to apply an existing migration
 
 `npx prisma migrate dev` replays every migration in `prisma/migrations/` **in filename order**
-against a throwaway shadow database before diffing your schema change. This repo has one migration
-folder whose timestamp doesn't sort where it was actually applied historically -
-`20250127000000_add_request_interactions` (year `2025`) sorts *before*
-`20251215200251_init`, which is the migration that creates the `requests` table
-`request_interactions` has a foreign key to. Replaying from empty therefore fails with:
+against a throwaway shadow database. `request_interactions` used to live in a folder named
+`20250127000000_add_request_interactions`, which sorted *before* `20251215200251_init` (the migration
+that creates the `requests` table it references), so replaying from empty failed with `P3006`/`P1014`.
 
-```
-Error: P3006
-Migration `20250127000000_add_request_interactions` failed to apply cleanly to the shadow database.
-Error code: P1014
-Error: The underlying table for model `requests` does not exist.
+It was renamed to `20251215200252_add_request_interactions`. Every already-migrated database must
+have its `_prisma_migrations` row renamed **before** the next `migrate deploy`/`migrate dev`, or
+Prisma reports the old name as missing (P3015) and tries to re-apply the new one:
+
+```sql
+-- UPDATE, not DELETE: keeps checksum and applied_at
+UPDATE "_prisma_migrations"
+SET migration_name = '20251215200252_add_request_interactions'
+WHERE migration_name = '20250127000000_add_request_interactions';
 ```
 
-This is pre-existing and unrelated to whatever change you're making - do **not** rename or reorder
-that migration folder (`scripts/baseline-migrations.sh` lists it first for a reason, and it's
-already applied in every real environment under that exact name; renaming it risks P3015
-elsewhere, see above). Work around the broken shadow database instead: diff directly against the
-live database (no shadow DB involved) and apply/record the result yourself:
+Fresh databases need nothing. If you still see P3006 on a shadow DB, work around it by diffing
+against the live database instead:
 
 ```bash
 npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script \
@@ -230,9 +229,6 @@ npx prisma migrate resolve --applied <timestamp>_<name>
 npx prisma migrate status   # should report "Database schema is up to date!"
 npx prisma generate
 ```
-
-(This was used to create `20260918113336_add_support_context`.) Then continue as usual - review the
-generated SQL, run `npm test`, etc.
 
 ### PgBouncer Issues
 
