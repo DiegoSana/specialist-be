@@ -190,6 +190,8 @@ A daily job deletes notifications older than:
 | `REQUEST_INTEREST_EXPRESSED` | Provider shows interest | Client |
 | `REQUEST_PROFESSIONAL_ASSIGNED` | Provider assigned | Service Provider |
 | `REVIEW_APPROVED` | Admin approves review | Service Provider |
+| `REQUEST_ATTENTION_FLAGGED` | A request is flagged `AT_RISK`/`ABANDONED`/`ESCALATED` | Every admin |
+| `WHATSAPP_OPTED_OUT` | `User.whatsappOptedOut` transitions `false -> true` (WhatsApp reply "STOP" or admin override via `PUT /admin/users/:id/whatsapp-opt-out`) | The opted-out user, forced to `EMAIL` regardless of their `preferredExternalChannel` (see below) |
 
 > **Note**: Service Provider can be either a Professional (individual) or a Company.
 > The notification system uses `providerUserId` to send notifications to the correct user.
@@ -238,3 +240,30 @@ All provider-related events include:
 | `providerType` | `PROFESSIONAL` \| `COMPANY` | Type of provider |
 | `providerName` | string | Display name for notifications |
 | `professionalId` | string | (Deprecated) Backward compatibility |
+
+### Forcing the external channel
+
+`NotificationService.createForUser` normally derives the external channel from the recipient's
+own `preferredExternalChannel` preference (`EMAIL` by default, or `WHATSAPP` if they opted into
+it). Pass `forceExternalChannel: NotificationChannel.EMAIL` (or `.WHATSAPP`) to bypass that and
+guarantee a specific channel — used by `WHATSAPP_OPTED_OUT` (`UserWhatsAppOptedOutHandler`,
+`src/notifications/application/handlers/user-whatsapp-opted-out.handler.ts`) so the "you were
+opted out of WhatsApp" notice is never itself routed through WhatsApp, which would be unusable for
+that user by definition.
+
+```typescript
+// Identity context: UserService.setWhatsAppOptedOut publishes this on the false -> true
+// transition only, whether triggered by the WhatsApp reply classifier or the admin override
+// (UserService.updateWhatsAppOptOutForUser).
+await this.eventBus.publish(new UserWhatsAppOptedOutEvent({ userId }));
+
+// Handler (Notifications context) forces EMAIL:
+await this.notifications.createForUser({
+  userId,
+  type: 'WHATSAPP_OPTED_OUT',
+  title: 'Te diste de baja de WhatsApp',
+  includeExternal: true,
+  requireExternal: true,
+  forceExternalChannel: NotificationChannel.EMAIL,
+});
+```

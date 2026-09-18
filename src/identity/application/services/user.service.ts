@@ -13,6 +13,8 @@ import {
   USER_QUERY_REPOSITORY,
 } from '../../domain/queries/user.query-repository';
 import { UserEntity, UserAuthContext } from '../../domain/entities/user.entity';
+import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
+import { UserWhatsAppOptedOutEvent } from '../../domain/events/user-whatsapp-opted-out.event';
 
 /**
  * UserService exposes user operations to other bounded contexts.
@@ -25,6 +27,7 @@ export class UserService {
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
     @Inject(USER_QUERY_REPOSITORY)
     private readonly userQueryRepository: UserQueryRepository,
+    @Inject(EVENT_BUS) private readonly eventBus: EventBus,
   ) {}
 
   // ─────────────────────────────────────────────────────────────
@@ -119,10 +122,15 @@ export class UserService {
   }
 
   /**
-   * Set (or clear) the WhatsApp opt-out flag. Triggered by the WhatsApp reply classifier
-   * when a user asks to stop receiving messages — see ProfileActivationService, which
+   * Set (or clear) the WhatsApp opt-out flag. Two callers funnel through here: the WhatsApp
+   * reply classifier (when a user asks to stop receiving messages) and the admin manual
+   * override (UserService.updateWhatsAppOptOutForUser) — see ProfileActivationService, which
    * treats an opted-out user as having no active profile (WhatsApp is the mandatory
    * channel for coordinating requests).
+   *
+   * Publishes UserWhatsAppOptedOutEvent only on the false -> true transition (never when
+   * clearing the flag), so the user is told exactly once per opt-out, regardless of which
+   * caller triggered it.
    */
   async setWhatsAppOptedOut(
     userId: string,
@@ -132,7 +140,16 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return this.userRepository.save(user.withWhatsAppOptedOut(optedOut));
+    const wasOptedOut = user.whatsappOptedOut;
+    const saved = await this.userRepository.save(
+      user.withWhatsAppOptedOut(optedOut),
+    );
+    if (optedOut && !wasOptedOut) {
+      await this.eventBus.publish(
+        new UserWhatsAppOptedOutEvent({ userId: saved.id }),
+      );
+    }
+    return saved;
   }
 
   /**
@@ -282,6 +299,33 @@ export class UserService {
     }
     const next = targetUser.withVerificationOverrides(overrides);
     return this.userRepository.save(next);
+  }
+
+  /**
+   * Admin only: manually set/clear a user's WhatsApp opt-out flag. No-op (and skips the
+   * notification event) when the flag already matches the requested value, so an admin
+   * re-saving the same state never re-triggers the "you were opted out" notification.
+   * Delegates the actual persistence + transition-detection to setWhatsAppOptedOut, the
+   * same method the automatic WhatsApp reply classifier uses.
+   */
+  async updateWhatsAppOptOutForUser(
+    targetUserId: string,
+    actingUser: UserEntity,
+    optedOut: boolean,
+  ): Promise<UserEntity> {
+    if (!actingUser.isAdminUser()) {
+      throw new ForbiddenException(
+        'Only admins can update the WhatsApp opt-out flag',
+      );
+    }
+    const targetUser = await this.userRepository.findById(targetUserId, true);
+    if (!targetUser) {
+      throw new NotFoundException('User not found');
+    }
+    if (targetUser.whatsappOptedOut === optedOut) {
+      return targetUser;
+    }
+    return this.setWhatsAppOptedOut(targetUserId, optedOut);
   }
 
   // ─────────────────────────────────────────────────────────────

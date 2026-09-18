@@ -93,6 +93,18 @@ export class AdminService {
     );
   }
 
+  async updateUserWhatsAppOptOut(
+    userId: string,
+    updateDto: { whatsappOptedOut: boolean },
+    actingUser: UserEntity,
+  ) {
+    return this.userService.updateWhatsAppOptOutForUser(
+      userId,
+      actingUser,
+      updateDto.whatsappOptedOut,
+    );
+  }
+
   async getAllProfessionals(page: number = 1, limit: number = 10) {
     return this.professionalService.getAllProfessionalsForAdmin(page, limit);
   }

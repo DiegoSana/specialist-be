@@ -166,10 +166,11 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/admin/users` | List all users (paginated, optional `search` on email/firstName/lastName, optional `type` = `CLIENT`\|`PROFESSIONAL`\|`COMPANY` to filter by profile). Each item includes `isAdmin`, `hasClientProfile`, `hasProfessionalProfile`, `hasCompanyProfile`, `updatedAt` |
+| `GET` | `/admin/users` | List all users (paginated, optional `search` on email/firstName/lastName, optional `type` = `CLIENT`\|`PROFESSIONAL`\|`COMPANY` to filter by profile). Each item includes `isAdmin`, `hasClientProfile`, `hasProfessionalProfile`, `hasCompanyProfile`, `updatedAt`, `whatsappOptedOut`, `whatsappOptedOutAt` |
 | `GET` | `/admin/users/:id` | Get user by ID. Adds `professionalId` and `companyId` (`string \| null`) alongside the user fields — the linked Professional/Company profile's own `id` (not the userId), for linking to `/admin/professionals/:id` / `/admin/companies/:id` |
 | `PUT` | `/admin/users/:id/status` | Update user status |
 | `PUT` | `/admin/users/:id/verification` | Manually set email/phone verified (body: `{ emailVerified?: boolean, phoneVerified?: boolean }`) |
+| `PUT` | `/admin/users/:id/whatsapp-opt-out` | Manually set/clear `User.whatsappOptedOut` (body: `{ whatsappOptedOut: boolean }`). Setting it `true` (from `false`) sends the user a `WHATSAPP_OPTED_OUT` notification (forced to email); clearing it does not notify. No-op if the value is already what was requested |
 | `GET` | `/admin/professionals` | List all professionals (paginated) |
 | `PUT` | `/admin/professionals/:id/status` | Update professional status |
 | `GET` | `/admin/requests` | List all requests (paginated, optional status filter). Each item's `provider` is `{ id, type: 'PROFESSIONAL' \| 'COMPANY', name } \| null` |

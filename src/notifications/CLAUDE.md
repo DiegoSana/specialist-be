@@ -6,7 +6,7 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
 
 ## Public API (exported by `NotificationsModule`)
 
-- `NotificationService`: `createForUser({ userId, type, title, body?, data?, idempotencyKey?, includeExternal?, requireExternal? })`,
+- `NotificationService`: `createForUser({ userId, type, title, body?, data?, idempotencyKey?, includeExternal?, requireExternal?, forceExternalChannel? })`,
   `listForUser`, `markRead(user, id)`, `markAllRead`, `findByIdForUser`, `listAll` (admin),
   `getDeliveryStats`, `resendNotification` (admin).
 - `NotificationPreferencesService`: `getForUser`, `upsertForUser`.
@@ -48,8 +48,17 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
   -> provider user (`providerUserId`); `status_changed` -> counterpart. `request.created` is
   subscribed but intentionally silent.
 - `ReviewsNotificationsHandler`: `review.approved` -> provider user.
+- `RequestAttentionFlaggedHandler`: `requests.request_attention.flagged` -> every admin
+  (`UserService.findAdminUserIds()`), in-app only (`includeExternal: false`).
+- `UserWhatsAppOptedOutHandler`: `identity.user.whatsapp_opted_out` -> the opted-out user
+  (`REQUIRES_EXTERNAL: true`, `forceExternalChannel: NotificationChannel.EMAIL` — never WhatsApp,
+  since that's unavailable to this user by definition; see "Forcing the external channel" in
+  `docs/guides/NOTIFICATIONS.md`). Event comes from the Identity context
+  (`src/identity/domain/events/user-whatsapp-opted-out.event.ts`), published only on the
+  `false -> true` transition, whether triggered by the WhatsApp reply classifier or the admin
+  override (`PUT /admin/users/:id/whatsapp-opt-out`).
 Types in use: `REQUEST_STATUS_CHANGED`, `REQUEST_INTEREST_EXPRESSED`, `REQUEST_PROFESSIONAL_ASSIGNED`,
-`REVIEW_APPROVED`. Copy is Spanish (es-AR).
+`REVIEW_APPROVED`, `REQUEST_ATTENTION_FLAGGED`, `WHATSAPP_OPTED_OUT`. Copy is Spanish (es-AR).
 
 ## Jobs
 
@@ -69,4 +78,5 @@ exponential backoff `*_RETRY_BASE_SECONDS`/`*_RETRY_MAX_SECONDS`), `Notification
 
 ## Tests
 
-`notification.service.spec.ts`.
+`notification.service.spec.ts`, `request-attention-flagged.handler.spec.ts`,
+`user-whatsapp-opted-out.handler.spec.ts`.

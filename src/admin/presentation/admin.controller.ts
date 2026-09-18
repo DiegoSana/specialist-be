@@ -19,6 +19,7 @@ import {
 import { AdminService } from '../application/admin.service';
 import { UpdateUserStatusDto } from '../application/dto/update-user-status.dto';
 import { UpdateUserVerificationDto } from '../application/dto/update-user-verification.dto';
+import { UpdateUserWhatsAppOptOutDto } from '../application/dto/update-user-whatsapp-opt-out.dto';
 import { UpdateProfessionalStatusDto } from '../application/dto/update-professional-status.dto';
 import { UpdateCompanyStatusDto } from '../application/dto/update-company-status.dto';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
@@ -103,6 +104,28 @@ export class AdminController {
     @CurrentUser() user: UserEntity,
   ) {
     return this.adminService.updateUserVerification(id, updateDto, user);
+  }
+
+  @Put('users/:id/whatsapp-opt-out')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Manually set/clear a user WhatsApp opt-out (Admin only)',
+    description:
+      'Manual override for User.whatsappOptedOut. Setting it true blocks the user from ' +
+      'creating/taking new requests (see ProfileActivationService) and triggers a ' +
+      'notification telling them so; clearing it does not notify.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User WhatsApp opt-out updated successfully',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateUserWhatsAppOptOut(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateUserWhatsAppOptOutDto,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.adminService.updateUserWhatsAppOptOut(id, updateDto, user);
   }
 
   @Get('professionals')

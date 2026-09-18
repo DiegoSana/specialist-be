@@ -58,6 +58,8 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
       hasClientProfile: boolean;
       hasProfessionalProfile: boolean;
       hasCompanyProfile: boolean;
+      whatsappOptedOut: boolean;
+      whatsappOptedOutAt: Date | null;
     }>;
     total: number;
   }> {
@@ -95,6 +97,8 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
           isAdmin: true,
           createdAt: true,
           updatedAt: true,
+          whatsappOptedOut: true,
+          whatsappOptedOutAt: true,
           client: {
             select: {
               id: true,
@@ -125,6 +129,8 @@ export class PrismaUserQueryRepository implements UserQueryRepository {
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
         isAdmin: u.isAdmin,
+        whatsappOptedOut: u.whatsappOptedOut,
+        whatsappOptedOutAt: u.whatsappOptedOutAt,
         hasClientProfile: !!u.client,
         hasProfessionalProfile: !!u.professional,
         hasCompanyProfile: !!u.company,

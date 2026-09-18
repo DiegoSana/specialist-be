@@ -92,6 +92,11 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - Todo lo anterior según los perfiles que tenga el usuario.
 - Listar y ver usuarios (`GET /admin/users`, `GET /admin/users/:id`).
 - Cambiar estado de usuarios (`PUT /admin/users/:id/status`).
+- Ver y forzar manualmente el opt-out de WhatsApp de un usuario (`GET /admin/users` /
+  `GET /admin/users/:id` incluyen `whatsappOptedOut`/`whatsappOptedOutAt`;
+  `PUT /admin/users/:id/whatsapp-opt-out`). Marcarlo en `true` dispara una notificación
+  (`WHATSAPP_OPTED_OUT`, forzada por email) avisándole al usuario que no podrá crear solicitudes
+  ni mostrar interés hasta revertirlo; limpiarlo no notifica.
 - Listar y ver profesionales y empresas.
 - Cambiar estado de profesionales y empresas (verificar, suspender, etc.).
 - Verificar empresas (`POST /companies/:id/verify`).

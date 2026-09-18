@@ -30,6 +30,7 @@ describe('AdminService', () => {
       update: jest.fn(),
       findByIdForUser: jest.fn(),
       updateStatusForUser: jest.fn(),
+      updateWhatsAppOptOutForUser: jest.fn(),
       getAllUsersForAdmin: jest.fn(),
       getUserStats: jest.fn(),
     };
@@ -324,6 +325,44 @@ describe('AdminService', () => {
         service.updateUserStatus(
           'non-existent',
           { status: UserStatus.SUSPENDED },
+          adminUser,
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateUserWhatsAppOptOut', () => {
+    const adminUser = createMockUser({ id: 'admin-123', isAdmin: true });
+
+    it('should update the WhatsApp opt-out flag successfully', async () => {
+      const updatedUser = createMockUser({ whatsappOptedOut: true });
+      mockUserService.updateWhatsAppOptOutForUser.mockResolvedValue(
+        updatedUser,
+      );
+
+      const result = await service.updateUserWhatsAppOptOut(
+        'user-123',
+        { whatsappOptedOut: true },
+        adminUser,
+      );
+
+      expect(result.whatsappOptedOut).toBe(true);
+      expect(mockUserService.updateWhatsAppOptOutForUser).toHaveBeenCalledWith(
+        'user-123',
+        adminUser,
+        true,
+      );
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockUserService.updateWhatsAppOptOutForUser.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
+
+      await expect(
+        service.updateUserWhatsAppOptOut(
+          'non-existent',
+          { whatsappOptedOut: true },
           adminUser,
         ),
       ).rejects.toThrow(NotFoundException);

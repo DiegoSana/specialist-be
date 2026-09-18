@@ -9,6 +9,7 @@ import { InAppNotificationService } from './application/services/in-app-notifica
 import { RequestsNotificationsHandler } from './application/handlers/requests-notifications.handler';
 import { ReviewsNotificationsHandler } from './application/handlers/reviews-notifications.handler';
 import { RequestAttentionFlaggedHandler } from './application/handlers/request-attention-flagged.handler';
+import { UserWhatsAppOptedOutHandler } from './application/handlers/user-whatsapp-opted-out.handler';
 import { NotificationPreferencesService } from './application/services/notification-preferences.service';
 import { NotificationService } from './application/services/notification.service';
 import { NotificationRetentionJob } from './application/jobs/notification-retention.job';
@@ -52,6 +53,7 @@ import { IdentityModule } from '../identity/identity.module';
     RequestsNotificationsHandler,
     ReviewsNotificationsHandler,
     RequestAttentionFlaggedHandler,
+    UserWhatsAppOptedOutHandler,
     {
       provide: IN_APP_NOTIFICATION_REPOSITORY,
       useClass: PrismaInAppNotificationRepository,
