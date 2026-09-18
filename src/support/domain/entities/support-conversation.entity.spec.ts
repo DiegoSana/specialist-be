@@ -187,7 +187,9 @@ describe('SupportConversationEntity', () => {
         relatedRequestId: null,
       }).resolve('admin-1', new Date('2026-09-18T10:00:00.000Z'));
 
-      const reopened = conversation.reopen(new Date('2026-09-19T00:00:00.000Z'));
+      const reopened = conversation.reopen(
+        new Date('2026-09-19T00:00:00.000Z'),
+      );
 
       expect(reopened.status).toBe(SupportConversationStatus.OPEN);
       expect(reopened.resolvedAt).toBeNull();
@@ -202,7 +204,9 @@ describe('SupportConversationEntity', () => {
         relatedRequestId: null,
       });
 
-      const secondReopen = conversation.reopen(new Date('2026-09-19T00:00:00.000Z'));
+      const secondReopen = conversation.reopen(
+        new Date('2026-09-19T00:00:00.000Z'),
+      );
 
       expect(secondReopen).toBe(conversation);
     });

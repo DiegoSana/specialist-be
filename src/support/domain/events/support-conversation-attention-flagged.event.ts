@@ -16,8 +16,7 @@ export type SupportConversationAttentionFlaggedPayload = {
 export class SupportConversationAttentionFlaggedEvent
   implements DomainEvent<SupportConversationAttentionFlaggedPayload>
 {
-  public static readonly EVENT_NAME =
-    'support.conversation.attention_flagged';
+  public static readonly EVENT_NAME = 'support.conversation.attention_flagged';
 
   public readonly name = SupportConversationAttentionFlaggedEvent.EVENT_NAME;
   public readonly occurredAt = new Date();

@@ -118,7 +118,10 @@ export class SupportConversationEntity {
   }
 
   /** Idempotent: resolving an already-resolved conversation is a no-op state-wise. */
-  resolve(adminUserId: string, now: Date = new Date()): SupportConversationEntity {
+  resolve(
+    adminUserId: string,
+    now: Date = new Date(),
+  ): SupportConversationEntity {
     if (this.isResolved()) {
       return this;
     }
