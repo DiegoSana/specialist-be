@@ -19,6 +19,9 @@ primary_region = 'gru'
   FRONTEND_URL = 'https://specialist-fe.vercel.app'
   NOTIFICATIONS_DISPATCH_ENABLED = 'true'
   NOTIFICATIONS_SMTP_PORT = '587'
+  # Unmatched inbound WhatsApp messages open a support conversation (admin /admin/support)
+  # instead of being dropped - see docs/decisions/ADR-005-SUPPORT-CONVERSATIONS.md.
+  SUPPORT_CONVERSATIONS_ENABLED = 'true'
   # Pre-launch: this "production" Fly deploy is only used for functional testing/validation
   # so far, not real users. WHATSAPP_PROVIDER=local + WHATSAPP_DEV_MODE_ENABLED=true turn on
   # the admin WhatsApp dev tools (simulate reply, force-trigger a follow-up) here too, same as
