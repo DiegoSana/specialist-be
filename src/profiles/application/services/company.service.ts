@@ -30,6 +30,8 @@ import { randomUUID } from 'crypto';
 import { UserService } from '../../../identity/application/services/user.service';
 import { UserEntity } from '../../../identity/domain/entities/user.entity';
 import { ProfileToggleService } from './profile-toggle.service';
+import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
+import { CompanyStatusChangedEvent } from '../../domain/events/company-status-changed.event';
 
 @Injectable()
 export class CompanyService {
@@ -44,7 +46,24 @@ export class CompanyService {
     private readonly tradeRepository: TradeRepository,
     @Inject(forwardRef(() => ProfileToggleService))
     private readonly profileToggleService: ProfileToggleService,
+    @Inject(EVENT_BUS) private readonly eventBus: EventBus,
   ) {}
+
+  private async publishStatusChange(
+    before: CompanyEntity,
+    after: CompanyEntity,
+  ): Promise<void> {
+    if (before.status === after.status) return;
+    await this.eventBus.publish(
+      new CompanyStatusChangedEvent({
+        companyId: after.id,
+        userId: after.userId,
+        companyName: after.companyName,
+        previousStatus: before.status,
+        newStatus: after.status,
+      }),
+    );
+  }
 
   // ─────────────────────────────────────────────────────────────
   // Helper: Build auth context from user
@@ -486,6 +505,7 @@ export class CompanyService {
       companyId,
     );
 
+    await this.publishStatusChange(company, result.company);
     return result.company;
   }
 
@@ -557,6 +577,11 @@ export class CompanyService {
       throw new ForbiddenException('Only admins can change company status');
     }
 
-    return this.companyRepository.updateStatus(companyId, status);
+    const updated = await this.companyRepository.updateStatus(
+      companyId,
+      status,
+    );
+    await this.publishStatusChange(company, updated);
+    return updated;
   }
 }

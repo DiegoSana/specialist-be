@@ -63,7 +63,11 @@ from domain events of other contexts. Docs: `docs/guides/NOTIFICATIONS.md`,
   `SUPPORT_CONVERSATION_NEEDS_ATTENTION`, in-app only (`includeExternal: false`) — mirrors
   `RequestAttentionFlaggedHandler`, not `UserWhatsAppOptedOutHandler`: the admin already lives in
   the panel, no email needed.
-Types in use: `REQUEST_STATUS_CHANGED`, `REQUEST_INTEREST_EXPRESSED`, `REQUEST_PROFESSIONAL_ASSIGNED`,
+- `CompanyStatusChangedHandler`: `profiles.company.status_changed` (Profiles, published by
+  `CompanyService.verifyCompany`/`updateStatus` only when the status actually changes) -> the
+  company owner. ACTIVE/VERIFIED -> `COMPANY_VERIFIED`, REJECTED -> `COMPANY_REJECTED`,
+  SUSPENDED -> `COMPANY_SUSPENDED`; other statuses are silent. Forces EMAIL as external channel.
+Types in use: `COMPANY_VERIFIED`, `COMPANY_REJECTED`, `COMPANY_SUSPENDED`, `REQUEST_STATUS_CHANGED`, `REQUEST_INTEREST_EXPRESSED`, `REQUEST_PROFESSIONAL_ASSIGNED`,
 `REVIEW_APPROVED`, `REQUEST_ATTENTION_FLAGGED`, `WHATSAPP_OPTED_OUT`, `WHATSAPP_REACTIVATED`,
 `SUPPORT_CONVERSATION_NEEDS_ATTENTION`. Copy is Spanish (es-AR).
 
