@@ -145,6 +145,26 @@ describe('AuthenticationService', () => {
       expect(mockJwtService.sign).toHaveBeenCalled();
     });
 
+    it('should expose all three profile flags, including hasCompanyProfile', async () => {
+      const user = createMockUser({
+        email: loginDto.email,
+        password: 'hashed-password',
+        status: UserStatus.ACTIVE,
+        hasCompanyProfile: true,
+      });
+
+      mockUserRepository.findByEmail.mockResolvedValue(user);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.login(loginDto);
+
+      expect(result.user).toMatchObject({
+        hasClientProfile: user.hasClientProfile,
+        hasProfessionalProfile: user.hasProfessionalProfile,
+        hasCompanyProfile: true,
+      });
+    });
+
     it('should throw UnauthorizedException for non-existent user', async () => {
       mockUserRepository.findByEmail.mockResolvedValue(null);
 
