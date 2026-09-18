@@ -141,7 +141,7 @@ section above for the flagging flow.
   gated into that same computation (Profiles context) so an opted-out user can't create/take new
   requests; this context additionally checks `whatsappOptedOut` directly in
   `RequestInteractionService.getRecipientPhone` (refuses to return a phone, reusing the "no
-  verified phone -> `FAILED`" path) and in `FollowUpSchedulerJob.canReceiveFollowUp`, so
+  verified phone -> `FAILED`" path) and in `FollowUpSchedulerJob.resolveFollowUpRecipientPhone`, so
   already-assigned requests simply stop receiving WhatsApp for that person (they are never
   auto-cancelled/unassigned).
 - Controller resolves the caller's provider context (Professional or Company) in

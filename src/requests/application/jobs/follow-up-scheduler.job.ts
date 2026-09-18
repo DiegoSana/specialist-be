@@ -29,6 +29,7 @@ import type { IFollowUpRule } from '../../domain/follow-up';
 import { FollowUpQueryExecutor } from '../follow-up/follow-up-query-executor';
 import { RequestEntity } from '../../domain/entities/request.entity';
 import { RequestAttentionService } from '../services/request-attention.service';
+import { SupportConversationService } from '../../../support/application/services/support-conversation.service';
 
 export const FOLLOW_UP_RULES = Symbol('FOLLOW_UP_RULES');
 
@@ -56,6 +57,7 @@ export class FollowUpSchedulerJob {
     @Inject(forwardRef(() => CompanyService))
     private readonly companyService: CompanyService,
     private readonly attentionService: RequestAttentionService,
+    private readonly supportConversationService: SupportConversationService,
   ) {}
 
   /**
@@ -235,12 +237,24 @@ export class FollowUpSchedulerJob {
       }
     }
 
-    const canReceive = await this.canReceiveFollowUp(request, direction);
-    if (!canReceive) {
+    const recipientPhone = await this.resolveFollowUpRecipientPhone(
+      request,
+      direction,
+    );
+    if (!recipientPhone) {
       return {
         scheduled: false,
         reason:
           'Cannot receive follow-up (missing recipient or unverified phone)',
+      };
+    }
+
+    if (
+      await this.supportConversationService.hasOpenConversation(recipientPhone)
+    ) {
+      return {
+        scheduled: false,
+        reason: 'Open support conversation for recipient phone',
       };
     }
 
@@ -292,7 +306,7 @@ export class FollowUpSchedulerJob {
    * condition (status for BY_STATUS rules; "has interests" for
    * PENDING_WITH_INTERESTS, reusing the same check the rule's buildPayload
    * already performs rather than reinventing it) and the same recipient
-   * eligibility check the cron uses (`canReceiveFollowUp`). It deliberately
+   * eligibility check the cron uses (`resolveFollowUpRecipientPhone`). It deliberately
    * skips `hasPendingFollowUp` and the "<1 day since last interaction" guards:
    * those exist only to stop the automatic cron from spamming, and this is an
    * explicit human action.
@@ -324,11 +338,11 @@ export class FollowUpSchedulerJob {
       );
     }
 
-    const canReceive = await this.canReceiveFollowUp(
+    const recipientPhone = await this.resolveFollowUpRecipientPhone(
       request,
       rule.getDirection(),
     );
-    if (!canReceive) {
+    if (!recipientPhone) {
       throw new BadRequestException(
         'Recipient cannot receive a follow-up (missing phone or unverified phone)',
       );
@@ -357,13 +371,29 @@ export class FollowUpSchedulerJob {
     return { interactionId: interaction.id };
   }
 
-  private async canReceiveFollowUp(
+  private eligiblePhone(
+    user:
+      | {
+          phone?: string | null;
+          phoneVerified?: boolean;
+          whatsappOptedOut?: boolean;
+        }
+      | null
+      | undefined,
+  ): string | null {
+    return user?.phone && user.phoneVerified && !user.whatsappOptedOut
+      ? user.phone
+      : null;
+  }
+
+  /** Recipient's WhatsApp phone if they can receive a follow-up, else null. */
+  private async resolveFollowUpRecipientPhone(
     request: RequestEntity,
     direction: InteractionDirection,
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     if (direction === InteractionDirection.TO_PROVIDER) {
       if (!request.providerId) {
-        return false;
+        return null;
       }
       try {
         const professional =
@@ -372,44 +402,36 @@ export class FollowUpSchedulerJob {
           );
         if (professional) {
           const user = await this.userService.findById(professional.userId);
-          return !!(
-            user?.phone &&
-            user.phoneVerified &&
-            !user.whatsappOptedOut
-          );
+          return this.eligiblePhone(user);
         }
         const company = await this.companyService.findByServiceProviderId(
           request.providerId,
         );
         if (company) {
           const user = await this.userService.findById(company.userId);
-          return !!(
-            user?.phone &&
-            user.phoneVerified &&
-            !user.whatsappOptedOut
-          );
+          return this.eligiblePhone(user);
         }
       } catch (error) {
         this.logger.warn(
           `Error checking provider phone for request ${request.id}`,
           error,
         );
-        return false;
+        return null;
       }
-      return false;
+      return null;
     } else {
       if (!request.clientId) {
-        return false;
+        return null;
       }
       try {
         const user = await this.userService.findById(request.clientId);
-        return !!(user?.phone && user.phoneVerified && !user.whatsappOptedOut);
+        return this.eligiblePhone(user);
       } catch (error) {
         this.logger.warn(
           `Error checking client phone for request ${request.id}`,
           error,
         );
-        return false;
+        return null;
       }
     }
   }

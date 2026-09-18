@@ -63,6 +63,32 @@ describe('SupportConversationService', () => {
     );
   });
 
+  describe('hasOpenConversation', () => {
+    it.each([
+      [SupportConversationStatus.OPEN, true],
+      [SupportConversationStatus.RESOLVED, false],
+    ])(
+      'returns correctly when the conversation is %s',
+      async (status, expected) => {
+        mockConversationRepository.findByPhoneNumber.mockResolvedValue(
+          buildConversation({ status }),
+        );
+
+        await expect(
+          service.hasOpenConversation('+5492944123456'),
+        ).resolves.toBe(expected);
+      },
+    );
+
+    it('returns false when there is no conversation for the phone', async () => {
+      mockConversationRepository.findByPhoneNumber.mockResolvedValue(null);
+
+      await expect(service.hasOpenConversation('+5492944123456')).resolves.toBe(
+        false,
+      );
+    });
+  });
+
   describe('receiveInboundMessage', () => {
     it('is idempotent: does nothing when the twilioMessageSid was already recorded', async () => {
       mockMessageRepository.findByTwilioMessageSid.mockResolvedValue({
