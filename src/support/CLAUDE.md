@@ -32,7 +32,9 @@ repo:
 
 - `SupportConversationEntity` (real aggregate, `save(entity)`): one row per phone number
   (`phoneNumber` unique). State machine `OPEN`/`RESOLVED`. `userId`/`relatedRequestId` are soft
-  references - no Prisma FK - resolved best-effort (`UserService.findByPhone`) or set later; this
+  references - no Prisma FK - resolved best-effort (`UserService.findByPhone` for `userId`;
+  `relatedRequestId` is passed in by `requests` on the fork = the request of the most recent
+  interaction ever sent to that phone, latest one wins on every inbound message); this
   context never depends structurally on `identity`/`requests` at the schema level. Key methods:
   `createFromInboundMessage`, `recordInboundMessage(now)` (returns `{ conversation, reopened }` -
   `reopened` is true only on `RESOLVED -> OPEN`, the signal the service uses to decide whether to

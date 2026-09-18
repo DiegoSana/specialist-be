@@ -66,6 +66,7 @@ describe('RequestInteractionService', () => {
       mockInteractionRepository = {
         findByTwilioMessageSid: jest.fn(),
         findMostRecentByPhone: jest.fn(),
+        findMostRecentRequestIdByPhone: jest.fn().mockResolvedValue(null),
         findByRequestId: jest.fn().mockResolvedValue([]),
         save: jest.fn((i) => Promise.resolve(i)),
       };
@@ -533,7 +534,31 @@ describe('RequestInteractionService', () => {
         phoneNumber: '+5492944123456',
         body: 'hola, alguien?',
         twilioMessageSid: 'SM123',
+        relatedRequestId: null,
       });
+    });
+
+    it('passes the most recent request messaged to that phone as relatedRequestId', async () => {
+      mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(null);
+      mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(null);
+      mockInteractionRepository.findMostRecentRequestIdByPhone.mockResolvedValue(
+        'req-9',
+      );
+      mockConfig.get.mockImplementation((key: string, def?: unknown) =>
+        key === 'SUPPORT_CONVERSATIONS_ENABLED' ? 'true' : def,
+      );
+
+      await service.processInboundMessage({
+        from: 'whatsapp:+5492944123456',
+        body: 'hola, alguien?',
+        messageId: 'SM124',
+      });
+
+      expect(
+        mockSupportConversationService.receiveInboundMessage,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ relatedRequestId: 'req-9' }),
+      );
     });
   });
 

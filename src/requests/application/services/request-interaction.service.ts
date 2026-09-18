@@ -790,10 +790,16 @@ export class RequestInteractionService {
       return;
     }
 
+    const relatedRequestId =
+      await this.interactionRepository.findMostRecentRequestIdByPhone(
+        phoneNumber,
+      );
+
     await this.supportConversationService.receiveInboundMessage({
       phoneNumber,
       body: params.body,
       twilioMessageSid: params.messageId,
+      relatedRequestId,
     });
   }
 

@@ -39,6 +39,12 @@ export interface RequestInteractionRepository {
   ): Promise<RequestInteractionEntity | null>;
 
   /**
+   * Request id of the most recent interaction of any type/status/age sent to this
+   * phone number. Gives an unmatched inbound message (support fork) request context.
+   */
+  findMostRecentRequestIdByPhone(phoneNumber: string): Promise<string | null>;
+
+  /**
    * Check if there's a pending follow-up interaction for a request.
    * Used to avoid scheduling duplicate follow-ups.
    */

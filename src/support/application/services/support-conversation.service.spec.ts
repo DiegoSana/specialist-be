@@ -191,6 +191,54 @@ describe('SupportConversationService', () => {
       );
     });
 
+    it('stores relatedRequestId on a new conversation', async () => {
+      mockMessageRepository.findByTwilioMessageSid.mockResolvedValue(null);
+      mockConversationRepository.findByPhoneNumber.mockResolvedValue(null);
+      mockUserService.findByPhone.mockResolvedValue(null);
+
+      await service.receiveInboundMessage({
+        phoneNumber: '+5492944123456',
+        body: 'hola',
+        twilioMessageSid: 'SM1',
+        relatedRequestId: 'req-1',
+      });
+
+      expect(mockConversationRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ relatedRequestId: 'req-1' }),
+      );
+    });
+
+    it('updates relatedRequestId on an existing conversation, and keeps it when none is provided', async () => {
+      mockMessageRepository.findByTwilioMessageSid.mockResolvedValue(null);
+      mockConversationRepository.findByPhoneNumber.mockResolvedValue(
+        buildConversation({ status: SupportConversationStatus.OPEN }),
+      );
+
+      await service.receiveInboundMessage({
+        phoneNumber: '+5492944123456',
+        body: 'otro',
+        twilioMessageSid: 'SM2',
+        relatedRequestId: 'req-2',
+      });
+      expect(mockConversationRepository.save).toHaveBeenLastCalledWith(
+        expect.objectContaining({ relatedRequestId: 'req-2' }),
+      );
+
+      const withRequest = buildConversation().withRelatedRequestId('req-2');
+      mockConversationRepository.findByPhoneNumber.mockResolvedValue(
+        withRequest,
+      );
+      await service.receiveInboundMessage({
+        phoneNumber: '+5492944123456',
+        body: 'otro más',
+        twilioMessageSid: 'SM3',
+        relatedRequestId: null,
+      });
+      expect(mockConversationRepository.save).toHaveBeenLastCalledWith(
+        expect.objectContaining({ relatedRequestId: 'req-2' }),
+      );
+    });
+
     it('publishes the attention event again when a RESOLVED conversation is reopened by a new inbound message', async () => {
       mockMessageRepository.findByTwilioMessageSid.mockResolvedValue(null);
       mockConversationRepository.findByPhoneNumber.mockResolvedValue(

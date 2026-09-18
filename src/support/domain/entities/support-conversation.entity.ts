@@ -100,6 +100,26 @@ export class SupportConversationEntity {
     return { conversation, reopened: wasResolved };
   }
 
+  /** Latest known request context wins; no-op when unchanged or unknown. */
+  withRelatedRequestId(requestId: string | null): SupportConversationEntity {
+    if (!requestId || requestId === this.relatedRequestId) {
+      return this;
+    }
+    return new SupportConversationEntity(
+      this.id,
+      this.phoneNumber,
+      this.userId,
+      requestId,
+      this.status,
+      this.lastInboundAt,
+      this.lastOutboundAt,
+      this.createdAt,
+      this.updatedAt,
+      this.resolvedAt,
+      this.resolvedByUserId,
+    );
+  }
+
   /** Record a successful admin reply having been sent. */
   recordOutboundMessage(now: Date = new Date()): SupportConversationEntity {
     return new SupportConversationEntity(
