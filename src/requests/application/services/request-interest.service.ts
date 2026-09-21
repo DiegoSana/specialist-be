@@ -20,11 +20,16 @@ import {
   RequestAuthContext,
 } from '../../domain/entities/request.entity';
 import { ExpressInterestDto } from '../dto/express-interest.dto';
-import { RequestStatus, ProviderType } from '@prisma/client';
+import {
+  RequestStatus,
+  ProviderType,
+  RequestInterestStatus,
+} from '@prisma/client';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { RequestInterestExpressedEvent } from '../../domain/events/request-interest-expressed.event';
 import { RequestProfessionalAssignedEvent } from '../../domain/events/request-professional-assigned.event';
 import { RequestStatusChangedEvent } from '../../domain/events/request-status-changed.event';
+import { RequestInterestStatusChangedEvent } from '../../domain/events/request-interest-status-changed.event';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
 import { CompanyService } from '../../../profiles/application/services/company.service';
@@ -157,13 +162,14 @@ export class RequestInterestService {
       throw new ForbiddenException('Cannot express interest in this request');
     }
 
-    // Check if already expressed interest
+    // A WITHDRAWN row is reused (unique per request+provider); any other state means the
+    // provider already has an active or resolved interest.
     const existingInterest =
       await this.requestInterestRepository.findByRequestAndProvider(
         requestId,
         ctx.serviceProviderId,
       );
-    if (existingInterest) {
+    if (existingInterest && !existingInterest.isWithdrawn()) {
       throw new BadRequestException(
         'You have already expressed interest in this request',
       );
@@ -179,11 +185,29 @@ export class RequestInterestService {
       }
     }
 
-    const savedInterest = await this.requestInterestRepository.add({
-      requestId,
-      serviceProviderId: ctx.serviceProviderId,
-      message: dto.message || null,
-    });
+    const savedInterest = existingInterest
+      ? await this.requestInterestRepository.save(
+          existingInterest.reExpress(dto.message || null),
+        )
+      : await this.requestInterestRepository.add({
+          requestId,
+          serviceProviderId: ctx.serviceProviderId,
+          message: dto.message || null,
+        });
+
+    if (existingInterest) {
+      await this.publishInterestStatusChanged(
+        request,
+        savedInterest,
+        RequestInterestStatus.WITHDRAWN,
+        ctx.userId,
+        {
+          userId: ctx.userId,
+          type: ctx.providerType ?? null,
+          name: ctx.providerName ?? null,
+        },
+      );
+    }
 
     await this.eventBus.publish(
       new RequestInterestExpressedEvent({
@@ -219,14 +243,34 @@ export class RequestInterestService {
         requestId,
         ctx.serviceProviderId,
       );
-    if (!interest) {
+    if (!interest || interest.isWithdrawn()) {
       throw new NotFoundException('Interest not found');
     }
+    if (!interest.canBeWithdrawnBy(ctx)) {
+      throw new BadRequestException(
+        'Interest can no longer be withdrawn (the client already decided)',
+      );
+    }
 
-    await this.requestInterestRepository.remove(
-      requestId,
-      ctx.serviceProviderId,
+    // Withdraw instead of deleting so the provider keeps the history ("Retirado").
+    const saved = await this.requestInterestRepository.save(
+      interest.withdraw(),
     );
+
+    const request = await this.requestRepository.findById(requestId);
+    if (request) {
+      await this.publishInterestStatusChanged(
+        request,
+        saved,
+        interest.status,
+        ctx.userId,
+        {
+          userId: ctx.userId,
+          type: ctx.providerType ?? null,
+          name: ctx.providerName ?? null,
+        },
+      );
+    }
   }
 
   /**
@@ -279,7 +323,7 @@ export class RequestInterestService {
         requestId,
         ctx.serviceProviderId,
       );
-    return interest !== null;
+    return interest !== null && !interest.isWithdrawn();
   }
 
   /**
@@ -353,7 +397,7 @@ export class RequestInterestService {
         requestId,
         serviceProviderId,
       );
-    if (!interest) {
+    if (!interest || interest.isWithdrawn()) {
       throw new BadRequestException(
         'This provider has not expressed interest in this request',
       );
@@ -398,8 +442,18 @@ export class RequestInterestService {
       }),
     );
 
-    // Keep interests in DB - providers can still see they expressed interest
-    // even if request was assigned to someone else
+    // Interests stay in the DB so providers can see how their application ended:
+    // the chosen one becomes CHOSEN, every other still-open one NOT_CHOSEN.
+    const openInterests = (
+      await this.requestInterestRepository.findByRequestId(requestId)
+    ).filter((i) => i.isInterested() && i.id !== interest.id);
+    const chosenInterest = await this.requestInterestRepository.save(
+      interest.markChosen(),
+    );
+    await this.requestInterestRepository.markOthersNotChosen(
+      requestId,
+      serviceProviderId,
+    );
 
     // Get client name for notifications
     const client = (updatedRequest as any).client;
@@ -421,6 +475,22 @@ export class RequestInterestService {
         professionalId: serviceProviderId,
       }),
     );
+
+    await this.publishInterestStatusChanged(
+      updatedRequest,
+      chosenInterest,
+      interest.status,
+      ctx.userId,
+      { userId: providerUserId, type: providerType, name: providerName },
+    );
+    for (const other of openInterests) {
+      await this.publishInterestStatusChanged(
+        updatedRequest,
+        other.markNotChosen(),
+        other.status,
+        ctx.userId,
+      );
+    }
 
     if (updatedRequest.status !== fromStatus) {
       await this.eventBus.publish(
@@ -489,6 +559,9 @@ export class RequestInterestService {
 
     const fromStatus = request.status;
     const fromProviderId = request.providerId;
+    const decidedInterests = (
+      await this.requestInterestRepository.findByRequestId(requestId)
+    ).filter((i) => i.isChosen() || i.isNotChosen());
 
     // Unassign provider, revert to PUBLISHED, and make public again
     const updatedRequest = await this.requestRepository.save(
@@ -498,6 +571,9 @@ export class RequestInterestService {
         isPublic: true,
       }),
     );
+
+    // The client's decision is reverted: everyone competes again.
+    await this.requestInterestRepository.resetDecided(requestId);
 
     // Get client name for notifications
     const client = (updatedRequest as any).client;
@@ -532,6 +608,18 @@ export class RequestInterestService {
       }
     }
 
+    for (const decided of decidedInterests) {
+      await this.publishInterestStatusChanged(
+        updatedRequest,
+        decided.reset(),
+        decided.status,
+        ctx.userId,
+        decided.serviceProviderId === fromProviderId
+          ? { userId: providerUserId, type: providerType, name: providerName }
+          : undefined,
+      );
+    }
+
     // Publish status change event
     if (updatedRequest.status !== fromStatus) {
       await this.eventBus.publish(
@@ -555,5 +643,38 @@ export class RequestInterestService {
     }
 
     return updatedRequest;
+  }
+
+  /**
+   * Publishes requests.request_interest.status_changed for one interest transition.
+   * `interest` is the entity AFTER the transition; `fromStatus` the state it left.
+   * Provider details are optional: the client-driven bulk NOT_CHOSEN transitions only
+   * carry ids (no per-provider lookup), consumers resolve the rest by serviceProviderId.
+   */
+  private async publishInterestStatusChanged(
+    request: RequestEntity,
+    interest: RequestInterestEntity,
+    fromStatus: RequestInterestStatus,
+    changedByUserId: string,
+    provider?: {
+      userId: string | null;
+      type: ProviderType | null;
+      name: string | null;
+    },
+  ): Promise<void> {
+    await this.eventBus.publish(
+      new RequestInterestStatusChangedEvent({
+        requestId: request.id,
+        requestTitle: request.title,
+        clientId: request.clientId,
+        serviceProviderId: interest.serviceProviderId,
+        providerUserId: provider?.userId ?? null,
+        providerType: provider?.type ?? interest.provider?.type ?? null,
+        providerName: provider?.name ?? interest.provider?.displayName ?? null,
+        fromStatus,
+        toStatus: interest.status,
+        changedByUserId,
+      }),
+    );
   }
 }

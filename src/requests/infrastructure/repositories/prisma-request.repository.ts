@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { RequestRepository } from '../../domain/repositories/request.repository';
 import { RequestEntity } from '../../domain/entities/request.entity';
-import { RequestStatus } from '@prisma/client';
+import { RequestInterestStatus, RequestStatus } from '@prisma/client';
 import { PrismaRequestMapper } from '../mappers/request.prisma-mapper';
 
 @Injectable()
@@ -201,7 +201,7 @@ export class PrismaRequestRepository implements RequestRepository {
         updatedAt: { lt: updatedBefore },
         isPublic: true,
         interests: {
-          some: {},
+          some: { status: RequestInterestStatus.INTERESTED },
         },
       },
       include: {

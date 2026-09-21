@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { RequestInterestRepository } from '../../domain/repositories/request-interest.repository';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
-import { ProviderType } from '@prisma/client';
+import { ProviderType, RequestInterestStatus } from '@prisma/client';
 
 @Injectable()
 export class PrismaRequestInterestRepository
@@ -86,13 +86,15 @@ export class PrismaRequestInterestRepository
       raw.serviceProviderId,
       raw.message,
       raw.createdAt,
+      raw.status,
       providerInfo,
     );
   }
 
   async findByRequestId(requestId: string): Promise<RequestInterestEntity[]> {
+    // WITHDRAWN rows stay in the table (history / provider's own list) but are never offered to the client.
     const interests = await this.prisma.requestInterest.findMany({
-      where: { requestId },
+      where: { requestId, status: { not: RequestInterestStatus.WITHDRAWN } },
       include: this.providerInclude,
       orderBy: { createdAt: 'desc' },
     });
@@ -144,6 +146,41 @@ export class PrismaRequestInterestRepository
     });
 
     return this.mapToDomain(interest);
+  }
+
+  async save(interest: RequestInterestEntity): Promise<RequestInterestEntity> {
+    const saved = await this.prisma.requestInterest.update({
+      where: { id: interest.id },
+      data: { status: interest.status, message: interest.message },
+      include: this.providerInclude,
+    });
+    return this.mapToDomain(saved);
+  }
+
+  async markOthersNotChosen(
+    requestId: string,
+    chosenServiceProviderId: string,
+  ): Promise<void> {
+    await this.prisma.requestInterest.updateMany({
+      where: {
+        requestId,
+        serviceProviderId: { not: chosenServiceProviderId },
+        status: RequestInterestStatus.INTERESTED,
+      },
+      data: { status: RequestInterestStatus.NOT_CHOSEN },
+    });
+  }
+
+  async resetDecided(requestId: string): Promise<void> {
+    await this.prisma.requestInterest.updateMany({
+      where: {
+        requestId,
+        status: {
+          in: [RequestInterestStatus.CHOSEN, RequestInterestStatus.NOT_CHOSEN],
+        },
+      },
+      data: { status: RequestInterestStatus.INTERESTED },
+    });
   }
 
   async remove(requestId: string, serviceProviderId: string): Promise<void> {

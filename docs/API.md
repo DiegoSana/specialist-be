@@ -125,9 +125,9 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 | `POST` | `/requests/:id/photos` | Add photo to request | ✅ |
 | `DELETE` | `/requests/:id/photos` | Remove photo from request | ✅ |
 | `POST` | `/requests/:id/interest` | Express interest (provider) | ✅ Provider |
-| `DELETE` | `/requests/:id/interest` | Remove interest | ✅ Provider |
+| `DELETE` | `/requests/:id/interest` | Withdraw interest (keeps the row as `WITHDRAWN`; only while `INTERESTED`) | ✅ Provider |
 | `GET` | `/requests/:id/interest` | Check my interest status | ✅ Provider |
-| `GET` | `/requests/:id/interests` | List interested providers | ✅ |
+| `GET` | `/requests/:id/interests` | List interested providers (`WITHDRAWN` ones are excluded) | ✅ |
 | `POST` | `/requests/:id/assign` | Assign provider (client) | ✅ |
 
 > **Note**: "Provider" = Professional or Company. Both can view available requests, express interest, and be assigned to jobs.
@@ -337,7 +337,9 @@ When a public request is created, service providers (professionals or companies)
 2. **Providers** view available requests via `GET /requests/available`
 3. **Provider** expresses interest via `POST /requests/:id/interest`
 4. **Client** views interested providers via `GET /requests/:id/interests`
-5. **Client** assigns a provider via `POST /requests/:id/assign`
+5. **Client** assigns a provider via `POST /requests/:id/assign`: the chosen interest becomes `CHOSEN`, every other open one `NOT_CHOSEN` (rows are kept, not deleted)
+
+Each interest has its own `status` (`RequestInterestStatus`): `INTERESTED` (Interesado), `CHOSEN` (Elegido), `NOT_CHOSEN` (No elegido), `WITHDRAWN` (Retirado). A provider that withdrew can express interest again (the row is reused). `GET /requests/interested` (provider's own list) returns all of them as `interestStatus`.
 
 ```json
 // Express interest request
@@ -348,6 +350,7 @@ When a public request is created, service providers (professionals or companies)
 // Interested provider response
 {
   "serviceProviderId": "uuid",
+  "status": "INTERESTED", // INTERESTED | CHOSEN | NOT_CHOSEN | WITHDRAWN
   "providerType": "PROFESSIONAL", // or "COMPANY"
   "displayName": "Juan Pérez",
   "message": "...",

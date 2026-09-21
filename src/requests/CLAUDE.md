@@ -66,12 +66,18 @@ request attention" below.
 - Status transitions: declarative `TRANSITIONS` table in `request.entity.ts` mirroring the spec's "Quién puede mover cada cosa" (actors `CLIENT|PROVIDER|SYSTEM|SUPPORT`; `RequestAuthContext` gained `isSystem`/`isSupport`, producers land in later PRs; `IN_PROGRESS -> ABANDONED` intentionally unmapped, open question in the spec);
   admin any. Direct request needs `professionalId|companyId` (resolved to `providerId`) and an
   active provider; public request needs `tradeId` and starts unassigned.
-- `RequestInterest`: association store (`add/remove/removeAllByRequestId`), unique per
-  `(requestId, serviceProviderId)`.
+- `RequestInterestEntity` has a `status` (`RequestInterestStatus`: `INTERESTED|CHOSEN|NOT_CHOSEN|WITHDRAWN`) with
+  `markChosen/markNotChosen/withdraw/reExpress/reset` (immutable) and `canBeWithdrawnBy`. Unique per
+  `(requestId, serviceProviderId)`; `WITHDRAWN` rows are reused on re-express. Repository: `add`, `save`,
+  `markOthersNotChosen`, `resetDecided` (`remove/removeAllByRequestId` no longer used by the services);
+  `findByRequestId` (client-facing list, follow-up rule) excludes `WITHDRAWN`, `findByServiceProviderId` returns all.
+  `assignProvider` -> chosen `CHOSEN` + others `NOT_CHOSEN`; `unassignProvider` resets them to `INTERESTED`.
 - `RequestInteractionEntity`: WhatsApp message lifecycle `PENDING->SENT->DELIVERED->RESPONDED|FAILED`,
   `markAsSent/markAsDelivered/markAsResponded/markAsFailed`, idempotent on `twilioMessageSid`.
 - Events: `requests.request.created`, `requests.request.status_changed`,
-  `requests.request_interest.expressed`, `requests.request.professional_assigned`,
+  `requests.request_interest.expressed`, `requests.request_interest.status_changed`
+  (`RequestInterestStatusChangedEvent`: one per interest transition; not consumed yet, notifying
+  non-chosen providers is PR4/notifications), `requests.request.professional_assigned`,
   `requests.interaction.responded`. Payloads carry `serviceProviderId`, `providerUserId`,
   `providerType`, `providerName`.
 - Follow-up rules (`domain/follow-up` contracts, `application/follow-up/rules` strategies):
@@ -161,7 +167,7 @@ section above for the flagging flow.
 
 ## Tests
 
-`request.service.spec.ts`, `request-interest.service.spec.ts` (mock `ProfileActivationService`),
+`request.service.spec.ts`, `request-interest.service.spec.ts` (mock `ProfileActivationService`), `request-interest.entity.spec.ts`,
 `follow-up-scheduler.job.spec.ts`, `admin-whatsapp.service.spec.ts`,
 `prisma-request-interaction.repository.spec.ts` (asserts the actual Prisma `where` clause includes
 `interactionType: FOLLOW_UP` - this repo's first repository-level spec, added specifically to
