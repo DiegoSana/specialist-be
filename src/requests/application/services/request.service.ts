@@ -286,6 +286,7 @@ export class RequestService {
     const saved = await this.requestRepository.save(
       request.withChanges({
         status: updateDto.status,
+        statusReason: updateDto.statusReason,
       }),
     );
 

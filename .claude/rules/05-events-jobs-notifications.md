@@ -66,19 +66,18 @@ distributed lock); do not add multi-instance assumptions without adding leasing.
 
 ## WhatsApp follow-up (requests context)
 
-- Rules are strategy classes in `requests/application/follow-up/rules/` extending
-  `AbstractFollowUpRule`/`StatusFollowUpRule`, registered in the `FOLLOW_UP_RULES` factory in
-  `requests.module.ts`. Each rule declares name, `FollowUpQuery`, direction (`TO_CLIENT|TO_PROVIDER`)
-  and a template key from `shared/infrastructure/messaging/message-templates.json`. Use the
-  `add-follow-up-rule` skill.
-- Follow-ups only target assigned requests (or the explicit PUBLISHED-with-interests rule); skip if
-  a follow-up is already pending or an interaction happened < 1 day ago; recipient must have a
-  verified phone.
+- Rules are data-driven ladders (`requests/application/follow-up/follow-up-ladders.ts`, expanded into
+  `LadderFollowUpRule`s and registered via the `FOLLOW_UP_RULES` factory in `requests.module.ts`). Each rung
+  declares state, recipient (`TO_CLIENT|TO_PROVIDER`), days since entering the state and a template key from
+  `shared/infrastructure/messaging/message-templates.json` (`notice_*` avisos, `question_*` preguntas). Max 3
+  messages per ladder; reminders reuse the template with the `{reminder}` prefix. Use the `add-follow-up-rule` skill.
+- The scheduler only sends 9-20h Buenos Aires (`WHATSAPP_FOLLOWUP_WINDOW_*`); step N of a ladder is sent only
+  after exactly N messages of that ladder were sent in the current status; recipient must have a verified phone.
 - Outbound goes through the `WhatsAppMessagingPort` (`TwilioWhatsAppAdapter`), never the Twilio
   SDK directly; the shared `TwilioClientService` is the single Twilio client.
 - Inbound: `POST /api/webhooks/twilio` -> `TwilioWebhookGuard` (signature) + `TwilioRateLimitGuard`
   -> `RequestInteractionService.processInboundMessage` -> `DetectResponseIntentUseCase` ->
   `RequestInteractionRespondedEvent` -> `RequestInteractionRespondedHandler` changes request status
-  (CONFIRMED: SENT->CONTACT_RELEASED, STARTED: CONTACT_RELEASED->IN_PROGRESS, COMPLETED: IN_PROGRESS->FINISHED,
-  CANCELLED: non-terminal->CANCELLED). Idempotency is keyed on `twilioMessageSid`.
+  only for the question templates (P1 agreement: yes -> IN_PROGRESS / no -> NOT_COMPLETED; P2 progress: done -> FINISHED /
+  stopped -> INTERRUPTED; P3 satisfaction: yes -> CLOSED / no -> UNDER_REVIEW); replies to notices never change state. Idempotency is keyed on `twilioMessageSid`.
 - Interaction status machine: PENDING->SENT|FAILED, SENT->DELIVERED|FAILED, DELIVERED->RESPONDED|FAILED.

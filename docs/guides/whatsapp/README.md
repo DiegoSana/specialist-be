@@ -4,18 +4,45 @@ Documentación completa del sistema de follow-up automático de solicitudes vía
 
 ## ¿Cuándo se hace follow-up?
 
-**Solo cuando la solicitud ya está asignada a un proveedor.** No hay follow-up para solicitudes públicas sin asignar (estado `PUBLISHED`).
+Fuente: `docs/EspecialistBRC — Estados del pedido.md` ("Follow-up por WhatsApp"). Dos tipos de mensaje:
+**avisos** (`notice_*`, A1-A7: informan y llevan a la app, donde se hace la acción) y **preguntas**
+(`question_*`, P1-P3: la respuesta libre puede mover el estado). Una "escalera" (ladder) es la secuencia
+mensaje inicial + recordatorios que recibe **una** persona mientras el pedido está en **un** estado; máximo 3
+mensajes por escalera. Los recordatorios reutilizan la misma plantilla anteponiendo
+`Te escribimos de nuevo por "<pedido>".` (variable `{reminder}`, no hay plantillas extra). Definidas en
+`src/requests/application/follow-up/follow-up-ladders.ts`; días = desde que el pedido entra al estado.
 
-| Estado de la solicitud | Días sin actividad | Destinatario | Template |
-|------------------------|---------------------|--------------|----------|
-| `CONTACT_RELEASED` (contacto liberado, aún no empezada) | 3 días | Proveedor | follow_up_3_days |
-| `CONTACT_RELEASED` | 7 días | Proveedor | follow_up_7_days |
-| `IN_PROGRESS` (trabajo en curso) | 5 días | Proveedor | follow_up_5_days_in_progress |
-| `IN_PROGRESS` | 10 días | Proveedor | follow_up_10_days_in_progress |
-| `FINISHED` (terminada, pendiente de conformidad) | 1 día | Cliente | follow_up_review_1_day (pedir reseña) |
-| `PUBLISHED` pública con interesados y sin proveedor asignado | 3 días | Cliente | follow_up_pending_3_days_with_interests (elegir especialista) |
+| Estado | Para | Mensajes (días) | Plantilla | Qué mueve el estado |
+|--------|------|-----------------|-----------|---------------------|
+| `SENT` | Especialista | 0, 2, 4 | `notice_request_sent` (A1) | Aceptar/rechazar, en la app |
+| `PUBLISHED` con interesados | Cliente | 0, 2, 4 | `notice_interests_published` (A2) | Elegir, en la app |
+| `CONTACT_RELEASED` | Ambos | 0 | `notice_contact_released` (A3) | - |
+| `CONTACT_RELEASED` | Ambos, por separado | 2, 4, 6 | `question_agreement` (P1) | acuerdo -> `IN_PROGRESS`; no hubo acuerdo -> `NOT_COMPLETED` |
+| `IN_PROGRESS` | Especialista | 7, 14, 21 | `question_progress` (P2) | terminó -> `FINISHED`; interrumpido -> `INTERRUPTED`; sigue -> sin cambio |
+| `FINISHED` | Cliente | 0, 2, 4 | `question_satisfaction` (P3) | conforme -> `CLOSED`; objeta -> `UNDER_REVIEW` |
+| `CLOSED` | Ambos | 0, 3 | `notice_request_closed` (A6) | Calificar, en la app |
+| `CLOSED` automático (`statusReason=AUTO_CLOSED`) | Cliente | 0 | `notice_auto_closed` (A7) | - |
+| `REJECTED` | Cliente | 0 | `notice_request_rejected` (A4) | Volver a publicar, en la app |
+| `EXPIRED`, `NO_RESPONSE`, `NOT_COMPLETED`, `ABANDONED` | Cliente | 0 | `notice_no_agreement` (A5) | Volver a publicar, en la app |
 
-El job `FollowUpSchedulerJob` corre cada hora, busca solicitudes que cumplan estado + antigüedad, y programa un mensaje de follow-up (luego `WhatsAppDispatchJob` lo envía). No se programa follow-up si ya hay uno pendiente o si hubo interacción reciente (&lt; 1 día).
+`UNDER_REVIEW` no envía mensajes (lo maneja soporte).
+
+`FollowUpSchedulerJob` corre cada hora (solo de 9 a 20 h, hora de Buenos Aires; ver
+`WHATSAPP_FOLLOWUP_WINDOW_*`), programa cada mensaje y `WhatsAppDispatchJob` lo envía. Reglas por escalera:
+el mensaje N solo sale cuando ya se enviaron exactamente N mensajes de esa escalera **en el estado actual**
+(se cuenta en el ledger de `RequestInteraction` vía `metadata.ladder` + `metadata.requestStatus`, ignorando
+los `FAILED`), hay como mucho un mensaje pendiente por destinatario y pasó >= 1 día desde el último mensaje a
+esa persona en ese estado. Si el último mensaje de una pregunta queda sin respuesta alguna en todo el pedido,
+se marca `AT_RISK`.
+
+**Limitación conocida**: no existe un timestamp de "entrada al estado"; los "días desde que entra al estado"
+se aproximan con `Request.updatedAt`. Cualquier otro `save` del pedido (ej. subir una foto) reinicia ese reloj
+para los días, aunque el conteo de mensajes por estado no se reinicia (no hay reenvíos). Un historial de
+estados (ver `TODO.md`) lo resolvería.
+
+Respuestas: solo las plantillas `question_*` pueden cambiar el estado; una respuesta a un aviso nunca lo
+cambia, y si la respuesta no es clara (`UNKNOWN`/`NEEDS_INFO`) el estado no cambia. El clasificador recibe la
+plantilla a la que se responde (ver "Intención -> estado" abajo).
 
 ---
 

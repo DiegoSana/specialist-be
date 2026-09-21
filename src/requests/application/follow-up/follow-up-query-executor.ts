@@ -20,10 +20,10 @@ export class FollowUpQueryExecutor {
     cutoffDate.setDate(cutoffDate.getDate() - query.days);
 
     if (query.type === 'BY_STATUS') {
-      return this.requestRepository.findByStatusAndUpdatedBefore(
-        query.status,
-        cutoffDate,
-      );
+      // No provider filter: ladders also cover states without an assigned provider
+      // (PUBLISHED, EXPIRED, ...); TO_PROVIDER rules skip requests with no provider when
+      // resolving the recipient phone.
+      return this.requestRepository.findStaleByStatus(query.status, cutoffDate);
     }
     return this.requestRepository.findPendingWithInterestsUpdatedBefore(
       cutoffDate,

@@ -1,4 +1,11 @@
-import { IsEnum, IsOptional, IsNumber, IsString, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsNumber,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { RequestStatus } from '@prisma/client';
 
@@ -21,4 +28,14 @@ export class UpdateRequestDto {
   @IsOptional()
   @IsString()
   quoteNotes?: string;
+
+  @ApiProperty({
+    example: 'No llegamos a un acuerdo en el alcance del trabajo.',
+    required: false,
+    description: 'Reason for NOT_COMPLETED / INTERRUPTED transitions',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  statusReason?: string;
 }

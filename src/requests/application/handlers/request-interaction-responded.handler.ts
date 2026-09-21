@@ -110,8 +110,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
       // Special case: client replying to "assign specialist" follow-up with a number (1, 2, 3...)
       if (
         interaction.direction === 'TO_CLIENT' &&
-        interaction.messageTemplate ===
-          'follow_up_pending_3_days_with_interests' &&
+        interaction.messageTemplate === 'notice_interests_published' &&
         request.status === RequestStatus.PUBLISHED
       ) {
         const assigned = await this.tryAssignProviderByNumber(
@@ -142,6 +141,8 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
       const newStatus = this.mapIntentToStatus(
         event.payload.responseIntent,
         request,
+        interaction.messageTemplate,
+        responseContent,
       );
 
       if (!newStatus) {
@@ -172,6 +173,12 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
       try {
         await this.requestService.updateStatus(requestId, context, {
           status: newStatus,
+          // Keep the person's own words as the "motivo" for the two states that store one.
+          statusReason:
+            newStatus === RequestStatus.NOT_COMPLETED ||
+            newStatus === RequestStatus.INTERRUPTED
+              ? responseContent?.slice(0, 500)
+              : undefined,
         });
       } catch (statusError: any) {
         // The classifier inferred a status change, but the actor isn't authorized to
@@ -296,68 +303,76 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
   }
 
   /**
-   * Map response intent to Request status change.
-   * Returns null if no status change should occur.
+   * Map a reply to a Request status change, per "Follow-up por WhatsApp" in
+   * docs/EspecialistBRC — Estados del pedido.md. Only the three QUESTION templates can move
+   * the state (notices lead to the app, so a reply to them never changes it), and the
+   * template the person is answering disambiguates the generic intent:
    *
-   * Mechanical rename to the new 15-state machine (PR1 of the state-machine redesign, see
-   * docs/EspecialistBRC — Estados del pedido.md): this only needs to compile and not regress
-   * obviously. Mapping the real P1/P2/P3 question semantics (¿se pusieron de acuerdo?,
-   * ¿terminó?, ¿quedó conforme?) onto these replies is explicitly deferred to PR4.
+   * - question_agreement (CONTACT_RELEASED): CONFIRMED -> IN_PROGRESS, CANCELLED (no) -> NOT_COMPLETED
+   * - question_progress (IN_PROGRESS): COMPLETED -> FINISHED; CANCELLED ("no puedo seguir",
+   *   "cancelar") -> INTERRUPTED; anything else = still going, no change. A bare "no" is
+   *   ambiguous for this question, so it does not interrupt.
+   * - question_satisfaction (FINISHED): CONFIRMED -> CLOSED, CANCELLED (no) -> UNDER_REVIEW
    *
-   * Note: The logic considers the context of the follow-up message.
-   * For example, if a follow-up asks "¿Ya empezaste?" and user responds "si",
-   * it should be treated as STARTED, not CONFIRMED.
+   * Unclear replies (UNKNOWN/NEEDS_INFO) never change the state.
    */
   private mapIntentToStatus(
     intent: ResponseIntent,
     request: RequestEntity,
+    template: string,
+    replyText: string,
   ): RequestStatus | null {
-    const currentStatus = request.status;
-    switch (intent) {
-      case ResponseIntent.CONFIRMED:
-        // CONFIRMED can mean:
-        // 1. Accepting a direct request (SENT -> CONTACT_RELEASED)
-        // 2. Confirming they started work (CONTACT_RELEASED -> IN_PROGRESS) - if context suggests it
-        if (currentStatus === RequestStatus.SENT) {
-          return RequestStatus.CONTACT_RELEASED;
-        }
-        // If contact was released and user confirms, they likely started
-        // This handles cases where "si" is detected as CONFIRMED but context is "did you start?"
-        if (currentStatus === RequestStatus.CONTACT_RELEASED) {
-          this.logger.debug(
-            `CONFIRMED intent for CONTACT_RELEASED request - treating as STARTED`,
-          );
-          return RequestStatus.IN_PROGRESS;
-        }
-        return null;
+    const status = request.status;
 
-      case ResponseIntent.STARTED:
-        // STARTED means work has begun
-        if (currentStatus === RequestStatus.CONTACT_RELEASED) {
-          return RequestStatus.IN_PROGRESS;
-        }
-        return null;
-
-      case ResponseIntent.COMPLETED:
-        // COMPLETED means work is done
-        if (currentStatus === RequestStatus.IN_PROGRESS) {
-          return RequestStatus.FINISHED;
-        }
-        return null;
-
-      case ResponseIntent.CANCELLED:
-        // CANCELLED can happen from any non-terminal state
-        if (!request.isTerminal()) {
-          return RequestStatus.CANCELLED;
-        }
-        return null;
-
-      case ResponseIntent.NEEDS_INFO:
-      case ResponseIntent.UNKNOWN:
-      default:
-        // These don't trigger status changes
-        return null;
+    if (
+      template === 'question_agreement' &&
+      status === RequestStatus.CONTACT_RELEASED
+    ) {
+      if (
+        intent === ResponseIntent.CONFIRMED ||
+        intent === ResponseIntent.STARTED
+      ) {
+        return RequestStatus.IN_PROGRESS;
+      }
+      if (intent === ResponseIntent.CANCELLED) {
+        return RequestStatus.NOT_COMPLETED;
+      }
+      return null;
     }
+
+    if (
+      template === 'question_progress' &&
+      status === RequestStatus.IN_PROGRESS
+    ) {
+      if (intent === ResponseIntent.COMPLETED) {
+        return RequestStatus.FINISHED;
+      }
+      if (
+        intent === ResponseIntent.CANCELLED &&
+        !/^\s*no[\s.!¡]*$/i.test(replyText ?? '')
+      ) {
+        return RequestStatus.INTERRUPTED;
+      }
+      return null;
+    }
+
+    if (
+      template === 'question_satisfaction' &&
+      status === RequestStatus.FINISHED
+    ) {
+      if (intent === ResponseIntent.CONFIRMED) {
+        return RequestStatus.CLOSED;
+      }
+      if (intent === ResponseIntent.CANCELLED) {
+        return RequestStatus.UNDER_REVIEW;
+      }
+      return null;
+    }
+
+    this.logger.debug(
+      `Reply to template '${template}' (intent ${intent}) does not move a request in ${status}`,
+    );
+    return null;
   }
 
   /**
@@ -374,21 +389,27 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
       let direction: 'TO_CLIENT' | 'TO_PROVIDER' = 'TO_PROVIDER';
 
       switch (newStatus) {
-        case RequestStatus.CONTACT_RELEASED:
-          template = 'status_update_confirmed';
-          direction = 'TO_PROVIDER';
-          break;
         case RequestStatus.IN_PROGRESS:
           template = 'status_update_started';
-          direction = 'TO_PROVIDER';
           break;
         case RequestStatus.FINISHED:
           template = 'status_update_completed';
           direction = 'TO_PROVIDER';
           break;
-        case RequestStatus.CANCELLED:
-          template = 'status_update_cancelled';
+        case RequestStatus.NOT_COMPLETED:
+          template = 'status_update_not_completed';
+          break;
+        case RequestStatus.INTERRUPTED:
+          template = 'status_update_interrupted';
           direction = 'TO_PROVIDER';
+          break;
+        case RequestStatus.CLOSED:
+          template = 'status_update_closed';
+          direction = 'TO_CLIENT';
+          break;
+        case RequestStatus.UNDER_REVIEW:
+          template = 'status_update_under_review';
+          direction = 'TO_CLIENT';
           break;
       }
 

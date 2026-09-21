@@ -7,12 +7,14 @@ import {
   RequestRepository,
 } from '../../domain/repositories/request.repository';
 import { RequestService } from '../services/request.service';
+import { AUTO_CLOSED_STATUS_REASON } from '../../domain/entities/request-status.metadata';
 
 interface ExpirationRule {
   from: RequestStatus;
   to: RequestStatus;
   envVar: string;
   defaultDays: number;
+  statusReason?: string;
 }
 
 /**
@@ -48,6 +50,7 @@ export const EXPIRATION_RULES: ExpirationRule[] = [
     to: RequestStatus.CLOSED,
     envVar: 'REQUEST_EXPIRY_DAYS_FINISHED',
     defaultDays: 7,
+    statusReason: AUTO_CLOSED_STATUS_REASON,
   },
 ];
 
@@ -105,6 +108,7 @@ export class RequestExpirationJob {
           }
           await this.requestService.updateStatus(request.id, ctx, {
             status: rule.to,
+            statusReason: rule.statusReason,
           });
           applied++;
         } catch (error: any) {

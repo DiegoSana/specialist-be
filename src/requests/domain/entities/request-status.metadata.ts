@@ -22,3 +22,10 @@ export const REQUEST_STATUS_LABELS_ES: Record<RequestStatus, string> = {
   [RequestStatus.INTERRUPTED]: 'Interrumpido',
   [RequestStatus.ABANDONED]: 'Abandonado',
 };
+
+/**
+ * `Request.statusReason` marker set by the Sistema actor when it closes a FINISHED request
+ * because the client never answered (cierre automático). Lets follow-up rules send the
+ * "closed automatically" notice (A7) instead of the regular closed notice (A6).
+ */
+export const AUTO_CLOSED_STATUS_REASON = 'AUTO_CLOSED';

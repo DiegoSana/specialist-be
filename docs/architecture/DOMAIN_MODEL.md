@@ -493,25 +493,22 @@ PENDING ──markAsSent──► SENT ──markAsDelivered──► DELIVERED 
   `DetectResponseIntentUseCase` sets `responseIntent`; `requests.interaction.responded` is emitted.
 - Any non-terminal -> `FAILED` (send error, max retries). `RESPONDED` and `FAILED` are terminal.
 
-**Follow-up rules** (`FollowUpSchedulerJob`, hourly; skipped if a follow-up is already pending or there was
-activity in the last day):
+**Follow-up rules** (`FollowUpSchedulerJob`, hourly, 9-20h Buenos Aires): data-driven ladders in
+`follow-up-ladders.ts` (initial message + reminders, max 3 per state and recipient). See
+`docs/guides/whatsapp/README.md` for the full table (templates A1-A7 `notice_*`, P1-P3 `question_*`).
 
-| Request state | Inactivity | Direction | Template |
-|---------------|-----------|-----------|----------|
-| `PENDING` public with >= 1 interest | 3 days | `TO_CLIENT` | `follow_up_pending_3_days_with_interests` (client replies with a number to assign) |
-| `ACCEPTED` | 3 / 7 days | `TO_PROVIDER` | `follow_up_3_days`, `follow_up_7_days` |
-| `IN_PROGRESS` | 5 / 10 days | `TO_PROVIDER` | `follow_up_5_days_in_progress`, `follow_up_10_days_in_progress` |
-| `DONE` | 1 day | `TO_CLIENT` | `follow_up_review_1_day` (ask for a review) |
+**Reply -> Request status** (`RequestInteractionRespondedHandler`; only the question templates move state,
+the template being answered disambiguates the generic `responseIntent`):
 
-**Intent -> Request status** (`RequestInteractionRespondedHandler`):
-
-| `responseIntent` | Current status | New status |
-|------------------|----------------|-----------|
-| `CONFIRMED` | `PENDING` / `ACCEPTED` | `ACCEPTED` / `IN_PROGRESS` |
-| `STARTED` | `ACCEPTED` | `IN_PROGRESS` |
-| `COMPLETED` | `IN_PROGRESS` | `DONE` |
-| `CANCELLED` | any non-terminal | `CANCELLED` |
-| `NEEDS_INFO`, `UNKNOWN` | - | no change |
+| Template answered | Current status | `responseIntent` | New status |
+|-------------------|----------------|------------------|-----------|
+| `question_agreement` (P1) | `CONTACT_RELEASED` | `CONFIRMED`/`STARTED` | `IN_PROGRESS` |
+| `question_agreement` (P1) | `CONTACT_RELEASED` | `CANCELLED` | `NOT_COMPLETED` (reply stored in `statusReason`) |
+| `question_progress` (P2) | `IN_PROGRESS` | `COMPLETED` | `FINISHED` |
+| `question_progress` (P2) | `IN_PROGRESS` | `CANCELLED` (not a bare "no") | `INTERRUPTED` (reply stored in `statusReason`) |
+| `question_satisfaction` (P3) | `FINISHED` | `CONFIRMED` | `CLOSED` |
+| `question_satisfaction` (P3) | `FINISHED` | `CANCELLED` | `UNDER_REVIEW` |
+| any | any | `NEEDS_INFO`, `UNKNOWN`, or reply to a notice | no change |
 
 A `STATUS_UPDATE` interaction (`status_update_*` template) is sent back after every automatic transition.
 
