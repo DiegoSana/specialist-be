@@ -14,7 +14,11 @@ import {
   createMockProfessional,
   createMockRequest,
 } from '../../../__mocks__/test-utils';
-import { RequestStatus, ProviderType } from '@prisma/client';
+import {
+  RequestStatus,
+  ProviderType,
+  RequestInterestStatus,
+} from '@prisma/client';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
 import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
 
@@ -25,6 +29,7 @@ const createMockInterest = (
     serviceProviderId: string;
     message: string | null;
     createdAt: Date;
+    status: RequestInterestStatus;
   }>,
 ): RequestInterestEntity => {
   return new RequestInterestEntity(
@@ -33,6 +38,7 @@ const createMockInterest = (
     overrides?.serviceProviderId || 'sp-123',
     overrides?.message || 'Interested in this job',
     overrides?.createdAt || new Date(),
+    overrides?.status ?? RequestInterestStatus.INTERESTED,
   );
 };
 
@@ -78,8 +84,11 @@ describe('RequestInterestService', () => {
     mockRequestInterestRepository = {
       add: jest.fn(),
       findByRequestAndProvider: jest.fn(),
-      findByRequestId: jest.fn(),
+      findByRequestId: jest.fn().mockResolvedValue([]),
       findByServiceProviderId: jest.fn(),
+      save: jest.fn().mockImplementation(async (i) => i),
+      markOthersNotChosen: jest.fn().mockResolvedValue(undefined),
+      resetDecided: jest.fn().mockResolvedValue(undefined),
       remove: jest.fn(),
       removeAllByRequestId: jest.fn(),
     };
@@ -259,6 +268,32 @@ describe('RequestInterestService', () => {
       expect(mockEventBus.publish).toHaveBeenCalled();
     });
 
+    it('should reuse a WITHDRAWN interest row when expressing interest again', async () => {
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+        ['trade-1'],
+      );
+      mockRequestRepository.findById.mockResolvedValue(publicRequest);
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        createMockInterest({ status: RequestInterestStatus.WITHDRAWN }),
+      );
+
+      const result = await service.expressInterest('request-123', ctx, {
+        message: 'Back again',
+      });
+
+      expect(mockRequestInterestRepository.add).not.toHaveBeenCalled();
+      expect(result.status).toBe(RequestInterestStatus.INTERESTED);
+      expect(result.message).toBe('Back again');
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'requests.request_interest.status_changed',
+        }),
+      );
+    });
+
     it('should throw ForbiddenException if user has no provider profile', async () => {
       const ctx = createAuthContext('user-123', null, null);
       mockRequestRepository.findById.mockResolvedValue(publicRequest);
@@ -360,12 +395,59 @@ describe('RequestInterestService', () => {
       mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
         createMockInterest(),
       );
+      mockRequestRepository.findById.mockResolvedValue(
+        createMockRequest({
+          id: 'request-123',
+          status: RequestStatus.PUBLISHED,
+        }),
+      );
 
       await service.removeInterest('request-123', ctx);
 
-      expect(mockRequestInterestRepository.remove).toHaveBeenCalledWith(
-        'request-123',
+      // Withdraws (keeps the row as "Retirado") instead of deleting it
+      expect(mockRequestInterestRepository.remove).not.toHaveBeenCalled();
+      expect(mockRequestInterestRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: RequestInterestStatus.WITHDRAWN }),
+      );
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'requests.request_interest.status_changed',
+          payload: expect.objectContaining({
+            fromStatus: RequestInterestStatus.INTERESTED,
+            toStatus: RequestInterestStatus.WITHDRAWN,
+          }),
+        }),
+      );
+    });
+
+    it('should throw BadRequestException if the client already decided', async () => {
+      const ctx = createAuthContext(
+        'user-123',
         'sp-123',
+        ProviderType.PROFESSIONAL,
+      );
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        createMockInterest({ status: RequestInterestStatus.NOT_CHOSEN }),
+      );
+
+      await expect(service.removeInterest('request-123', ctx)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockRequestInterestRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if interest is already withdrawn', async () => {
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+      );
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        createMockInterest({ status: RequestInterestStatus.WITHDRAWN }),
+      );
+
+      await expect(service.removeInterest('request-123', ctx)).rejects.toThrow(
+        NotFoundException,
       );
     });
 
@@ -467,6 +549,21 @@ describe('RequestInterestService', () => {
       expect(result).toBe(true);
     });
 
+    it('should return false if the interest was withdrawn', async () => {
+      const ctx = createAuthContext(
+        'user-123',
+        'sp-123',
+        ProviderType.PROFESSIONAL,
+      );
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        createMockInterest({ status: RequestInterestStatus.WITHDRAWN }),
+      );
+
+      expect(await service.hasExpressedInterest('request-123', ctx)).toBe(
+        false,
+      );
+    });
+
     it('should return false if no interest', async () => {
       const ctx = createAuthContext(
         'user-123',
@@ -526,10 +623,16 @@ describe('RequestInterestService', () => {
 
       expect(result.providerId).toBe('sp-123');
       expect(result.status).toBe(RequestStatus.CONTACT_RELEASED);
-      // Interests are kept when assigning a provider (not deleted)
+      // Interests are kept (not deleted): chosen one -> CHOSEN, the rest -> NOT_CHOSEN
       expect(
         mockRequestInterestRepository.removeAllByRequestId,
       ).not.toHaveBeenCalled();
+      expect(mockRequestInterestRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: RequestInterestStatus.CHOSEN }),
+      );
+      expect(
+        mockRequestInterestRepository.markOthersNotChosen,
+      ).toHaveBeenCalledWith('request-123', 'sp-123');
       expect(mockEventBus.publish).toHaveBeenCalled();
     });
 
@@ -589,6 +692,21 @@ describe('RequestInterestService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('should throw BadRequestException if the provider withdrew their interest', async () => {
+      const ctx = createAuthContext('client-123', null, null);
+      mockRequestRepository.findById.mockResolvedValue(publicRequest);
+      mockRequestInterestRepository.findByRequestAndProvider.mockResolvedValue(
+        createMockInterest({
+          serviceProviderId: 'sp-123',
+          status: RequestInterestStatus.WITHDRAWN,
+        }),
+      );
+
+      await expect(
+        service.assignProvider('request-123', ctx, 'sp-123'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('should allow admin to assign', async () => {
       const ctx = createAuthContext('admin-123', null, null, [], true);
       const interest = createMockInterest({ serviceProviderId: 'sp-123' });
@@ -615,6 +733,61 @@ describe('RequestInterestService', () => {
       const result = await service.assignProvider('request-123', ctx, 'sp-123');
 
       expect(result.providerId).toBe('sp-123');
+    });
+  });
+
+  describe('unassignProvider', () => {
+    it('should revert the request and reset decided interests to INTERESTED', async () => {
+      const ctx = createAuthContext('client-123', null, null);
+      const assigned = createMockRequest({
+        id: 'request-123',
+        clientId: 'client-123',
+        providerId: 'sp-123',
+        isPublic: false,
+        status: RequestStatus.CONTACT_RELEASED,
+      });
+      const reverted = createMockRequest({
+        ...assigned,
+        providerId: null,
+        isPublic: true,
+        status: RequestStatus.PUBLISHED,
+      });
+      mockRequestRepository.findById.mockResolvedValue(assigned);
+      mockRequestRepository.save.mockResolvedValue(reverted);
+      mockRequestInterestRepository.findByRequestId.mockResolvedValue([
+        createMockInterest({
+          serviceProviderId: 'sp-123',
+          status: RequestInterestStatus.CHOSEN,
+        }),
+        createMockInterest({
+          id: 'interest-2',
+          serviceProviderId: 'sp-456',
+          status: RequestInterestStatus.NOT_CHOSEN,
+        }),
+      ]);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(
+        createMockProfessional({
+          id: 'prof-123',
+          userId: 'provider-user',
+          serviceProviderId: 'sp-123',
+        }),
+      );
+
+      const result = await service.unassignProvider('request-123', ctx);
+
+      expect(result.status).toBe(RequestStatus.PUBLISHED);
+      expect(mockRequestInterestRepository.resetDecided).toHaveBeenCalledWith(
+        'request-123',
+      );
+      const interestEvents = mockEventBus.publish.mock.calls
+        .map(([e]: any) => e)
+        .filter(
+          (e: any) => e.name === 'requests.request_interest.status_changed',
+        );
+      expect(interestEvents).toHaveLength(2);
+      expect(interestEvents[0].payload.toStatus).toBe(
+        RequestInterestStatus.INTERESTED,
+      );
     });
   });
 });

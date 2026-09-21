@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { RequestStatus } from '@prisma/client';
+import { RequestInterestStatus, RequestStatus } from '@prisma/client';
 import { RequestResponseDto } from './request-response.dto';
 import { RequestInterestEntity } from '../../domain/entities/request-interest.entity';
 import { RequestEntity } from '../../domain/entities/request.entity';
@@ -14,6 +14,13 @@ export class InterestedRequestDto {
 
   @ApiProperty({ description: 'When interest was expressed' })
   interestCreatedAt: Date;
+
+  @ApiProperty({
+    enum: RequestInterestStatus,
+    description:
+      'My state in this request: INTERESTED (Interesado), CHOSEN (Elegido), NOT_CHOSEN (No elegido), WITHDRAWN (Retirado)',
+  })
+  interestStatus: RequestInterestStatus;
 
   @ApiPropertyOptional({ description: 'Message sent with interest' })
   interestMessage: string | null;
@@ -63,6 +70,7 @@ export class InterestedRequestDto {
     dto.interestId = interest.id;
     dto.interestCreatedAt = interest.createdAt;
     dto.interestMessage = interest.message;
+    dto.interestStatus = interest.status;
     dto.requestId = interest.requestId;
 
     if (request) {
