@@ -45,6 +45,7 @@ import { RequestsController } from './presentation/requests.controller';
 import { TwilioWebhookController } from './presentation/controllers/twilio-webhook.controller';
 import { AdminWhatsAppController } from './presentation/controllers/admin-whatsapp.controller';
 import { AdminWhatsAppDevController } from './presentation/controllers/admin-whatsapp-dev.controller';
+import { AdminRequestReviewController } from './presentation/controllers/admin-request-review.controller';
 import { AdminRequestAttentionController } from './presentation/controllers/admin-request-attention.controller';
 import { TwilioWebhookGuard } from './presentation/guards/twilio-webhook.guard';
 import { TwilioRateLimitGuard } from './presentation/guards/twilio-rate-limit.guard';
@@ -71,6 +72,7 @@ import { SupportModule } from '../support/support.module';
     TwilioWebhookController,
     AdminWhatsAppController,
     AdminRequestAttentionController,
+    AdminRequestReviewController,
     ...(process.env.NODE_ENV !== 'production' ||
     process.env.WHATSAPP_DEV_MODE_ENABLED === 'true'
       ? [AdminWhatsAppDevController]

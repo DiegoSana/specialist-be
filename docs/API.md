@@ -180,6 +180,7 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 | `GET` | `/admin/whatsapp/conversations/:requestId` | Get the full WhatsApp message thread for a request |
 | `POST` | `/admin/whatsapp/conversations/:requestId/simulate-reply` | Simulate an inbound WhatsApp reply (dev mode only, 404 otherwise) |
 | `POST` | `/admin/whatsapp/conversations/:requestId/trigger-followup` | Force-trigger a follow-up rule right now (dev mode only, 404 otherwise) |
+| `POST` | `/admin/requests/:id/resolve-review` | Support flow: resolve a request in `UNDER_REVIEW` (client objected to `FINISHED`), moving it to `CLOSED` as the Soporte actor. Optional body `{ note }` (max 500 chars, stored as `statusReason`). List candidates with `GET /admin/requests?status=UNDER_REVIEW`. 400 if the request is not under review. MVP: admin-only (no dedicated support role yet) |
 | `GET` | `/admin/requests/attention` | List open `RequestAttentionFlag`s (paginated, `?page=&limit=`), joined with request title/status. Reasons: `AT_RISK` (follow-up ladder exhausted, request never responded), `ABANDONED` (LLM-detected evasive reply), `ESCALATED` (LLM-detected `escalate`) |
 | `POST` | `/admin/requests/attention/:id/resolve` | Mark an attention flag resolved (204). Purely a status change — does not touch the underlying request; the admin follows up manually via the WhatsApp conversations viewer above |
 | `GET` | `/admin/support/conversations` | List support conversations (paginated, `?status=OPEN\|RESOLVED\|ALL&page=&limit=`). Each item includes `canReplyNow`, computed server-side from the WhatsApp 24h reply window |
@@ -363,15 +364,23 @@ Each interest has its own `status` (`RequestInterestStatus`): `INTERESTED` (Inte
 
 ## Request Status Flow
 
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> DRAFT
+    DRAFT --> PUBLISHED: bolsa (public)
+    DRAFT --> SENT: direct
+    PUBLISHED --> CONTACT_RELEASED: client chooses
+    SENT --> CONTACT_RELEASED: provider accepts
+    CONTACT_RELEASED --> IN_PROGRESS: agreement
+    IN_PROGRESS --> FINISHED: provider
+    FINISHED --> CLOSED: client confirms / auto-close
+    FINISHED --> UNDER_REVIEW: client objects
+    UNDER_REVIEW --> CLOSED: support resolves
+    CLOSED --> [*]
 ```
-┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────┐
-│ PENDING │ ──► │ ACCEPTED │ ──► │IN_PROGRESS│ ──► │ DONE │
-└─────────┘     └──────────┘     └──────────┘     └──────┘
-     │                                                 │
-     │              ┌───────────┐                      │
-     └────────────► │ CANCELLED │ ◄────────────────────┘
-                    └───────────┘
-```
+
+Terminal alternates (never reach `CLOSED`): `EXPIRED` (bolsa, nobody chosen), `NO_RESPONSE` (direct, no answer), `REJECTED`, `CANCELLED` (client, before contact release), `NOT_COMPLETED` (no agreement), `INTERRUPTED` (work started, not finished), `ABANDONED` (contact released, nobody answered). Actors: client, provider, system (expirations/auto-close), support (`UNDER_REVIEW`). Full spec: `docs/EspecialistBRC — Estados del pedido.md`.
 
 ---
 

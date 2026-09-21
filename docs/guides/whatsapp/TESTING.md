@@ -90,7 +90,7 @@ docker exec especialistas-api-dev npm run whatsapp:test-single <request-id>
 ```
 
 Este comando:
-- ✅ Prepara el request (ACCEPTED, updated_at hace 4 días)
+- ✅ Prepara el request (CONTACT_RELEASED, updated_at hace 4 días)
 - ✅ Ejecuta scheduler para crear follow-up
 - ✅ Envía el mensaje
 - ✅ Verifica estado en Twilio
@@ -141,9 +141,9 @@ WHERE sp.id = 'provider-id-del-request';
 #### Paso 3: Preparar Request para Testing
 
 ```sql
--- Actualizar request a estado ACCEPTED hace 4 días
+-- Actualizar request a estado CONTACT_RELEASED hace 4 días
 UPDATE requests 
-SET status = 'ACCEPTED', updated_at = NOW() - INTERVAL '4 days'
+SET status = 'CONTACT_RELEASED', updated_at = NOW() - INTERVAL '4 days'
 WHERE id = 'tu-request-id';
 
 -- Verificar que el usuario tenga teléfono verificado
@@ -206,9 +206,9 @@ docker exec especialistas-api-dev npm run whatsapp:resend list PENDING
 #### Opción B: Crear interaction de prueba
 
 ```sql
--- Crear Request en estado ACCEPTED con updated_at hace 4 días
+-- Crear Request en estado CONTACT_RELEASED con updated_at hace 4 días
 UPDATE requests 
-SET status = 'ACCEPTED', updated_at = NOW() - INTERVAL '4 days'
+SET status = 'CONTACT_RELEASED', updated_at = NOW() - INTERVAL '4 days'
 WHERE id = 'tu-request-id';
 
 -- Verificar teléfono del usuario

@@ -111,7 +111,7 @@ interactions.
 **Request Types**:
 - **Direct** (`isPublic: false`) - Client -> a specific `ServiceProvider` (`providerId` set at creation).
 - **Public** (`isPublic: true`) - Client -> any provider of the `tradeId`; providers express interest, the
-  client assigns one (`providerId` set on assignment, status -> `ACCEPTED`).
+  client assigns one (`providerId` set on assignment, status -> `CONTACT_RELEASED`).
 
 **Repositories**: `RequestRepository` (save-based: `findById`, `findByClientId`, `findByProviderId`,
 `findPublicRequests`, `findAvailableForProfessional`, `findByStatusAndUpdatedBefore`,
@@ -145,7 +145,7 @@ fields are kept only for backward compatibility and hold the `serviceProviderId`
 `requestId` -> `Request`, **unique**).
 
 **Rules**:
-- Only after the `Request` is `DONE` (`RequestEntity.canBeReviewed()`).
+- Only after the `Request` is `CLOSED` (`RequestEntity.canBeReviewed()`), including closes by the system (auto-close) or support.
 - One Review per Request (`Review.requestId @unique`).
 - `rating` 1..5 (`Rating` value object).
 - Moderation: `PENDING -> APPROVED | REJECTED` (`moderatedAt`, `moderatedBy`). Only `APPROVED` reviews are
@@ -215,7 +215,7 @@ fields are kept only for backward compatibility and hold the `serviceProviderId`
 | `ProviderType` | `PROFESSIONAL`, `COMPANY` | `ServiceProvider.type` |
 | `ProfessionalStatus` | `PENDING_VERIFICATION`, `ACTIVE`, `VERIFIED`, `INACTIVE`, `REJECTED`, `SUSPENDED` | `Professional.status` |
 | `CompanyStatus` | `PENDING_VERIFICATION`, `ACTIVE`, `VERIFIED`, `INACTIVE`, `REJECTED`, `SUSPENDED` | `Company.status` |
-| `RequestStatus` | `PENDING`, `ACCEPTED`, `IN_PROGRESS`, `DONE`, `CANCELLED` | `Request.status` |
+| `RequestStatus` | `DRAFT`, `PUBLISHED`, `SENT`, `CONTACT_RELEASED`, `IN_PROGRESS`, `FINISHED`, `CLOSED`, `UNDER_REVIEW`, `EXPIRED`, `NO_RESPONSE`, `REJECTED`, `CANCELLED`, `NOT_COMPLETED`, `INTERRUPTED`, `ABANDONED` | `Request.status` |
 | `ReviewStatus` | `PENDING`, `APPROVED`, `REJECTED` | `Review.status` |
 | `InteractionType` | `FOLLOW_UP`, `RESPONSE`, `STATUS_UPDATE` | `RequestInteraction.interactionType` |
 | `InteractionStatus` | `PENDING`, `SENT`, `DELIVERED`, `RESPONDED`, `FAILED` | `RequestInteraction.status` |
@@ -360,10 +360,10 @@ fields are kept only for backward compatibility and hold the `serviceProviderId`
 │  ├── description: string                                         │
 │  ├── address, availability: string | null                        │
 │  ├── photos: string[] (default [])                               │
-│  ├── status: PENDING | ACCEPTED | IN_PROGRESS | DONE | CANCELLED │
+│  ├── status: RequestStatus (15 values, see enum table)            │
 │  ├── quoteAmount: Float | null, quoteNotes: string | null        │
 │  ├── clientRating: Int | null, clientRatingComment: str | null   │
-│  │     (provider rates the client after DONE, once)              │
+│  │     (provider rates the client after CLOSED, once)            │
 │  └── createdAt, updatedAt                                        │
 │                                                                  │
 │  RequestInterest (request_interests) - association store         │
@@ -459,25 +459,32 @@ fields are kept only for backward compatibility and hold the `serviceProviderId`
 
 ### Request
 
-```
-             client cancels (any non-terminal)
-   ┌───────────────────────────────────────────────────┐
-   │                                                   ▼
-PENDING ──► ACCEPTED ──► IN_PROGRESS ──► DONE      CANCELLED
-   ▲   assign /  │   provider       provider
-   │   provider  │   starts         completes
-   │   accepts   │
-   └─────────────┘ client unassigns (ACCEPTED → PENDING, providerId = null)
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> DRAFT
+    DRAFT --> PUBLISHED: bolsa (public)
+    DRAFT --> SENT: direct
+    PUBLISHED --> CONTACT_RELEASED: client chooses
+    SENT --> CONTACT_RELEASED: provider accepts
+    CONTACT_RELEASED --> IN_PROGRESS: agreement
+    IN_PROGRESS --> FINISHED: provider
+    FINISHED --> CLOSED: client confirms / auto-close
+    FINISHED --> UNDER_REVIEW: client objects
+    UNDER_REVIEW --> CLOSED: support resolves
+    CLOSED --> [*]
 ```
 
-- Direct request: created `PENDING` with `providerId`; the assigned provider moves it to `ACCEPTED`.
-- Public request: created `PENDING` with `tradeId` and no provider; providers add `RequestInterest`; the client
-  assigns one (`providerId` set, status `ACCEPTED`; interest rows are kept as history).
-- Provider-only transitions: `PENDING -> ACCEPTED`, `ACCEPTED -> IN_PROGRESS`, `IN_PROGRESS -> DONE`.
-- Client-only transitions: `* -> CANCELLED` (except from `DONE`/`CANCELLED`), unassign (`ACCEPTED -> PENDING`).
-- Admins may perform any transition.
-- After `DONE`: the client may write one `Review`; the provider may rate the client once
+Terminal alternates (never reach `CLOSED`): `EXPIRED` (bolsa, nobody chosen), `NO_RESPONSE` (direct, no answer), `REJECTED`, `CANCELLED` (client, before contact release), `NOT_COMPLETED` (no agreement), `INTERRUPTED` (work started, not finished), `ABANDONED` (contact released, nobody answered). Actors: client, provider, system (expirations/auto-close), support (`UNDER_REVIEW`). Full spec: `docs/EspecialistBRC — Estados del pedido.md`.
+
+- Direct request: created `SENT` with `providerId`; the provider accepts (`CONTACT_RELEASED`) or rejects (`REJECTED`).
+- Public request: created `PUBLISHED` with `tradeId` and no provider; providers add `RequestInterest`
+  (`INTERESTED`/`CHOSEN`/`NOT_CHOSEN`/`WITHDRAWN`); the client chooses one (`providerId` set, `CONTACT_RELEASED`).
+- Transitions are a declarative table in `request.entity.ts` (`TRANSITIONS`, by actor `CLIENT|PROVIDER|SYSTEM|SUPPORT`);
+  admins may perform any transition. `IN_PROGRESS -> ABANDONED` is intentionally not mapped (open question in the spec).
+- Only `CLOSED` requests can be reviewed: the client may write one `Review`; the provider may rate the client once
   (`clientRating`, `clientRatingComment`).
+- `statusReason` stores the motivo for `NOT_COMPLETED`/`INTERRUPTED`, the support resolution note, or `AUTO_CLOSED`.
 
 ### RequestInteraction (WhatsApp follow-up)
 
@@ -587,15 +594,15 @@ that `canOperate()` **and** whose user is fully verified.
 - Direct request: `providerId` required, `tradeId` optional. Public request: `tradeId` required,
   `providerId` null until assignment.
 - Creating a request requires `hasActiveClientProfile`; expressing interest requires
-  `hasActiveProviderProfile` and a public `PENDING` request without provider.
+  `hasActiveProviderProfile` and a public `PUBLISHED` request without provider.
 - `RequestInterest` is added/removed, never updated: one per `(requestId, serviceProviderId)`.
 - Only the client (or admin) assigns/unassigns and cancels; only the assigned provider advances status.
-- The provider may rate the client once after `DONE`.
+- The provider may rate the client once after `CLOSED`.
 - `RequestInteraction` transitions are enforced in the entity (`markAsSent` requires `PENDING`, etc.);
   `twilioMessageSid` is unique.
 
 ### Reputation
-- Review only when `Request.status = DONE`; one Review per Request; rating 1..5.
+- Review only when `Request.status = CLOSED`; one Review per Request; rating 1..5.
 - New reviews are `PENDING`; only admins moderate; only `APPROVED` reviews affect
   `ServiceProvider.averageRating` / `totalReviews`.
 - Reviews are attached to the `ServiceProvider`, so Professional and Company histories never merge.

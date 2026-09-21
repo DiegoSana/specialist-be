@@ -155,6 +155,34 @@ describe('follow-up ladders (spec: Follow-up por WhatsApp)', () => {
     expect(a6.appliesTo!(confirmed)).toBe(true);
   });
 
+  it('sends no automatic WhatsApp while UNDER_REVIEW (support handles it)', () => {
+    const statuses = rules.map((r) => {
+      const q = r.getQuery();
+      return q.type === 'BY_STATUS' ? q.status : null;
+    });
+    expect(statuses).not.toContain(RequestStatus.UNDER_REVIEW);
+    const underReview = createMockRequest({
+      status: RequestStatus.UNDER_REVIEW,
+    });
+    for (const rule of rules) {
+      const q = rule.getQuery();
+      if (q.type === 'BY_STATUS') expect(q.status).not.toBe(underReview.status);
+    }
+  });
+
+  it('sends the regular closed notice (A6), not A7, when support closes a request', () => {
+    const supportClosed = createMockRequest({
+      status: RequestStatus.CLOSED,
+      statusReason: 'Resuelto por soporte',
+    });
+    expect(byLadder('CLOSED_NOTICE_CLIENT')[0].appliesTo!(supportClosed)).toBe(
+      true,
+    );
+    expect(byLadder('AUTO_CLOSED_NOTICE')[0].appliesTo!(supportClosed)).toBe(
+      false,
+    );
+  });
+
   describe('payload', () => {
     const request = () => {
       const r: any = createMockRequest({

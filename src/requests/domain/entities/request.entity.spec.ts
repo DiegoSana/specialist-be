@@ -215,6 +215,25 @@ describe('RequestEntity', () => {
     });
   });
 
+  describe('support resolving UNDER_REVIEW', () => {
+    it('lets support (only) close a request under review', () => {
+      const r = at(RequestStatus.UNDER_REVIEW);
+      expect(r.canChangeStatusBy(support, RequestStatus.CLOSED)).toBe(true);
+      expect(r.canChangeStatusBy(client, RequestStatus.CLOSED)).toBe(false);
+      expect(r.canChangeStatusBy(provider, RequestStatus.CLOSED)).toBe(false);
+      expect(r.canChangeStatusBy(system, RequestStatus.CLOSED)).toBe(false);
+    });
+
+    it('keeps ratings available once support closed it (same as any CLOSED request)', () => {
+      const closed = at(RequestStatus.UNDER_REVIEW).withChanges({
+        status: RequestStatus.CLOSED,
+        statusReason: 'Resuelto por soporte',
+      });
+      expect(closed.canBeReviewed()).toBe(true);
+      expect(closed.canRateClientBy(provider)).toBe(true);
+    });
+  });
+
   describe('bolsa rules', () => {
     it('should only allow interest / assignment while PUBLISHED and unassigned', () => {
       const published = createMockRequest({

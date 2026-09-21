@@ -148,7 +148,10 @@ export class RequestsNotificationsHandler implements OnModuleInit {
       const displayProviderName =
         providerName || event.payload.professionalName;
       const clientMadeChange = changedByUserId === event.payload.clientId;
-      const systemMadeChange = event.payload.changedByActorKind === 'SYSTEM';
+      // System/support-made changes have no human "author" to name in the copy.
+      const systemMadeChange =
+        event.payload.changedByActorKind === 'SYSTEM' ||
+        event.payload.changedByActorKind === 'SUPPORT';
       const statusLabel = this.statusLabel(toStatus);
       const requestRef = requestTitle ? `"${requestTitle}"` : 'la solicitud';
 

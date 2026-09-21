@@ -154,6 +154,7 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/whatsapp/conversations/:requestId` | `GET` | Hilo completo de mensajes de WhatsApp de una solicitud |
 | `/api/admin/whatsapp/conversations/:requestId/simulate-reply` | `POST` | Simular una respuesta entrante de WhatsApp (solo dev mode, 404 si no) |
 | `/api/admin/whatsapp/conversations/:requestId/trigger-followup` | `POST` | Disparar una regla de follow-up ahora mismo (solo dev mode, 404 si no) |
+| `/api/admin/requests/:id/resolve-review` | `POST` | Soporte: resolver un request `UNDER_REVIEW` -> `CLOSED` (body opcional `{ note }`, guardada en `statusReason`). Listar con `GET /api/admin/requests?status=UNDER_REVIEW`. 400 si no está en revisión. MVP: solo admin |
 | `/api/admin/requests/attention` | `GET` | Listar `RequestAttentionFlag`s abiertos (paginado, `?page=&limit=`), con título/status del request. Razones: `AT_RISK` (escalera de follow-up agotada sin respuesta), `ABANDONED`/`ESCALATED` (señal del clasificador LLM) |
 | `/api/admin/requests/attention/:id/resolve` | `POST` | Marcar un flag como resuelto (204) - no toca el request en sí, el seguimiento es manual vía el visor de conversaciones |
 | `/api/admin/support/conversations` | `GET` | Listar conversaciones de soporte (paginado, `?status=OPEN\|RESOLVED\|ALL&page=&limit=`). Cada item incluye `canReplyNow` (ventana de 24hs, calculado en el server) |

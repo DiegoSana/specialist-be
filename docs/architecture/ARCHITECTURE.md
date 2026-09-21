@@ -109,16 +109,24 @@ This repository follows a Clean Architecture + DDD-inspired structure. For the p
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Estados de Request**:
+**Estados de Request** (15 estados; detalle en `docs/EspecialistBRC — Estados del pedido.md`):
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> DRAFT
+    DRAFT --> PUBLISHED: bolsa (public)
+    DRAFT --> SENT: direct
+    PUBLISHED --> CONTACT_RELEASED: client chooses
+    SENT --> CONTACT_RELEASED: provider accepts
+    CONTACT_RELEASED --> IN_PROGRESS: agreement
+    IN_PROGRESS --> FINISHED: provider
+    FINISHED --> CLOSED: client confirms / auto-close
+    FINISHED --> UNDER_REVIEW: client objects
+    UNDER_REVIEW --> CLOSED: support resolves
+    CLOSED --> [*]
 ```
-┌──────────┐     ┌──────────┐     ┌─────────────┐     ┌──────┐
-│ PENDING  │────►│ ACCEPTED │────►│ IN_PROGRESS │────►│ DONE │
-└──────────┘     └──────────┘     └─────────────┘     └──────┘
-      │                                                    
-      │          ┌───────────┐                            
-      └─────────►│ CANCELLED │                            
-                 └───────────┘                            
-```
+
+Terminal alternates (never reach `CLOSED`): `EXPIRED` (bolsa, nobody chosen), `NO_RESPONSE` (direct, no answer), `REJECTED`, `CANCELLED` (client, before contact release), `NOT_COMPLETED` (no agreement), `INTERRUPTED` (work started, not finished), `ABANDONED` (contact released, nobody answered). Actors: client, provider, system (expirations/auto-close), support (`UNDER_REVIEW`). Full spec: `docs/EspecialistBRC — Estados del pedido.md`.
 
 **Servicios**:
 - `RequestService` - CRUD, cambios de estado, fotos
@@ -134,7 +142,7 @@ This repository follows a Clean Architecture + DDD-inspired structure. For the p
 - `Review` - Reseña de un cliente a un profesional
 
 **Reglas**:
-- Solo se puede crear una Review después de que el Request esté DONE
+- Solo se puede crear una Review después de que el Request esté CLOSED
 - Solo el cliente puede crear la Review
 - Un Request solo puede tener una Review
 
@@ -402,7 +410,7 @@ src/
 │   │   │ address: string | null                                    │  │   │
 │   │   │ availability: string | null                               │  │   │
 │   │   │ photos: string[]                                          │  │   │
-│   │   │ status: PENDING | ACCEPTED | IN_PROGRESS | DONE | CANCEL  │  │   │
+│   │   │ status: DRAFT | PUBLISHED | SENT | ... | CLOSED (15 estados)│  │   │
 │   │   │ quoteAmount: number | null                                │  │   │
 │   │   │ quoteNotes: string | null                                 │  │   │
 │   │   └──────────────────────────────────────────────────────────┘  │   │
@@ -421,7 +429,7 @@ src/
 │   │                                                                  │   │
 │   └──────────────────────────────────────────────────────────────────┘   │
 │                              │                                           │
-│                              │ después de DONE                           │
+│                              │ después de CLOSED                         │
 │                              ▼                                           │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
 │   │                        REPUTATION                                │   │

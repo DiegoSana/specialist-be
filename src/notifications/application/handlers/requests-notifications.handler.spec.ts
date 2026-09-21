@@ -72,4 +72,25 @@ describe('RequestsNotificationsHandler.onStatusChanged', () => {
       '"Arreglar canilla" pasó a "Abandonado"',
     ]);
   });
+
+  it('notifies both with neutral copy when support closed a request under review', async () => {
+    const event = new RequestStatusChangedEvent({
+      ...buildEvent('support-1').payload,
+      fromStatus: RequestStatus.UNDER_REVIEW,
+      toStatus: RequestStatus.CLOSED,
+      changedByUserId: 'support-1',
+      changedByActorKind: 'SUPPORT',
+    });
+
+    await (handler as any).onStatusChanged(event);
+
+    expect(notifiedUserIds()).toEqual(['client-1', 'provider-1']);
+    const titles = mockNotifications.createForUser.mock.calls.map(
+      (c: any[]) => c[0].title,
+    );
+    expect(titles).toEqual([
+      '"Arreglar canilla" pasó a "Cerrado"',
+      '"Arreglar canilla" pasó a "Cerrado"',
+    ]);
+  });
 });

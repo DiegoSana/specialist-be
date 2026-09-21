@@ -1,6 +1,6 @@
 # Reputation context (`src/reputation`)
 
-Owns `Review` (client -> provider after a DONE request) with admin moderation and the provider
+Owns `Review` (client -> provider after a CLOSED request) with admin moderation and the provider
 rating recomputation. Docs: `docs/guides/REVIEW_MODERATION.md` (Prisma snippet is stale; schema
 uses `serviceProviderId` and required unique `requestId`).
 
@@ -27,7 +27,7 @@ PENDING), `/reviews/admin/pending` GET, `/:id/approve` POST, `/:id/reject` POST 
 
 ## Invariants
 
-- One review per request (`Review.requestId` unique, required); request must be `DONE` and the
+- One review per request (`Review.requestId` unique, required); request must be `CLOSED` and the
   reviewer must be its client; target is `serviceProviderId`.
 - Only APPROVED reviews count toward `ServiceProvider.averageRating/totalReviews` and public lists.
   Approve/reject recompute the rating through `ProfessionalService.updateRating` /

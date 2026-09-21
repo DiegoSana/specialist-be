@@ -837,4 +837,49 @@ describe('RequestService', () => {
       ]);
     });
   });
+
+  describe('support review resolution', () => {
+    it('buildSupportAuthContext flags the Soporte actor', () => {
+      expect(service.buildSupportAuthContext('support-1')).toEqual({
+        userId: 'support-1',
+        isSupport: true,
+      });
+    });
+
+    it('resolveReview closes an UNDER_REVIEW request as SUPPORT and stores the note', async () => {
+      const request = createMockRequest({ status: RequestStatus.UNDER_REVIEW });
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockRequestRepository.save.mockImplementation(async (r: any) => r);
+
+      const result = await service.resolveReview(
+        'req-123',
+        'support-1',
+        'Resuelto con ambas partes',
+      );
+
+      expect(result.status).toBe(RequestStatus.CLOSED);
+      expect(result.statusReason).toBe('Resuelto con ambas partes');
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            fromStatus: RequestStatus.UNDER_REVIEW,
+            toStatus: RequestStatus.CLOSED,
+            changedByUserId: 'support-1',
+            changedByActorKind: 'SUPPORT',
+          }),
+        }),
+      );
+    });
+
+    it('resolveReview rejects requests that are not under review', async () => {
+      mockRequestRepository.findById.mockResolvedValue(
+        createMockRequest({ status: RequestStatus.FINISHED }),
+      );
+
+      await expect(
+        service.resolveReview('req-123', 'support-1'),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockRequestRepository.save).not.toHaveBeenCalled();
+    });
+  });
 });

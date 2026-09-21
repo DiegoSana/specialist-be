@@ -236,6 +236,33 @@ export class RequestService {
     return { userId: 'system', isSystem: true };
   }
 
+  /** Context for the Soporte actor (an admin resolving an UNDER_REVIEW request). */
+  buildSupportAuthContext(supportUserId: string): RequestAuthContext {
+    return { userId: supportUserId, isSupport: true };
+  }
+
+  /**
+   * Support resolves a request the client objected to (UNDER_REVIEW -> CLOSED). The optional
+   * note is stored in statusReason. Closing enables ratings like any other CLOSED request.
+   */
+  async resolveReview(
+    requestId: string,
+    supportUserId: string,
+    note?: string,
+  ): Promise<RequestEntity> {
+    const request = await this.findById(requestId);
+    if (!request.isUnderReview()) {
+      throw new BadRequestException(
+        'Only requests under review can be resolved',
+      );
+    }
+    return this.updateStatus(
+      requestId,
+      this.buildSupportAuthContext(supportUserId),
+      { status: RequestStatus.CLOSED, statusReason: note || undefined },
+    );
+  }
+
   async findByClientId(clientId: string): Promise<RequestEntity[]> {
     return this.requestRepository.findByClientId(clientId);
   }
