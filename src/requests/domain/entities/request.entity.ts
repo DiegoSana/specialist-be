@@ -5,19 +5,70 @@ import { RequestStatus } from '@prisma/client';
  * - serviceProviderId: the current user's provider ID (Professional or Company)
  * - hasActiveClientProfile / hasActiveProviderProfile: from ProfileActivationService
  *   (single orchestration point); do not duplicate isFullyVerified/canOperate elsewhere.
+ * - isSystem: the request-expiration cron job (Sistema actor per the state machine spec).
+ * - isSupport: a support agent resolving an UNDER_REVIEW request (Soporte actor).
  */
 export interface RequestAuthContext {
   userId: string;
   serviceProviderId?: string | null;
   isAdmin?: boolean;
+  isSystem?: boolean;
+  isSupport?: boolean;
   /** Client profile exists and user is fully verified (email + phone) */
   hasActiveClientProfile?: boolean;
   /** Provider profile canOperate and user is fully verified */
   hasActiveProviderProfile?: boolean;
 }
 
+type ActorKind = 'CLIENT' | 'PROVIDER' | 'SYSTEM' | 'SUPPORT';
+
+/**
+ * Who can move a request from one status to another, mirroring
+ * "docs/EspecialistBRC — Estados del pedido.md" ("Quién puede mover cada cosa") line for line.
+ * SYSTEM/SUPPORT entries are wired ahead of their producers (request-expiration job, support
+ * review endpoint) landing in later PRs — the table stays a complete mirror of the spec from day
+ * one even though those transitions are unreachable until then.
+ */
+const TRANSITIONS: Partial<
+  Record<RequestStatus, Partial<Record<RequestStatus, ActorKind[]>>>
+> = {
+  [RequestStatus.DRAFT]: {
+    [RequestStatus.PUBLISHED]: ['CLIENT'],
+    [RequestStatus.SENT]: ['CLIENT'],
+  },
+  [RequestStatus.PUBLISHED]: {
+    [RequestStatus.CONTACT_RELEASED]: ['CLIENT'],
+    [RequestStatus.CANCELLED]: ['CLIENT'],
+    [RequestStatus.EXPIRED]: ['SYSTEM'],
+  },
+  [RequestStatus.SENT]: {
+    [RequestStatus.CONTACT_RELEASED]: ['PROVIDER'],
+    [RequestStatus.REJECTED]: ['PROVIDER'],
+    [RequestStatus.CANCELLED]: ['CLIENT'],
+    [RequestStatus.NO_RESPONSE]: ['SYSTEM'],
+  },
+  [RequestStatus.CONTACT_RELEASED]: {
+    [RequestStatus.IN_PROGRESS]: ['CLIENT', 'PROVIDER'],
+    [RequestStatus.NOT_COMPLETED]: ['CLIENT', 'PROVIDER'],
+    [RequestStatus.ABANDONED]: ['SYSTEM'],
+  },
+  [RequestStatus.IN_PROGRESS]: {
+    [RequestStatus.FINISHED]: ['PROVIDER'],
+    [RequestStatus.INTERRUPTED]: ['PROVIDER'],
+    // IN_PROGRESS -> ABANDONED is explicitly "por definir" in the spec (open question); not
+    // mapped yet, see docs/EspecialistBRC — Estados del pedido.md, section "Decisiones/Abiertas".
+  },
+  [RequestStatus.FINISHED]: {
+    [RequestStatus.CLOSED]: ['CLIENT', 'SYSTEM'],
+    [RequestStatus.UNDER_REVIEW]: ['CLIENT'],
+  },
+  [RequestStatus.UNDER_REVIEW]: {
+    [RequestStatus.CLOSED]: ['SUPPORT'],
+  },
+};
+
 export class RequestEntity {
-  static createPending(params: {
+  static createDraft(params: {
     id: string;
     clientId: string;
     providerId: string | null;
@@ -42,7 +93,8 @@ export class RequestEntity {
       params.address,
       params.availability,
       params.photos ?? [],
-      RequestStatus.PENDING,
+      RequestStatus.DRAFT,
+      null,
       null,
       null,
       null,
@@ -68,6 +120,7 @@ export class RequestEntity {
     public readonly quoteNotes: string | null,
     public readonly clientRating: number | null,
     public readonly clientRatingComment: string | null,
+    public readonly statusReason: string | null,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
   ) {}
@@ -79,28 +132,82 @@ export class RequestEntity {
     return this.providerId;
   }
 
-  isPending(): boolean {
-    return this.status === RequestStatus.PENDING;
+  isDraft(): boolean {
+    return this.status === RequestStatus.DRAFT;
   }
 
-  isAccepted(): boolean {
-    return this.status === RequestStatus.ACCEPTED;
+  isPublished(): boolean {
+    return this.status === RequestStatus.PUBLISHED;
+  }
+
+  isSent(): boolean {
+    return this.status === RequestStatus.SENT;
+  }
+
+  isContactReleased(): boolean {
+    return this.status === RequestStatus.CONTACT_RELEASED;
   }
 
   isInProgress(): boolean {
     return this.status === RequestStatus.IN_PROGRESS;
   }
 
-  isDone(): boolean {
-    return this.status === RequestStatus.DONE;
+  isFinished(): boolean {
+    return this.status === RequestStatus.FINISHED;
+  }
+
+  isClosed(): boolean {
+    return this.status === RequestStatus.CLOSED;
+  }
+
+  isUnderReview(): boolean {
+    return this.status === RequestStatus.UNDER_REVIEW;
+  }
+
+  isExpired(): boolean {
+    return this.status === RequestStatus.EXPIRED;
+  }
+
+  isNoResponse(): boolean {
+    return this.status === RequestStatus.NO_RESPONSE;
+  }
+
+  isRejected(): boolean {
+    return this.status === RequestStatus.REJECTED;
   }
 
   isCancelled(): boolean {
     return this.status === RequestStatus.CANCELLED;
   }
 
+  isNotCompleted(): boolean {
+    return this.status === RequestStatus.NOT_COMPLETED;
+  }
+
+  isInterrupted(): boolean {
+    return this.status === RequestStatus.INTERRUPTED;
+  }
+
+  isAbandoned(): boolean {
+    return this.status === RequestStatus.ABANDONED;
+  }
+
+  /** Any status that ends the request's lifecycle (whether or not it reached CLOSED). */
+  isTerminal(): boolean {
+    return (
+      this.isClosed() ||
+      this.isExpired() ||
+      this.isNoResponse() ||
+      this.isRejected() ||
+      this.isCancelled() ||
+      this.isNotCompleted() ||
+      this.isInterrupted() ||
+      this.isAbandoned()
+    );
+  }
+
   canBeReviewed(): boolean {
-    return this.isDone();
+    return this.isClosed();
   }
 
   isPublicRequest(): boolean {
@@ -128,12 +235,25 @@ export class RequestEntity {
   }
 
   /**
+   * Resolves which actor kind a context represents for THIS request. System/Support are
+   * explicit context flags (there is no "system user"); client/provider are derived from
+   * ownership/assignment, same as the rest of the entity's authorization checks.
+   */
+  private resolveActorKind(ctx: RequestAuthContext): ActorKind | null {
+    if (ctx.isSystem) return 'SYSTEM';
+    if (ctx.isSupport) return 'SUPPORT';
+    if (this.isClient(ctx)) return 'CLIENT';
+    if (this.isAssignedProvider(ctx)) return 'PROVIDER';
+    return null;
+  }
+
+  /**
    * Determines if a user can view this request.
    * Rules:
    * - Admins can view any request
    * - The client who created the request can view it
    * - The assigned provider can view it
-   * - Any provider can view available public requests (pending, no provider assigned)
+   * - Any provider can view available public requests (published, no provider assigned)
    */
   canBeViewedBy(ctx: RequestAuthContext): boolean {
     if (ctx.isAdmin) return true;
@@ -143,7 +263,7 @@ export class RequestEntity {
     // Available public request (any provider can view to express interest)
     if (
       this.isPublic &&
-      this.status === RequestStatus.PENDING &&
+      this.status === RequestStatus.PUBLISHED &&
       !this.providerId &&
       ctx.serviceProviderId
     ) {
@@ -159,10 +279,10 @@ export class RequestEntity {
    * - Admins can manage photos on any request
    * - Client can manage photos on their requests
    * - Assigned provider can manage photos
-   * - Cannot manage photos on cancelled requests
+   * - Cannot manage photos once the request reached a terminal state
    */
   canManagePhotosBy(ctx: RequestAuthContext): boolean {
-    if (this.isCancelled()) return false;
+    if (this.isTerminal()) return false;
     if (ctx.isAdmin) return true;
     if (this.isClient(ctx)) return true;
     if (this.isAssignedProvider(ctx)) return true;
@@ -170,11 +290,9 @@ export class RequestEntity {
   }
 
   /**
-   * Determines if a user can change the status of this request.
-   * Rules:
-   * - Admins can change any status
-   * - Client can: CANCEL (from non-terminal states)
-   * - Assigned provider can: PENDING→ACCEPTED, ACCEPTED→IN_PROGRESS, IN_PROGRESS→DONE
+   * Determines if a user (or the system/support actor) can change the status of this request.
+   * Mirrors the TRANSITIONS table above, which is itself a 1:1 mirror of the spec's "Quién puede
+   * mover cada cosa" table.
    */
   canChangeStatusBy(
     ctx: RequestAuthContext,
@@ -182,44 +300,22 @@ export class RequestEntity {
   ): boolean {
     if (ctx.isAdmin) return true;
 
-    // Client permissions
-    if (this.isClient(ctx)) {
-      // Client can cancel from non-terminal states
-      if (newStatus === RequestStatus.CANCELLED) {
-        return !this.isDone() && !this.isCancelled();
-      }
-      return false;
-    }
+    const actor = this.resolveActorKind(ctx);
+    if (!actor) return false;
 
-    // Assigned provider permissions
-    if (this.isAssignedProvider(ctx)) {
-      // Provider can accept pending direct requests
-      if (this.isPending() && newStatus === RequestStatus.ACCEPTED) {
-        return true;
-      }
-      // Provider can start work on accepted requests
-      if (this.isAccepted() && newStatus === RequestStatus.IN_PROGRESS) {
-        return true;
-      }
-      // Provider can complete in-progress requests
-      if (this.isInProgress() && newStatus === RequestStatus.DONE) {
-        return true;
-      }
-      return false;
-    }
-
-    return false;
+    const allowedActors = TRANSITIONS[this.status]?.[newStatus];
+    return !!allowedActors?.includes(actor);
   }
 
   /**
    * Determines if a user can rate the client on this request.
    * Rules:
    * - Only the assigned provider can rate
-   * - Only after work is done (DONE status)
+   * - Only after the request is closed (reputation only builds on CLOSED)
    * - Only once (clientRating must be null)
    */
   canRateClientBy(ctx: RequestAuthContext): boolean {
-    if (!this.isDone()) return false;
+    if (!this.isClosed()) return false;
     if (this.clientRating !== null) return false; // Already rated
     return this.isAssignedProvider(ctx);
   }
@@ -228,12 +324,12 @@ export class RequestEntity {
    * Determines if a provider can express interest in this request.
    * Rules:
    * - Must have an active provider profile (hasActiveProviderProfile: profile can operate + user fully verified)
-   * - Must be a public request, pending, with no provider assigned yet
+   * - Must be a public request, published, with no provider assigned yet
    */
   canExpressInterestBy(ctx: RequestAuthContext): boolean {
     if (!ctx.serviceProviderId) return false;
     if (!ctx.hasActiveProviderProfile) return false;
-    return this.isPublic && this.isPending() && !this.providerId;
+    return this.isPublic && this.isPublished() && !this.providerId;
   }
 
   /**
@@ -241,13 +337,13 @@ export class RequestEntity {
    * Rules:
    * - Admins can assign
    * - Only the client owner can assign (must have active client profile: verified email + phone)
-   * - Request must be public and pending
+   * - Request must be public and published
    */
   canAssignProviderBy(ctx: RequestAuthContext): boolean {
     if (ctx.isAdmin) return true;
     if (!this.isClient(ctx)) return false;
     if (ctx.hasActiveClientProfile === false) return false;
-    return this.isPublic && this.isPending();
+    return this.isPublic && this.isPublished();
   }
 
   /**
@@ -262,12 +358,17 @@ export class RequestEntity {
    * Rules:
    * - Only the client owner can unassign
    * - Request must have a provider assigned
-   * - Request status must be ACCEPTED (not yet started)
+   * - Request status must be CONTACT_RELEASED (not yet started)
+   *
+   * This is a corrective/internal action, not the product's normal recovery path for a
+   * request that didn't work out with the chosen provider (that path is "client creates a new
+   * request", per the spec's "Decisiones/Tomadas" — see docs/EspecialistBRC — Estados del
+   * pedido.md). Revisit whether this should stay client-facing once re-publishing ships.
    */
   canUnassignProviderBy(ctx: RequestAuthContext): boolean {
     if (ctx.isAdmin) return true;
     if (!this.isClient(ctx)) return false;
-    return !!this.providerId && this.isAccepted();
+    return !!this.providerId && this.isContactReleased();
   }
 
   withChanges(changes: {
@@ -284,6 +385,7 @@ export class RequestEntity {
     quoteNotes?: string | null;
     clientRating?: number | null;
     clientRatingComment?: string | null;
+    statusReason?: string | null;
     now?: Date;
   }): RequestEntity {
     const now = changes.now ?? new Date();
@@ -313,6 +415,9 @@ export class RequestEntity {
       changes.clientRatingComment !== undefined
         ? changes.clientRatingComment
         : this.clientRatingComment,
+      changes.statusReason !== undefined
+        ? changes.statusReason
+        : this.statusReason,
       this.createdAt,
       now,
     );

@@ -184,17 +184,17 @@ describe('ProfessionalService', () => {
       const completedRequests = [
         createMockRequest({
           id: 'req-1',
-          status: RequestStatus.DONE,
+          status: RequestStatus.CLOSED,
           photos: ['work1.jpg', 'work2.jpg'],
         }),
         createMockRequest({
           id: 'req-2',
-          status: RequestStatus.DONE,
+          status: RequestStatus.CLOSED,
           photos: ['work3.jpg'],
         }),
         createMockRequest({
           id: 'req-3',
-          status: RequestStatus.PENDING, // Not done, should be excluded
+          status: RequestStatus.PUBLISHED, // Not done, should be excluded
           photos: ['pending.jpg'],
         }),
       ];

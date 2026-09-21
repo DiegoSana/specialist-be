@@ -189,7 +189,7 @@ describe('ReviewService', () => {
       const professional = createMockProfessional();
       const request = createMockRequest({
         clientId: 'user-123',
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
       });
       const review = createMockReview({ status: ReviewStatus.PENDING });
 
@@ -274,7 +274,7 @@ describe('ReviewService', () => {
       const professional = createMockProfessional();
       const request = createMockRequest({
         clientId: 'user-123',
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
 
       mockUserService.findById.mockResolvedValue(user);
@@ -291,7 +291,7 @@ describe('ReviewService', () => {
       const professional = createMockProfessional();
       const request = createMockRequest({
         clientId: 'user-123',
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
       });
       const existingReview = createMockReview();
 
@@ -310,7 +310,7 @@ describe('ReviewService', () => {
       const professional = createMockProfessional();
       const request = createMockRequest({
         clientId: 'user-123',
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
       });
 
       mockUserService.findById.mockResolvedValue(user);

@@ -7,6 +7,7 @@ import { RequestCreatedEvent } from '../../../requests/domain/events/request-cre
 import { RequestInterestExpressedEvent } from '../../../requests/domain/events/request-interest-expressed.event';
 import { RequestProfessionalAssignedEvent } from '../../../requests/domain/events/request-professional-assigned.event';
 import { RequestStatusChangedEvent } from '../../../requests/domain/events/request-status-changed.event';
+import { REQUEST_STATUS_LABELS_ES } from '../../../requests/domain/entities/request-status.metadata';
 
 /**
  * Application-level event handler that materializes in-app notifications
@@ -209,22 +210,18 @@ export class RequestsNotificationsHandler implements OnModuleInit {
   }
 
   private statusLabel(status: RequestStatus): string {
-    const labels: Record<RequestStatus, string> = {
-      [RequestStatus.PENDING]: 'Pendiente',
-      [RequestStatus.ACCEPTED]: 'Aceptada',
-      [RequestStatus.IN_PROGRESS]: 'En progreso',
-      [RequestStatus.DONE]: 'Finalizada',
-      [RequestStatus.CANCELLED]: 'Cancelada',
-    };
-    return labels[status] || status;
+    return REQUEST_STATUS_LABELS_ES[status] || status;
   }
 
   private statusChangeBody(status: RequestStatus): string {
     if (status === RequestStatus.IN_PROGRESS) {
       return 'El trabajo ha comenzado.';
     }
-    if (status === RequestStatus.DONE) {
-      return '¡El trabajo está completo!';
+    if (status === RequestStatus.FINISHED) {
+      return '¡El trabajo está completo! Confirmá que quedaste conforme.';
+    }
+    if (status === RequestStatus.CLOSED) {
+      return '¡El pedido se cerró!';
     }
     if (status === RequestStatus.CANCELLED) {
       return 'La solicitud fue cancelada.';

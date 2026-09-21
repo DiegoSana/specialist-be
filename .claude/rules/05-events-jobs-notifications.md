@@ -70,7 +70,7 @@ distributed lock); do not add multi-instance assumptions without adding leasing.
   `requests.module.ts`. Each rule declares name, `FollowUpQuery`, direction (`TO_CLIENT|TO_PROVIDER`)
   and a template key from `shared/infrastructure/messaging/message-templates.json`. Use the
   `add-follow-up-rule` skill.
-- Follow-ups only target assigned requests (or the explicit PENDING-with-interests rule); skip if
+- Follow-ups only target assigned requests (or the explicit PUBLISHED-with-interests rule); skip if
   a follow-up is already pending or an interaction happened < 1 day ago; recipient must have a
   verified phone.
 - Outbound goes through the `WhatsAppMessagingPort` (`TwilioWhatsAppAdapter`), never the Twilio
@@ -78,6 +78,6 @@ distributed lock); do not add multi-instance assumptions without adding leasing.
 - Inbound: `POST /api/webhooks/twilio` -> `TwilioWebhookGuard` (signature) + `TwilioRateLimitGuard`
   -> `RequestInteractionService.processInboundMessage` -> `DetectResponseIntentUseCase` ->
   `RequestInteractionRespondedEvent` -> `RequestInteractionRespondedHandler` changes request status
-  (CONFIRMED: PENDING->ACCEPTED, STARTED: ACCEPTED->IN_PROGRESS, COMPLETED: IN_PROGRESS->DONE,
+  (CONFIRMED: SENT->CONTACT_RELEASED, STARTED: CONTACT_RELEASED->IN_PROGRESS, COMPLETED: IN_PROGRESS->FINISHED,
   CANCELLED: non-terminal->CANCELLED). Idempotency is keyed on `twilioMessageSid`.
 - Interaction status machine: PENDING->SENT|FAILED, SENT->DELIVERED|FAILED, DELIVERED->RESPONDED|FAILED.

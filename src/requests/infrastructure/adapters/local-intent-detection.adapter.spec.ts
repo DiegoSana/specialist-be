@@ -22,7 +22,7 @@ describe('LocalIntentDetectionAdapter', () => {
 
     const result = await adapter.detectIntent({
       messageText: 'si',
-      currentStatus: RequestStatus.ACCEPTED,
+      currentStatus: RequestStatus.CONTACT_RELEASED,
       triggeringTemplate: 'follow_up_3_days',
       conversationHistory: [
         {
@@ -48,7 +48,7 @@ describe('LocalIntentDetectionAdapter', () => {
 
     const result = await adapter.detectIntent({
       messageText: 'dejen de escribirme, estoy viendo otras opciones',
-      currentStatus: RequestStatus.PENDING,
+      currentStatus: RequestStatus.PUBLISHED,
       triggeringTemplate: null,
       conversationHistory: [],
     });

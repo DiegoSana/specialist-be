@@ -102,7 +102,7 @@ export class PrismaRequestRepository implements RequestRepository {
   async findPublicRequests(tradeIds?: string[]): Promise<RequestEntity[]> {
     const whereClause: any = {
       isPublic: true,
-      status: RequestStatus.PENDING,
+      status: RequestStatus.PUBLISHED,
       providerId: null, // Only show unassigned public requests
     };
 
@@ -143,7 +143,7 @@ export class PrismaRequestRepository implements RequestRepository {
     const requests = await this.prisma.request.findMany({
       where: {
         isPublic: true,
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
         providerId: null, // No provider assigned yet
         tradeId: {
           in: tradeIds,
@@ -196,7 +196,7 @@ export class PrismaRequestRepository implements RequestRepository {
   ): Promise<RequestEntity[]> {
     const requests = await this.prisma.request.findMany({
       where: {
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
         providerId: null,
         updatedAt: { lt: updatedBefore },
         isPublic: true,
@@ -230,6 +230,7 @@ export class PrismaRequestRepository implements RequestRepository {
       quoteNotes: request.quoteNotes,
       clientRating: request.clientRating,
       clientRatingComment: request.clientRatingComment,
+      statusReason: request.statusReason,
     };
 
     // No permitir cambiar el "owner" de la request vía save/update.

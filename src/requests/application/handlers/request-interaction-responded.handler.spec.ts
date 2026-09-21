@@ -68,10 +68,10 @@ describe('RequestInteractionRespondedHandler', () => {
       ...overrides,
     });
 
-  it('still maps CONFIRMED on a PENDING request to ACCEPTED (status machine unchanged by the richer payload)', async () => {
+  it('still maps CONFIRMED on a SENT request to CONTACT_RELEASED (status machine unchanged by the richer payload)', async () => {
     const request = createMockRequest({
       id: 'request-123',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.SENT,
     });
     mockRequestService.findById.mockResolvedValue(request);
     mockInteractionRepository.findById.mockResolvedValue({
@@ -85,14 +85,14 @@ describe('RequestInteractionRespondedHandler', () => {
     expect(mockRequestService.updateStatus).toHaveBeenCalledWith(
       'request-123',
       expect.anything(),
-      { status: RequestStatus.ACCEPTED },
+      { status: RequestStatus.CONTACT_RELEASED },
     );
   });
 
   it('does not throw when confidence/viability/optOut/escalate are present on the payload', async () => {
     const request = createMockRequest({
       id: 'request-123',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.SENT,
     });
     mockRequestService.findById.mockResolvedValue(request);
     mockInteractionRepository.findById.mockResolvedValue({
@@ -140,10 +140,10 @@ describe('RequestInteractionRespondedHandler', () => {
     expect(mockInteractionService.createFollowUp).not.toHaveBeenCalled();
   });
 
-  it('flags for attention instead of attempting a doomed ACCEPTED transition when a client reply to the assign-by-number follow-up does not parse', async () => {
+  it('flags for attention instead of attempting a doomed CONTACT_RELEASED transition when a client reply to the assign-by-number follow-up does not parse', async () => {
     const request = createMockRequest({
       id: 'request-123',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.PUBLISHED,
     });
     mockRequestService.findById.mockResolvedValue(request);
     mockInteractionRepository.findById.mockResolvedValue({

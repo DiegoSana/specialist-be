@@ -56,14 +56,14 @@ request attention" below.
 
 ## Domain
 
-- `RequestEntity`: `createPending(...)`, `withChanges`, predicates per `RequestStatus`
-  (`PENDING|ACCEPTED|IN_PROGRESS|DONE|CANCELLED`), `canBeReviewed()` (= DONE).
+- `RequestEntity`: `createDraft(...)`, `withChanges`, predicates per `RequestStatus`
+  (15 states, see `docs/EspecialistBRC — Estados del pedido.md`: `DRAFT|PUBLISHED|SENT|CONTACT_RELEASED|IN_PROGRESS|FINISHED|CLOSED|UNDER_REVIEW` + terminals `EXPIRED|NO_RESPONSE|REJECTED|CANCELLED|NOT_COMPLETED|INTERRUPTED|ABANDONED`), `canBeReviewed()` (= CLOSED). Labels: `REQUEST_STATUS_LABELS_ES` (`request-status.metadata.ts`). `RequestService.create` builds the draft and saves it directly as `PUBLISHED` (public) or `SENT` (direct).
   `providerId` is a `ServiceProvider` id; `professionalId` getter is deprecated.
   `RequestAuthContext { userId, serviceProviderId?, isAdmin?, hasActiveClientProfile?, hasActiveProviderProfile? }`.
   Rules: `canBeViewedBy`, `canManagePhotosBy`, `canChangeStatusBy(ctx, newStatus)`,
   `canRateClientBy`, `canExpressInterestBy` (needs active provider), `canAssignProviderBy`
   (needs active client), `canUnassignProviderBy`.
-- Status transitions: client -> `ACCEPTED|CANCELLED`; assigned provider -> `IN_PROGRESS|DONE`;
+- Status transitions: declarative `TRANSITIONS` table in `request.entity.ts` mirroring the spec's "Quién puede mover cada cosa" (actors `CLIENT|PROVIDER|SYSTEM|SUPPORT`; `RequestAuthContext` gained `isSystem`/`isSupport`, producers land in later PRs; `IN_PROGRESS -> ABANDONED` intentionally unmapped, open question in the spec);
   admin any. Direct request needs `professionalId|companyId` (resolved to `providerId`) and an
   active provider; public request needs `tradeId` and starts unassigned.
 - `RequestInterest`: association store (`add/remove/removeAllByRequestId`), unique per
@@ -75,8 +75,8 @@ request attention" below.
   `requests.interaction.responded`. Payloads carry `serviceProviderId`, `providerUserId`,
   `providerType`, `providerName`.
 - Follow-up rules (`domain/follow-up` contracts, `application/follow-up/rules` strategies):
-  ACCEPTED 3d/7d -> provider, IN_PROGRESS 5d/10d -> provider, DONE 1d -> client (review),
-  PENDING 3d with interests -> client (assign). Registered via `FOLLOW_UP_RULES` factory in the
+  CONTACT_RELEASED 3d/7d -> provider (rule classes still named `Accepted*`), IN_PROGRESS 5d/10d -> provider, FINISHED 1d -> client (review),
+  PUBLISHED 3d with interests -> client (assign). These are mechanical renames; the spec's real ladder/templates arrive in PR4. Registered via `FOLLOW_UP_RULES` factory in the
   module. When the highest-`days` `BY_STATUS` rule for a request's current status fires and the
   request has never had a `RESPONDED` interaction (`RequestInteractionRepository.hasRespondedInteraction`),
   `FollowUpSchedulerJob` flags it `AT_RISK` via `RequestAttentionService` (see "Admin request

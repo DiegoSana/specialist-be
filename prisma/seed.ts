@@ -1,4 +1,4 @@
-import { PrismaClient, UserStatus, ProfessionalStatus, CompanyStatus, RequestStatus, AuthProvider, ReviewStatus } from '@prisma/client';
+import { PrismaClient, UserStatus, ProfessionalStatus, CompanyStatus, RequestStatus, RequestInterestStatus, AuthProvider, ReviewStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -487,7 +487,7 @@ async function main() {
       description: 'Necesito instalar un aire acondicionado en el living.',
       address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'Lunes a viernes de 9 a 18hs',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.SENT,
     },
   });
 
@@ -500,7 +500,7 @@ async function main() {
       description: 'Hay una pérdida de agua debajo del lavatorio del baño.',
       address: 'Moreno 456, Centro, Bariloche',
       availability: 'Cualquier día por la mañana',
-      status: RequestStatus.ACCEPTED,
+      status: RequestStatus.CONTACT_RELEASED,
     },
   });
 
@@ -526,7 +526,7 @@ async function main() {
       description: 'Quisiera cotizar un mueble bajo mesada a medida.',
       address: 'Los Ñires 123, Melipal, Bariloche',
       availability: 'Cualquier día',
-      status: RequestStatus.DONE,
+      status: RequestStatus.CLOSED,
     },
   });
 
@@ -539,7 +539,7 @@ async function main() {
       description: 'Se corta la luz cuando enciendo varios electrodomésticos.',
       address: 'Palacios 789, Alto, Bariloche',
       availability: 'Urgente - cualquier momento',
-      status: RequestStatus.DONE,
+      status: RequestStatus.CLOSED,
     },
   });
 
@@ -567,7 +567,7 @@ async function main() {
       description: 'Necesito pintar un departamento de 3 ambientes. Paredes y techos en color blanco.',
       address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'A partir del próximo mes',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.PUBLISHED,
     },
   });
 
@@ -580,7 +580,7 @@ async function main() {
       description: 'Tengo humedad en una pared que necesita reparación urgente. Se está cayendo el revoque.',
       address: 'Los Ñires 123, Melipal, Bariloche',
       availability: 'Lo antes posible',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.PUBLISHED,
     },
   });
 
@@ -593,7 +593,7 @@ async function main() {
       description: 'Busco jardinero para mantenimiento mensual de jardín de 500m2.',
       address: 'Palacios 789, Alto, Bariloche',
       availability: 'Fines de semana preferentemente',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.DRAFT,
     },
   });
 
@@ -601,12 +601,13 @@ async function main() {
     data: {
       clientId: cliente2.id,
       tradeId: tradeElectricista.id,
-      isPublic: true,
+      providerId: electricista.professional!.serviceProviderId,
+      isPublic: false,
       title: 'Instalación eléctrica completa',
       description: 'Necesito hacer la instalación eléctrica de una casa en construcción. Incluye tablero y toda la distribución.',
       address: 'Barrio Privado Las Cartas, Bariloche',
       availability: 'A coordinar',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.CONTACT_RELEASED,
     },
   });
 
@@ -619,7 +620,7 @@ async function main() {
       description: 'Presupuesto para sistema de calefacción central a gas para casa de 150m2.',
       address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'Antes del invierno',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.PUBLISHED,
     },
   });
 
@@ -633,7 +634,7 @@ async function main() {
       description: 'Necesito cambiar la cerradura de la puerta de entrada y hacer 3 copias de llaves.',
       address: 'Moreno 456, Centro, Bariloche',
       availability: 'Esta semana',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.EXPIRED,
     },
   });
 
@@ -646,7 +647,7 @@ async function main() {
       description: 'Se rompió un vidrio de la ventana del living. Necesito reemplazo urgente.',
       address: 'Palacios 789, Alto, Bariloche',
       availability: 'Lo antes posible',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.CANCELLED,
     },
   });
 
@@ -659,7 +660,7 @@ async function main() {
       description: 'Tengo 3 equipos split que necesitan mantenimiento anual (limpieza de filtros y carga de gas).',
       address: 'Los Ñires 123, Melipal, Bariloche',
       availability: 'Próximas 2 semanas',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.PUBLISHED,
     },
   });
 
@@ -667,12 +668,13 @@ async function main() {
     data: {
       clientId: cliente1.id,
       tradeId: tradePlomero.id,
-      isPublic: true,
+      providerId: plomero.professional!.serviceProviderId,
+      isPublic: false,
       title: 'Destape de cañería',
       description: 'Tengo una cañería tapada en el baño. Necesito destape y revisión.',
       address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'Fines de semana',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.IN_PROGRESS,
     },
   });
 
@@ -680,12 +682,13 @@ async function main() {
     data: {
       clientId: cliente4.id,
       tradeId: tradeCarpintero.id,
-      isPublic: true,
+      providerId: carpintero.professional!.serviceProviderId,
+      isPublic: false,
       title: 'Estantería y escritorio a medida',
       description: 'Busco cotización para estantería en living y escritorio en habitación.',
       address: 'Palacios 789, Alto, Bariloche',
       availability: 'Flexible',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.ABANDONED,
     },
   });
 
@@ -693,12 +696,14 @@ async function main() {
     data: {
       clientId: cliente2.id,
       tradeId: tradeAlbañil.id,
-      isPublic: true,
+      providerId: constructora.company!.serviceProviderId,
+      isPublic: false,
       title: 'Piso de porcelanato en cocina',
       description: 'Quiero colocar piso de porcelanato en cocina y pasillo. Aprox 25m2.',
       address: 'Moreno 456, Centro, Bariloche',
       availability: 'Marzo',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.INTERRUPTED,
+      statusReason: 'El cliente pausó la obra por motivos personales.',
     },
   });
 
@@ -711,7 +716,7 @@ async function main() {
       description: 'Necesito instalar 2 ventiladores de techo en dormitorios.',
       address: 'Los Ñires 123, Melipal, Bariloche',
       availability: 'Cualquier día',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.PUBLISHED,
     },
   });
 
@@ -725,7 +730,7 @@ async function main() {
       description: 'El tanque de agua pierde. Necesito cambio de flotante y revisión general.',
       address: 'Palacios 789, Alto, Bariloche',
       availability: 'Mañana si es posible',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.SENT,
     },
   });
 
@@ -738,7 +743,7 @@ async function main() {
       description: 'Presupuesto para pintar fachada de casa de 2 plantas. Aprox 80m2.',
       address: 'Moreno 456, Centro, Bariloche',
       availability: 'Primavera',
-      status: RequestStatus.ACCEPTED,
+      status: RequestStatus.CONTACT_RELEASED,
     },
   });
 
@@ -764,7 +769,7 @@ async function main() {
       description: 'Casa nueva, necesito instalar 2 equipos split (living y habitación).',
       address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'A coordinar',
-      status: RequestStatus.DONE,
+      status: RequestStatus.FINISHED,
     },
   });
 
@@ -777,7 +782,7 @@ async function main() {
       description: 'Necesito una puerta corrediza para placard de 2,20m de ancho.',
       address: 'Palacios 789, Alto, Bariloche',
       availability: 'Sin apuro',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.REJECTED,
     },
   });
 
@@ -790,7 +795,7 @@ async function main() {
       description: 'Quiero colocar tiras LED y focos en el jardín con sensor de movimiento.',
       address: 'Moreno 456, Centro, Bariloche',
       availability: 'Fines de semana',
-      status: RequestStatus.CANCELLED,
+      status: RequestStatus.NO_RESPONSE,
     },
   });
 
@@ -803,7 +808,8 @@ async function main() {
       description: 'Varios trabajos: una canilla que gotea, un tomacorriente que no funciona y cambio de bisagras en puerta.',
       address: 'Los Ñires 123, Melipal, Bariloche',
       availability: 'Un solo día si es posible',
-      status: RequestStatus.ACCEPTED,
+      status: RequestStatus.NOT_COMPLETED,
+      statusReason: 'No llegamos a un acuerdo en el alcance del trabajo.',
     },
   });
 
@@ -816,7 +822,7 @@ async function main() {
       description: 'Quiero construir una pérgola de 3x4m en el patio. Material madera o hierro.',
       address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'Verano',
-      status: RequestStatus.PENDING,
+      status: RequestStatus.UNDER_REVIEW,
     },
   });
 
@@ -844,19 +850,19 @@ async function main() {
       // Providers interested in wall repair
       { requestId: publicRequest2.id, serviceProviderId: constructora.company!.serviceProviderId, message: 'Nos especializamos en reparación de humedad. Garantía de 2 años.' },
       // Providers interested in electrical work
-      { requestId: publicRequest4.id, serviceProviderId: electricista.professional!.serviceProviderId, message: 'Electricista matriculado. Hago presupuesto sin cargo.' },
-      { requestId: publicRequest4.id, serviceProviderId: serviciostecnicos.company!.serviceProviderId, message: 'Realizamos instalaciones completas. Certificamos ante EPEN.' },
-      { requestId: publicRequest4.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer el trabajo completo.' },
+      { requestId: publicRequest4.id, serviceProviderId: electricista.professional!.serviceProviderId, message: 'Electricista matriculado. Hago presupuesto sin cargo.', status: RequestInterestStatus.CHOSEN },
+      { requestId: publicRequest4.id, serviceProviderId: serviciostecnicos.company!.serviceProviderId, message: 'Realizamos instalaciones completas. Certificamos ante EPEN.', status: RequestInterestStatus.NOT_CHOSEN },
+      { requestId: publicRequest4.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer el trabajo completo.', status: RequestInterestStatus.NOT_CHOSEN },
       // Provider interested in gas installation
       { requestId: publicRequest5.id, serviceProviderId: gasista.professional!.serviceProviderId, message: 'Gasista matriculado. Experiencia en calefacción central.' },
       // New public requests - interests
       { requestId: publicRequest8.id, serviceProviderId: serviciostecnicos.company!.serviceProviderId, message: 'Hacemos mantenimiento de aires. Incluimos carga de gas si hace falta.' },
-      { requestId: publicRequest9.id, serviceProviderId: plomero.professional!.serviceProviderId, message: 'Plomero con equipo de destape. Presupuesto sin cargo.' },
-      { requestId: publicRequest9.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer destape y revisión.' },
-      { requestId: publicRequest10.id, serviceProviderId: carpintero.professional!.serviceProviderId, message: 'Trabajo a medida. Te paso presupuesto a la brevedad.' },
-      { requestId: publicRequest11.id, serviceProviderId: constructora.company!.serviceProviderId, message: 'Colocamos porcelanato. Incluimos preparación del piso.' },
+      { requestId: publicRequest9.id, serviceProviderId: plomero.professional!.serviceProviderId, message: 'Plomero con equipo de destape. Presupuesto sin cargo.', status: RequestInterestStatus.CHOSEN },
+      { requestId: publicRequest9.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer destape y revisión.', status: RequestInterestStatus.NOT_CHOSEN },
+      { requestId: publicRequest10.id, serviceProviderId: carpintero.professional!.serviceProviderId, message: 'Trabajo a medida. Te paso presupuesto a la brevedad.', status: RequestInterestStatus.CHOSEN },
+      { requestId: publicRequest11.id, serviceProviderId: constructora.company!.serviceProviderId, message: 'Colocamos porcelanato. Incluimos preparación del piso.', status: RequestInterestStatus.CHOSEN },
       { requestId: publicRequest12.id, serviceProviderId: electricista.professional!.serviceProviderId, message: 'Instalo ventiladores de techo. Varias marcas disponibles.' },
-      { requestId: publicRequest12.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer la instalación.' },
+      { requestId: publicRequest12.id, serviceProviderId: multioficio.professional!.serviceProviderId, message: 'Puedo hacer la instalación.', status: RequestInterestStatus.WITHDRAWN },
     ],
   });
 
@@ -894,7 +900,7 @@ async function main() {
       description: 'Instalación de equipo split 3000 frigorías en dormitorio principal.',
       address: 'Moreno 456, Centro, Bariloche',
       availability: 'Completado',
-      status: RequestStatus.DONE,
+      status: RequestStatus.CLOSED,
     },
   });
 
@@ -931,7 +937,7 @@ async function main() {
       description: 'Arreglo de corto circuito y cambio de canilla.',
       address: 'Av. Bustillo Km 3.5, Bariloche',
       availability: 'Completado',
-      status: RequestStatus.DONE,
+      status: RequestStatus.CLOSED,
     },
   });
 
@@ -964,7 +970,7 @@ async function main() {
   console.log(`   - 4 client users (email + phone verified)`);
   console.log(`   - 6 professional users (with ServiceProvider)`);
   console.log(`   - 4 company users (with ServiceProvider)`);
-  console.log(`   - 29 requests (17 direct, 12 public)`);
+  console.log(`   - 29 requests (17 direct, 12 public) covering all 15 RequestStatus values`);
   console.log(`   - 15 request interests`);
   console.log(`   - 6 reviews`);
   console.log(`   - 3 contacts`);

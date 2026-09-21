@@ -113,7 +113,7 @@ describe('RequestInteractionService', () => {
       });
       const request = createMockRequest({
         id: 'request-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
         interaction,
@@ -136,7 +136,7 @@ describe('RequestInteractionService', () => {
       expect(mockIntentDetectionPort.detectIntent).toHaveBeenCalledWith(
         expect.objectContaining({
           messageText: 'ya empecé',
-          currentStatus: RequestStatus.ACCEPTED,
+          currentStatus: RequestStatus.CONTACT_RELEASED,
           triggeringTemplate: 'follow_up_3_days',
           conversationHistory: [],
         }),
@@ -160,7 +160,7 @@ describe('RequestInteractionService', () => {
       const interaction = createMockInteraction({ requestId: 'request-123' });
       const request = createMockRequest({
         id: 'request-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
         interaction,
@@ -201,7 +201,7 @@ describe('RequestInteractionService', () => {
       const interaction = createMockInteraction({ requestId: 'request-123' });
       const request = createMockRequest({
         id: 'request-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
         interaction,
@@ -244,7 +244,7 @@ describe('RequestInteractionService', () => {
       const interaction = createMockInteraction({ requestId: 'request-123' });
       const request = createMockRequest({
         id: 'request-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
         interaction,
@@ -294,7 +294,7 @@ describe('RequestInteractionService', () => {
       const request = createMockRequest({
         id: 'request-123',
         clientId: 'client-user-1',
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
       });
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
         interaction,
@@ -328,7 +328,7 @@ describe('RequestInteractionService', () => {
       const request = createMockRequest({
         id: 'request-123',
         providerId: 'service-provider-1',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
         interaction,
@@ -361,7 +361,7 @@ describe('RequestInteractionService', () => {
       const interaction = createMockInteraction({ requestId: 'request-123' });
       const request = createMockRequest({
         id: 'request-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
         interaction,
@@ -392,7 +392,7 @@ describe('RequestInteractionService', () => {
       const request = createMockRequest({
         id: 'request-123',
         clientId: 'client-user-1',
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
       });
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(
         interaction,
@@ -447,7 +447,7 @@ describe('RequestInteractionService', () => {
       });
       const request = createMockRequest({
         id: 'request-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(null);
       mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(
@@ -675,7 +675,7 @@ describe('RequestInteractionService', () => {
 
         const result = await (service as any).classifyInboundReply({
           messageText: 'mmm no se',
-          currentStatus: RequestStatus.ACCEPTED,
+          currentStatus: RequestStatus.CONTACT_RELEASED,
           triggeringTemplate: null,
           conversationHistory: [],
         });
@@ -700,7 +700,7 @@ describe('RequestInteractionService', () => {
 
         const result = await (service as any).classifyInboundReply({
           messageText: 'STOP',
-          currentStatus: RequestStatus.ACCEPTED,
+          currentStatus: RequestStatus.CONTACT_RELEASED,
           triggeringTemplate: null,
           conversationHistory: [],
         });

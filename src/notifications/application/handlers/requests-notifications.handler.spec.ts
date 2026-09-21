@@ -26,7 +26,7 @@ describe('RequestsNotificationsHandler.onStatusChanged', () => {
       serviceProviderId: 'sp-1',
       providerUserId: 'provider-1',
       providerName: 'Beto',
-      fromStatus: RequestStatus.ACCEPTED,
+      fromStatus: RequestStatus.CONTACT_RELEASED,
       toStatus: RequestStatus.IN_PROGRESS,
       changedByUserId,
     });

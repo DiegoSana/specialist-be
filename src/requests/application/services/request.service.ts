@@ -106,18 +106,24 @@ export class RequestService {
       throw new BadRequestException('tradeId is required for public requests');
     }
 
+    // Requests are born as DRAFT and immediately published/sent in the same write — DRAFT stays
+    // addressable for a future "save as draft" screen, but the create endpoint keeps today's
+    // one-step UX (no separate "publish" call yet).
+    const draft = RequestEntity.createDraft({
+      id: randomUUID(),
+      clientId,
+      providerId,
+      tradeId: createDto.tradeId || null,
+      isPublic,
+      title: createDto.title,
+      description: createDto.description,
+      address: createDto.address || null,
+      availability: createDto.availability || null,
+      photos: createDto.photos || [],
+    });
     const saved = await this.requestRepository.save(
-      RequestEntity.createPending({
-        id: randomUUID(),
-        clientId,
-        providerId,
-        tradeId: createDto.tradeId || null,
-        isPublic,
-        title: createDto.title,
-        description: createDto.description,
-        address: createDto.address || null,
-        availability: createDto.availability || null,
-        photos: createDto.photos || [],
+      draft.withChanges({
+        status: isPublic ? RequestStatus.PUBLISHED : RequestStatus.SENT,
       }),
     );
 
@@ -410,7 +416,7 @@ export class RequestService {
     const request = await this.findById(requestId);
 
     if (!request.canRateClientBy(ctx)) {
-      if (!request.isDone()) {
+      if (!request.isClosed()) {
         throw new BadRequestException(
           'Can only rate client after work is completed',
         );

@@ -177,6 +177,7 @@ export const createMockRequest = (
     quoteNotes: string | null;
     clientRating: number | null;
     clientRatingComment: string | null;
+    statusReason: string | null;
     createdAt: Date;
     updatedAt: Date;
   }> = {},
@@ -192,11 +193,12 @@ export const createMockRequest = (
     address: 'Test Address 123',
     availability: 'Monday to Friday',
     photos: [],
-    status: RequestStatus.PENDING,
+    status: RequestStatus.PUBLISHED,
     quoteAmount: null,
     quoteNotes: null,
     clientRating: null,
     clientRatingComment: null,
+    statusReason: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -218,6 +220,7 @@ export const createMockRequest = (
     defaults.quoteNotes,
     defaults.clientRating,
     defaults.clientRatingComment,
+    defaults.statusReason,
     defaults.createdAt,
     defaults.updatedAt,
   );

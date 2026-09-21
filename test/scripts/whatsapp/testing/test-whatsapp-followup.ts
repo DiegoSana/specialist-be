@@ -118,7 +118,7 @@ async function showStatus() {
     // Show requests that might need follow-ups
     const requestsNeedingFollowUp = await prisma.request.findMany({
       where: {
-        status: { in: ['ACCEPTED', 'IN_PROGRESS'] },
+        status: { in: ['CONTACT_RELEASED', 'IN_PROGRESS'] },
         providerId: { not: null },
         updatedAt: {
           lte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3+ days ago

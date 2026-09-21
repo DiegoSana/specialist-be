@@ -189,7 +189,7 @@ export class ProfessionalService {
       professional.serviceProviderId,
     );
     const doneRequests = completedRequests.filter(
-      (req) => req.status === RequestStatus.DONE,
+      (req) => req.status === RequestStatus.CLOSED,
     );
 
     // Collect photos from completed work
@@ -229,7 +229,7 @@ export class ProfessionalService {
       professional.serviceProviderId,
     );
     const doneRequests = completedRequests.filter(
-      (req) => req.status === RequestStatus.DONE,
+      (req) => req.status === RequestStatus.CLOSED,
     );
 
     const completedWorkPhotos: string[] = [];

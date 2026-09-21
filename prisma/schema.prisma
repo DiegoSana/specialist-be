@@ -198,12 +198,14 @@ model Request {
   address             String?
   availability        String?
   photos              String[]      @default([])
-  status              RequestStatus @default(PENDING)
+  status              RequestStatus @default(DRAFT)
   quoteAmount         Float?
   quoteNotes          String?
   // Client rating by provider (after work is done)
   clientRating        Int?
   clientRatingComment String?
+  // Reason given for NOT_COMPLETED / INTERRUPTED (and future terminal states that need one)
+  statusReason        String?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
@@ -219,16 +221,24 @@ model Request {
 }
 
 model RequestInterest {
-  id                String          @id @default(uuid())
+  id                String                @id @default(uuid())
   requestId         String
   serviceProviderId String // Can be Professional or Company
   message           String? // Optional message from provider
-  createdAt         DateTime        @default(now())
-  request           Request         @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+  status            RequestInterestStatus @default(INTERESTED)
+  createdAt         DateTime              @default(now())
+  request           Request               @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  serviceProvider   ServiceProvider       @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
 
   @@unique([requestId, serviceProviderId])
   @@map("request_interests")
+}
+
+enum RequestInterestStatus {
+  INTERESTED // Expressed interest, waiting for the client's decision
+  CHOSEN // Client picked this provider; contact was released
+  NOT_CHOSEN // Client picked someone else
+  WITHDRAWN // Provider withdrew their interest
 }
 
 model Review {
@@ -386,12 +396,27 @@ enum ProfessionalStatus {
   SUSPENDED // Admin suspended
 }
 
+// Request lifecycle per docs/EspecialistBRC — Estados del pedido.md.
+// Main path: DRAFT -> PUBLISHED (bolsa) | SENT (directo) -> CONTACT_RELEASED -> IN_PROGRESS ->
+// FINISHED -> CLOSED, with UNDER_REVIEW as a transitory support-handled detour from FINISHED.
+// Terminal alternates (never reach CLOSED): EXPIRED, NO_RESPONSE, REJECTED, CANCELLED,
+// NOT_COMPLETED, INTERRUPTED, ABANDONED.
 enum RequestStatus {
-  PENDING
-  ACCEPTED
+  DRAFT
+  PUBLISHED
+  SENT
+  CONTACT_RELEASED
   IN_PROGRESS
-  DONE
+  FINISHED
+  CLOSED
+  UNDER_REVIEW
+  EXPIRED
+  NO_RESPONSE
+  REJECTED
   CANCELLED
+  NOT_COMPLETED
+  INTERRUPTED
+  ABANDONED
 }
 
 enum AuthProvider {
