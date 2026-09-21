@@ -1,1 +1,74 @@
-{"follow_up_3_days":{"es":"Hola! 👋 Hace 3 días te asignamos la solicitud \"{title}\". ¿Ya empezaste el trabajo? Responde 'sí' si ya comenzaste o 'no' si aún no.","en":"Hi! 👋 We assigned you the request \"{title}\" 3 days ago. Have you started the work? Reply 'yes' if you've started or 'no' if not yet."},"follow_up_7_days":{"es":"Hola! Recordatorio: tienes la solicitud \"{title}\" pendiente desde hace 7 días. ¿Necesitas ayuda o información adicional?","en":"Hi! Reminder: you have the request \"{title}\" pending from 7 days ago. Do you need help or additional information?"},"follow_up_5_days_in_progress":{"es":"Hola! 👋 ¿Cómo va el trabajo de \"{title}\"? Hace 5 días que empezaste. Responde 'terminé' cuando esté listo o 'necesito ayuda' si tienes dudas.","en":"Hi! 👋 How's the work going for \"{title}\"? You started 5 days ago. Reply 'done' when finished or 'need help' if you have questions."},"follow_up_10_days_in_progress":{"es":"Hola! Notamos que el trabajo de \"{title}\" lleva 10 días en progreso. ¿Necesitás ayuda o hay algún problema? Estamos acá para ayudarte.","en":"Hi! We noticed the work for \"{title}\" has been in progress for 10 days. Do you need help or is there a problem? We're here to help."},"follow_up_review_1_day":{"es":"¡Hola! El trabajo de \"{title}\" fue completado ayer. ¿Podrías dejar una reseña? Tu opinión nos ayuda mucho. Responde 'sí' para dejar tu reseña.","en":"Hi! The work for \"{title}\" was completed yesterday. Could you leave a review? Your opinion helps us a lot. Reply 'yes' to leave your review."},"status_update_confirmed":{"es":"✅ Confirmado! Actualizamos el estado de tu solicitud. Gracias por responder.","en":"✅ Confirmed! We've updated your request status. Thanks for responding."},"status_update_started":{"es":"✅ Perfecto! Marcamos que empezaste el trabajo. ¡Mucha suerte!","en":"✅ Perfect! We've marked that you started the work. Good luck!"},"status_update_completed":{"es":"✅ Excelente! Marcamos el trabajo como completado. El cliente será notificado.","en":"✅ Excellent! We've marked the work as completed. The client will be notified."},"status_update_cancelled":{"es":"✅ Entendido. Hemos cancelado la solicitud según tu indicación.","en":"✅ Understood. We've cancelled the request as you indicated."},"unknown_response":{"es":"Gracias por tu mensaje. Si querés confirmar que empezaste, responde 'sí'. Si terminaste, responde 'terminé'. Si necesitás ayuda, responde 'ayuda'.","en":"Thanks for your message. If you want to confirm you started, reply 'yes'. If you finished, reply 'done'. If you need help, reply 'help'."},"follow_up_pending_3_days_with_interests":{"es":"Hola! Tu solicitud \\\"{title}\\\" tiene {count} especialista(s) interesado(s) pero aún no asignaste a nadie. Responde con el número (1, 2, 3...) para asignar a ese especialista, o entra a la app para ver perfiles.","en":"Hi! Your request \\\"{title}\\\" has {count} interested specialist(s) but you have not assigned anyone yet. Reply with the number (1, 2, 3...) to assign that specialist, or go to the app to see profiles."},"status_update_assigned":{"es":"✅ Listo! Asignamos el especialista a tu solicitud \\\"{title}\\\". Te notificaremos cuando responda.","en":"✅ Done! We have assigned the specialist to your request \\\"{title}\\\". We will notify you when they respond."}}
+{
+  "notice_request_sent": {
+    "es": "{reminder}Hola {nombre}, {cliente} te envió una solicitud: {pedido}. Podés aceptarla o rechazarla acá: {link}",
+    "en": "{reminder}Hi {nombre}, {cliente} sent you a request: {pedido}. You can accept or reject it here: {link}"
+  },
+  "notice_interests_published": {
+    "es": "{reminder}Hola {nombre}, {cantidad} especialistas se interesaron en tu pedido {pedido}. Elegí con quién seguir acá: {link}",
+    "en": "{reminder}Hi {nombre}, {cantidad} specialists are interested in your request {pedido}. Choose who to continue with here: {link}"
+  },
+  "notice_contact_released": {
+    "es": "Ya podés hablar con {contraparte} por WhatsApp sobre {pedido}. Sus datos de contacto están acá: {link}",
+    "en": "You can now talk to {contraparte} on WhatsApp about {pedido}. Their contact details are here: {link}"
+  },
+  "notice_request_rejected": {
+    "es": "Hola {nombre}, {especialista} no puede tomar tu solicitud de {pedido}. Podés enviarla a otro especialista o publicarla en la bolsa: {link}",
+    "en": "Hi {nombre}, {especialista} can't take your request for {pedido}. You can send it to another specialist or publish it on the job board: {link}"
+  },
+  "notice_no_agreement": {
+    "es": "Hola {nombre}, tu pedido {pedido} quedó como {estado}. Si todavía lo necesitás, podés volver a publicarlo: {link}",
+    "en": "Hi {nombre}, your request {pedido} is now {estado}. If you still need it, you can publish it again: {link}"
+  },
+  "notice_request_closed": {
+    "es": "{reminder}Cerramos {pedido}. Dejale tu calificación a {contraparte} acá: {link}",
+    "en": "{reminder}We closed {pedido}. Leave your rating for {contraparte} here: {link}"
+  },
+  "notice_auto_closed": {
+    "es": "Como no recibimos tu respuesta, cerramos {pedido} como terminado. Si hubo algún problema, avisanos acá: {link}",
+    "en": "Since we didn't hear back from you, we closed {pedido} as finished. If there was any problem, let us know here: {link}"
+  },
+  "question_agreement": {
+    "es": "{reminder}Hola {nombre}, ¿lograste ponerte de acuerdo con {contraparte} para {pedido}? Contanos cómo va.",
+    "en": "{reminder}Hi {nombre}, did you manage to reach an agreement with {contraparte} for {pedido}? Tell us how it's going."
+  },
+  "question_progress": {
+    "es": "{reminder}Hola {nombre}, ¿cómo va el trabajo de {pedido} para {cliente}? Contanos si ya terminaste, si sigue en curso o si hubo algún problema.",
+    "en": "{reminder}Hi {nombre}, how is the work on {pedido} for {cliente} going? Tell us if you already finished, if it's still in progress or if there was a problem."
+  },
+  "question_satisfaction": {
+    "es": "{reminder}Hola {nombre}, {especialista} indicó que terminó {pedido}. ¿Quedaste conforme con el trabajo?",
+    "en": "{reminder}Hi {nombre}, {especialista} says they finished {pedido}. Are you satisfied with the work?"
+  },
+  "status_update_started": {
+    "es": "✅ Perfecto! Marcamos el pedido como en curso. ¡Mucha suerte!",
+    "en": "✅ Perfect! We marked the request as in progress. Good luck!"
+  },
+  "status_update_completed": {
+    "es": "✅ Excelente! Marcamos el trabajo como terminado. El cliente será notificado para confirmar.",
+    "en": "✅ Excellent! We marked the work as finished. The client will be asked to confirm."
+  },
+  "status_update_not_completed": {
+    "es": "✅ Entendido. Marcamos el pedido como no concretado.",
+    "en": "✅ Understood. We marked the request as not completed."
+  },
+  "status_update_interrupted": {
+    "es": "✅ Entendido. Marcamos el trabajo como interrumpido.",
+    "en": "✅ Understood. We marked the work as interrupted."
+  },
+  "status_update_closed": {
+    "es": "✅ ¡Gracias! Cerramos el pedido. Ya podés dejar tu calificación en la app.",
+    "en": "✅ Thanks! We closed the request. You can now leave your rating in the app."
+  },
+  "status_update_under_review": {
+    "es": "✅ Gracias por avisarnos. Nuestro equipo de soporte va a revisar el pedido.",
+    "en": "✅ Thanks for letting us know. Our support team will review the request."
+  },
+  "status_update_assigned": {
+    "es": "✅ Listo! Asignamos el especialista a tu solicitud \"{title}\". Te notificaremos cuando responda.",
+    "en": "✅ Done! We have assigned the specialist to your request \"{title}\". We will notify you when they respond."
+  },
+  "unknown_response": {
+    "es": "Gracias por tu mensaje. Si querés contarnos cómo va el pedido, respondé con una frase corta; para acciones como aceptar o elegir, usá la app.",
+    "en": "Thanks for your message. To tell us how the request is going, reply with a short sentence; for actions like accepting or choosing, use the app."
+  }
+}

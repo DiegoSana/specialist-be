@@ -68,25 +68,160 @@ describe('RequestInteractionRespondedHandler', () => {
       ...overrides,
     });
 
-  it('still maps CONFIRMED on a SENT request to CONTACT_RELEASED (status machine unchanged by the richer payload)', async () => {
-    const request = createMockRequest({
-      id: 'request-123',
-      status: RequestStatus.SENT,
-    });
-    mockRequestService.findById.mockResolvedValue(request);
+  const interactionFor = (
+    messageTemplate: string,
+    direction: InteractionDirection = InteractionDirection.TO_PROVIDER,
+  ) =>
     mockInteractionRepository.findById.mockResolvedValue({
-      direction: InteractionDirection.TO_PROVIDER,
-      messageTemplate: 'follow_up_3_days',
+      direction,
+      messageTemplate,
       metadata: null,
     });
 
-    await (handler as any).handleInteractionResponded(buildEvent());
-
-    expect(mockRequestService.updateStatus).toHaveBeenCalledWith(
-      'request-123',
-      expect.anything(),
-      { status: RequestStatus.CONTACT_RELEASED },
+  const run = async (
+    status: RequestStatus,
+    template: string,
+    direction: InteractionDirection,
+    intent: ResponseIntent,
+    text = 'respuesta',
+  ) => {
+    mockRequestService.findById.mockResolvedValue(
+      createMockRequest({ id: 'request-123', status }),
     );
+    interactionFor(template, direction);
+    await (handler as any).handleInteractionResponded(
+      buildEvent({ responseIntent: intent, responseContent: text }),
+    );
+  };
+
+  describe('reply -> status mapping (spec P1/P2/P3)', () => {
+    it.each([
+      [ResponseIntent.CONFIRMED, RequestStatus.IN_PROGRESS],
+      [ResponseIntent.CANCELLED, RequestStatus.NOT_COMPLETED],
+    ])(
+      'question_agreement: %s moves CONTACT_RELEASED to %s',
+      async (intent, expected) => {
+        await run(
+          RequestStatus.CONTACT_RELEASED,
+          'question_agreement',
+          InteractionDirection.TO_CLIENT,
+          intent,
+          'no pudimos',
+        );
+        expect(mockRequestService.updateStatus).toHaveBeenCalledWith(
+          'request-123',
+          expect.anything(),
+          {
+            status: expected,
+            statusReason:
+              expected === RequestStatus.NOT_COMPLETED
+                ? 'no pudimos'
+                : undefined,
+          },
+        );
+      },
+    );
+
+    it('question_progress: COMPLETED moves IN_PROGRESS to FINISHED', async () => {
+      await run(
+        RequestStatus.IN_PROGRESS,
+        'question_progress',
+        InteractionDirection.TO_PROVIDER,
+        ResponseIntent.COMPLETED,
+      );
+      expect(mockRequestService.updateStatus).toHaveBeenCalledWith(
+        'request-123',
+        expect.anything(),
+        { status: RequestStatus.FINISHED, statusReason: undefined },
+      );
+    });
+
+    it('question_progress: an explicit stop moves IN_PROGRESS to INTERRUPTED and stores the reason', async () => {
+      await run(
+        RequestStatus.IN_PROGRESS,
+        'question_progress',
+        InteractionDirection.TO_PROVIDER,
+        ResponseIntent.CANCELLED,
+        'tuve que dejarlo, se mudó',
+      );
+      expect(mockRequestService.updateStatus).toHaveBeenCalledWith(
+        'request-123',
+        expect.anything(),
+        {
+          status: RequestStatus.INTERRUPTED,
+          statusReason: 'tuve que dejarlo, se mudó',
+        },
+      );
+    });
+
+    it.each([
+      ['bare "no"', ResponseIntent.CANCELLED, 'No'],
+      ['still going', ResponseIntent.STARTED, 'sigue en curso'],
+      ['confirmation', ResponseIntent.CONFIRMED, 'si'],
+      ['unclear', ResponseIntent.UNKNOWN, 'mmm'],
+    ])(
+      'question_progress: %s does not change IN_PROGRESS',
+      async (_label, intent, text) => {
+        await run(
+          RequestStatus.IN_PROGRESS,
+          'question_progress',
+          InteractionDirection.TO_PROVIDER,
+          intent,
+          text,
+        );
+        expect(mockRequestService.updateStatus).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      [ResponseIntent.CONFIRMED, RequestStatus.CLOSED],
+      [ResponseIntent.CANCELLED, RequestStatus.UNDER_REVIEW],
+    ])(
+      'question_satisfaction: %s moves FINISHED to %s',
+      async (intent, expected) => {
+        await run(
+          RequestStatus.FINISHED,
+          'question_satisfaction',
+          InteractionDirection.TO_CLIENT,
+          intent,
+        );
+        expect(mockRequestService.updateStatus).toHaveBeenCalledWith(
+          'request-123',
+          expect.anything(),
+          { status: expected, statusReason: undefined },
+        );
+      },
+    );
+
+    it('unclear replies never change the state', async () => {
+      await run(
+        RequestStatus.FINISHED,
+        'question_satisfaction',
+        InteractionDirection.TO_CLIENT,
+        ResponseIntent.UNKNOWN,
+      );
+      expect(mockRequestService.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it('replies to notices (actions live in the app) never change the state', async () => {
+      await run(
+        RequestStatus.SENT,
+        'notice_request_sent',
+        InteractionDirection.TO_PROVIDER,
+        ResponseIntent.CONFIRMED,
+      );
+      expect(mockRequestService.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it('ignores a reply to a question that no longer matches the current status', async () => {
+      await run(
+        RequestStatus.CLOSED,
+        'question_satisfaction',
+        InteractionDirection.TO_CLIENT,
+        ResponseIntent.CANCELLED,
+      );
+      expect(mockRequestService.updateStatus).not.toHaveBeenCalled();
+    });
   });
 
   it('does not throw when confidence/viability/optOut/escalate are present on the payload', async () => {
@@ -97,7 +232,7 @@ describe('RequestInteractionRespondedHandler', () => {
     mockRequestService.findById.mockResolvedValue(request);
     mockInteractionRepository.findById.mockResolvedValue({
       direction: InteractionDirection.TO_PROVIDER,
-      messageTemplate: 'follow_up_3_days',
+      messageTemplate: 'notice_request_sent',
       metadata: null,
     });
 
@@ -116,12 +251,12 @@ describe('RequestInteractionRespondedHandler', () => {
   it('flags for attention instead of silently dropping a status change the actor is not authorized to make', async () => {
     const request = createMockRequest({
       id: 'request-123',
-      status: RequestStatus.IN_PROGRESS,
+      status: RequestStatus.FINISHED,
     });
     mockRequestService.findById.mockResolvedValue(request);
     mockInteractionRepository.findById.mockResolvedValue({
-      direction: InteractionDirection.TO_PROVIDER,
-      messageTemplate: 'follow_up_5_days_in_progress',
+      direction: InteractionDirection.TO_CLIENT,
+      messageTemplate: 'question_satisfaction',
       metadata: null,
     });
     mockRequestService.updateStatus.mockRejectedValue(
@@ -135,7 +270,7 @@ describe('RequestInteractionRespondedHandler', () => {
     expect(mockAttentionService.flag).toHaveBeenCalledWith(
       'request-123',
       'ESCALATED',
-      expect.stringContaining('CANCELLED'),
+      expect.stringContaining('UNDER_REVIEW'),
     );
     expect(mockInteractionService.createFollowUp).not.toHaveBeenCalled();
   });
@@ -148,7 +283,7 @@ describe('RequestInteractionRespondedHandler', () => {
     mockRequestService.findById.mockResolvedValue(request);
     mockInteractionRepository.findById.mockResolvedValue({
       direction: InteractionDirection.TO_CLIENT,
-      messageTemplate: 'follow_up_pending_3_days_with_interests',
+      messageTemplate: 'notice_interests_published',
       metadata: { interestedProviderIds: ['sp-1'] },
     });
 

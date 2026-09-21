@@ -99,7 +99,7 @@ export class MessageTemplateService implements OnModuleInit {
 
   /**
    * Get a template by key and language.
-   * @param templateKey Template identifier (e.g., 'follow_up_3_days')
+   * @param templateKey Template identifier (e.g., 'question_agreement')
    * @param language Language code ('es' or 'en')
    * @param variables Optional variables to replace in template (e.g., {name: 'Juan'})
    * @returns Formatted message or fallback message if template not found

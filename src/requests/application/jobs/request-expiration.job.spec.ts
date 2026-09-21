@@ -49,6 +49,7 @@ describe('RequestExpirationJob', () => {
     expect(service.updateStatus).toHaveBeenCalledTimes(1);
     expect(service.updateStatus).toHaveBeenCalledWith(request.id, systemCtx, {
       status: to,
+      statusReason: to === RequestStatus.CLOSED ? 'AUTO_CLOSED' : undefined,
     });
   });
 

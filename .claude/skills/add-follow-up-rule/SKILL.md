@@ -15,7 +15,7 @@ Read `docs/guides/whatsapp/README.md` and `.claude/rules/05-events-jobs-notifica
    `PENDING_WITH_INTERESTS {days}`), add a variant there, add a `findX...UpdatedBefore(...)`
    method to `RequestRepository` (+ `PrismaRequestRepository`), and map it in
    `src/requests/application/follow-up/follow-up-query-executor.ts`.
-3. **Rule class** in `src/requests/application/follow-up/rules/<status>-<n>-days.follow-up-rule.ts`:
+3. **Rule**: preferred path = add a `LadderDef` entry to `src/requests/application/follow-up/follow-up-ladders.ts` (status, directions, template, days; max 3; optional `appliesTo`/`escalatesWhenUnanswered`); the ladder guards (order, max 3, per-recipient) are applied by the scheduler. Only write a custom class as below for payloads a ladder can't express. Legacy class form: in `src/requests/application/follow-up/rules/<status>-<n>-days.follow-up-rule.ts`:
    - Status-based: extend `StatusFollowUpRule` and call
      `super('<NAME>', RequestStatus.X, <days>, InteractionDirection.TO_PROVIDER|TO_CLIENT, '<template_key>')`.
    - Custom payload/variables: extend `AbstractFollowUpRule` and implement `buildPayload(request)`

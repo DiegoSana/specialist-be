@@ -80,13 +80,17 @@ request attention" below.
   non-chosen providers is PR4/notifications), `requests.request.professional_assigned`,
   `requests.interaction.responded`. Payloads carry `serviceProviderId`, `providerUserId`,
   `providerType`, `providerName`.
-- Follow-up rules (`domain/follow-up` contracts, `application/follow-up/rules` strategies):
-  CONTACT_RELEASED 3d/7d -> provider (rule classes still named `Accepted*`), IN_PROGRESS 5d/10d -> provider, FINISHED 1d -> client (review),
-  PUBLISHED 3d with interests -> client (assign). These are mechanical renames; the spec's real ladder/templates arrive in PR4. Registered via `FOLLOW_UP_RULES` factory in the
-  module. When the highest-`days` `BY_STATUS` rule for a request's current status fires and the
-  request has never had a `RESPONDED` interaction (`RequestInteractionRepository.hasRespondedInteraction`),
-  `FollowUpSchedulerJob` flags it `AT_RISK` via `RequestAttentionService` (see "Admin request
-  attention" below) — `PENDING_WITH_INTERESTS` is excluded from this check.
+- Follow-up rules (`domain/follow-up` contracts, `application/follow-up`): data-driven "ladders" in
+  `follow-up-ladders.ts` -> `LadderFollowUpRule`s (one per initial message/reminder) registered via the
+  `FOLLOW_UP_RULES` factory. Implements the spec table (A1-A7 `notice_*`, P1-P3 `question_*` templates in
+  `message-templates.json`; reminders = same template + `{reminder}` prefix; max 3 per ladder; states without a
+  provider are covered because `FollowUpQueryExecutor` now uses `findStaleByStatus`). Scheduler guards for
+  ladder rules: step N only after N ladder messages were sent in the current status (ledger metadata
+  `ladder` + `requestStatus`), one pending message per recipient, >= 1 day between messages to a recipient in a
+  state, daytime window `WHATSAPP_FOLLOWUP_WINDOW_*`. No state-entry timestamp exists: "days since entering"
+  uses `Request.updatedAt` (known limitation). Rules flagged `escalatesWhenUnanswered` (last rung of P1/P2/P3)
+  mark the request `AT_RISK` via `RequestAttentionService` if nobody ever replied. Auto-closed requests
+  (`statusReason = AUTO_CLOSED`, set by `RequestExpirationJob`) get A7 instead of A6.
 - `RequestAttentionFlag` (association store, `domain/entities/request-attention-flag.entity.ts`):
   `id, requestId, reason (AT_RISK|ABANDONED|ESCALATED), detail?, createdAt, resolvedAt?,
   resolvedByUserId?`. Created only through `RequestAttentionService.flag(requestId, reason,
@@ -162,7 +166,10 @@ section above for the flagging flow.
 - Interested providers get the limited view (`fromEntityLimited`): no client contact/address until
   assigned.
 - Request status changes triggered by WhatsApp replies happen in
-  `RequestInteractionRespondedHandler`, not inside `RequestInteractionService`.
+  `RequestInteractionRespondedHandler`, not inside `RequestInteractionService`. Only replies to the `question_*`
+  templates move state (P1: yes -> IN_PROGRESS, no -> NOT_COMPLETED; P2: done -> FINISHED, stopped -> INTERRUPTED,
+  a bare "no" or "sigue" -> no change; P3: yes -> CLOSED, no -> UNDER_REVIEW); the classifier prompt receives the
+  template. Reply text is stored in `statusReason` for NOT_COMPLETED/INTERRUPTED (`UpdateRequestDto.statusReason`).
 - Cron jobs assume a single instance (no distributed lock).
 - `FollowUpSchedulerJob.forceTriggerRule` (admin "trigger now") deliberately **bypasses the
   time-gate instead of backdating the request**: it validates the rule's non-time condition

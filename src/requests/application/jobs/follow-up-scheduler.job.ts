@@ -10,6 +10,8 @@ import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import {
   InteractionDirection,
+  InteractionStatus,
+  InteractionType,
   RequestAttentionReason,
   RequestStatus,
 } from '@prisma/client';
@@ -95,6 +97,38 @@ export class FollowUpSchedulerJob {
     return this.maxDaysByStatus.get(query.status) === query.days;
   }
 
+  /**
+   * Daytime-only sending (spec: 9-20h). Configurable via WHATSAPP_FOLLOWUP_WINDOW_START_HOUR /
+   * WHATSAPP_FOLLOWUP_WINDOW_END_HOUR (end exclusive) in WHATSAPP_FOLLOWUP_TIMEZONE.
+   * Only the scheduler is gated; admin "trigger now" is an explicit human action and is not.
+   */
+  private isWithinSendWindow(now: Date): boolean {
+    const start = Number(
+      this.config.get('WHATSAPP_FOLLOWUP_WINDOW_START_HOUR', 9),
+    );
+    const end = Number(
+      this.config.get('WHATSAPP_FOLLOWUP_WINDOW_END_HOUR', 20),
+    );
+    const timeZone = this.config.get<string>(
+      'WHATSAPP_FOLLOWUP_TIMEZONE',
+      'America/Argentina/Buenos_Aires',
+    );
+    let hour: number;
+    try {
+      hour =
+        Number(
+          new Intl.DateTimeFormat('en-GB', {
+            hour: '2-digit',
+            hour12: false,
+            timeZone,
+          }).format(now),
+        ) % 24;
+    } catch {
+      hour = now.getHours();
+    }
+    return hour >= start && hour < end;
+  }
+
   @Cron('0 * * * *')
   async scheduleFollowUps(): Promise<void> {
     const startTime = Date.now();
@@ -108,10 +142,15 @@ export class FollowUpSchedulerJob {
       return;
     }
 
+    const now = new Date();
+    if (!this.isWithinSendWindow(now)) {
+      this.logger.debug('Outside the WhatsApp follow-up daytime window');
+      return;
+    }
+
     this.logger.debug('Starting follow-up scheduler job');
 
     try {
-      const now = new Date();
       let totalScheduled = 0;
       let totalSkipped = 0;
       let totalErrors = 0;
@@ -216,25 +255,19 @@ export class FollowUpSchedulerJob {
     const direction = rule.getDirection();
     const template = rule.getTemplate();
 
-    const hasPending = await this.interactionRepository.hasPendingFollowUp(
-      request.id,
-    );
-    if (hasPending) {
-      return { scheduled: false, reason: 'Already has pending follow-up' };
+    if (rule.appliesTo && !rule.appliesTo(request)) {
+      return {
+        scheduled: false,
+        reason: 'Rule does not apply to this request',
+      };
     }
 
-    const lastInteraction =
-      await this.interactionRepository.findMostRecentByRequestId(request.id);
-    if (lastInteraction) {
-      const daysSince =
-        (now.getTime() - lastInteraction.createdAt.getTime()) /
-        (1000 * 60 * 60 * 24);
-      if (daysSince < 1) {
-        return {
-          scheduled: false,
-          reason: `Recent interaction ${daysSince.toFixed(2)} days ago`,
-        };
-      }
+    const ladder = rule.getLadder?.();
+    const guardReason = ladder
+      ? await this.checkLadderGuards(rule, ladder, request, now)
+      : await this.checkLegacyGuards(request, now);
+    if (guardReason) {
+      return { scheduled: false, reason: guardReason };
     }
 
     const recipientPhone = await this.resolveFollowUpRecipientPhone(
@@ -278,7 +311,11 @@ export class FollowUpSchedulerJob {
       `Scheduled follow-up: RequestId=${request.id}, Rule=${rule.getName()}, Template=${template}`,
     );
 
-    if (this.isLastRuleForStatus(rule)) {
+    const escalate =
+      typeof rule.escalatesWhenUnanswered === 'function'
+        ? rule.escalatesWhenUnanswered()
+        : this.isLastRuleForStatus(rule);
+    if (escalate) {
       const everResponded =
         await this.interactionRepository.hasRespondedInteraction(request.id);
       if (!everResponded) {
@@ -291,6 +328,87 @@ export class FollowUpSchedulerJob {
     }
 
     return { scheduled: true };
+  }
+
+  /** Guards for rules without a ladder: one pending follow-up at a time, >= 1 day apart. */
+  private async checkLegacyGuards(
+    request: RequestEntity,
+    now: Date,
+  ): Promise<string | null> {
+    const hasPending = await this.interactionRepository.hasPendingFollowUp(
+      request.id,
+    );
+    if (hasPending) {
+      return 'Already has pending follow-up';
+    }
+
+    const lastInteraction =
+      await this.interactionRepository.findMostRecentByRequestId(request.id);
+    if (lastInteraction) {
+      const daysSince =
+        (now.getTime() - lastInteraction.createdAt.getTime()) /
+        (1000 * 60 * 60 * 24);
+      if (daysSince < 1) {
+        return `Recent interaction ${daysSince.toFixed(2)} days ago`;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Guards for ladder rules (max 3 messages per ladder and state, in order):
+   * - the message for step N is only sent once exactly N messages of this ladder were sent
+   *   for the request's CURRENT status (counted from the interactions ledger via
+   *   metadata.ladder + metadata.requestStatus, so a bump of Request.updatedAt never re-sends);
+   * - one pending message per recipient at a time (both parties are handled separately);
+   * - at least 1 day since the last message to that recipient in this state (outage catch-up).
+   */
+  private async checkLadderGuards(
+    rule: IFollowUpRule,
+    ladder: string,
+    request: RequestEntity,
+    now: Date,
+  ): Promise<string | null> {
+    const interactions = (
+      await this.interactionRepository.findByRequestId(request.id)
+    ).filter((i) => i.interactionType === InteractionType.FOLLOW_UP);
+    const forRecipient = interactions.filter(
+      (i) => i.direction === rule.getDirection(),
+    );
+
+    if (forRecipient.some((i) => i.status === InteractionStatus.PENDING)) {
+      return 'Already has pending follow-up for this recipient';
+    }
+
+    const sentInLadder = interactions.filter((i) => {
+      const meta = (i.metadata ?? {}) as Record<string, unknown>;
+      return (
+        meta.ladder === ladder &&
+        meta.requestStatus === request.status &&
+        i.status !== InteractionStatus.FAILED
+      );
+    }).length;
+    const step = rule.getStep?.() ?? 0;
+    if (sentInLadder !== step) {
+      return `Ladder ${ladder} is at step ${sentInLadder}, rule is step ${step}`;
+    }
+
+    const lastInState = forRecipient
+      .filter(
+        (i) =>
+          ((i.metadata ?? {}) as Record<string, unknown>).requestStatus ===
+          request.status,
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+    if (lastInState) {
+      const daysSince =
+        (now.getTime() - lastInState.createdAt.getTime()) /
+        (1000 * 60 * 60 * 24);
+      if (daysSince < 1) {
+        return `Recent interaction in this state ${daysSince.toFixed(2)} days ago`;
+      }
+    }
+    return null;
   }
 
   /** Rule names available to force-trigger, for the admin config endpoint. */

@@ -3,7 +3,10 @@ import { Module, forwardRef } from '@nestjs/common';
 // Domain
 import { REQUEST_REPOSITORY } from './domain/repositories/request.repository';
 import { REQUEST_QUERY_REPOSITORY } from './domain/queries/request.query-repository';
-import { REQUEST_INTEREST_REPOSITORY } from './domain/repositories/request-interest.repository';
+import {
+  REQUEST_INTEREST_REPOSITORY,
+  RequestInterestRepository,
+} from './domain/repositories/request-interest.repository';
 import { REQUEST_INTERACTION_REPOSITORY } from './domain/repositories/request-interaction.repository';
 import { REQUEST_INTERACTION_QUERY_REPOSITORY } from './domain/queries/request-interaction.query-repository';
 import { REQUEST_ATTENTION_FLAG_REPOSITORY } from './domain/repositories/request-attention-flag.repository';
@@ -24,14 +27,7 @@ import { DetectResponseIntentUseCase } from './application/use-cases/detect-resp
 import { RequestInteractionRespondedHandler } from './application/handlers/request-interaction-responded.handler';
 import { RequestAttentionService } from './application/services/request-attention.service';
 import { FollowUpQueryExecutor } from './application/follow-up/follow-up-query-executor';
-import {
-  Accepted3DaysFollowUpRule,
-  Accepted7DaysFollowUpRule,
-  InProgress5DaysFollowUpRule,
-  InProgress10DaysFollowUpRule,
-  Done1DayFollowUpRule,
-  Pending3DaysWithInterestsFollowUpRule,
-} from './application/follow-up/rules';
+import { buildFollowUpRules } from './application/follow-up/follow-up-ladders';
 
 // Infrastructure
 import { PrismaRequestRepository } from './infrastructure/repositories/prisma-request.repository';
@@ -96,30 +92,11 @@ import { SupportModule } from '../support/support.module';
     RequestInteractionRespondedHandler,
     RequestAttentionService,
     FollowUpQueryExecutor,
-    Accepted3DaysFollowUpRule,
-    Accepted7DaysFollowUpRule,
-    InProgress5DaysFollowUpRule,
-    InProgress10DaysFollowUpRule,
-    Done1DayFollowUpRule,
-    Pending3DaysWithInterestsFollowUpRule,
     {
       provide: FOLLOW_UP_RULES,
-      useFactory: (
-        r1: Accepted3DaysFollowUpRule,
-        r2: Accepted7DaysFollowUpRule,
-        r3: InProgress5DaysFollowUpRule,
-        r4: InProgress10DaysFollowUpRule,
-        r5: Done1DayFollowUpRule,
-        r6: Pending3DaysWithInterestsFollowUpRule,
-      ) => [r1, r2, r3, r4, r5, r6],
-      inject: [
-        Accepted3DaysFollowUpRule,
-        Accepted7DaysFollowUpRule,
-        InProgress5DaysFollowUpRule,
-        InProgress10DaysFollowUpRule,
-        Done1DayFollowUpRule,
-        Pending3DaysWithInterestsFollowUpRule,
-      ],
+      useFactory: (interestRepository: RequestInterestRepository) =>
+        buildFollowUpRules(interestRepository),
+      inject: [REQUEST_INTEREST_REPOSITORY],
     },
     {
       provide: REQUEST_REPOSITORY,

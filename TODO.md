@@ -37,6 +37,9 @@ Spec: `docs/EspecialistBRC — Estados del pedido.md`. PR1 = enum de 15 estados 
 - [ ] Abandonado: solo aplica a `CONTACT_RELEASED` tras agotar recordatorios; `IN_PROGRESS -> ABANDONED` sin mapear.
 - [ ] Cierre automático (`FINISHED -> CLOSED` por vencimiento) califica con el mismo peso que un cierre confirmado.
 - [x] PR3 (`feat/estados-pedido-pr3`): `RequestExpirationJob` (Sistema) aplica PUBLISHED->EXPIRED (6d), SENT->NO_RESPONSE (6d), CONTACT_RELEASED->ABANDONED (8d, supuesto: margen tras el último recordatorio de 6d), FINISHED->CLOSED (7d); plazos por env `REQUEST_EXPIRY_DAYS_*`, job apagado por defecto (`REQUEST_EXPIRATION_ENABLED`).
+- [x] PR4 (`feat/estados-pedido-pr4`): 10 plantillas del spec (A1-A7 `notice_*`, P1-P3 `question_*`), escaleras de follow-up por estado (`follow-up-ladders.ts`), ventana diurna 9-20h, y mapeo de respuestas P1/P2/P3 -> estado en `RequestInteractionRespondedHandler`. Sin migración: las respuestas se desambiguan por plantilla sobre los `ResponseIntent` existentes.
+- [ ] Limitación PR4: no hay timestamp de entrada al estado; los "días desde que entra" usan `Request.updatedAt` (cualquier `save` lo reinicia). Resolver con el historial de estados de arriba.
+- [ ] PR4: las plantillas deben aprobarse en WhatsApp antes de usarse en producción (Twilio). Por definir en el spec: agrupar mensajes si una persona tiene varios pedidos en el mismo estado (hoy se mandan por separado).
 - [ ] TODO abierto: `IN_PROGRESS -> ABANDONED` NO implementado (pregunta abierta del spec); En curso solo deja de recibir recordatorios.
 
 ### ⬜ Hallazgos pendientes (2026-09-15)
