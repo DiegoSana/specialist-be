@@ -35,8 +35,8 @@ Docs: `docs/guides/PERMISSIONS_BY_ROLE.md`, `docs/guides/whatsapp/README.md`,
 
 ## Endpoints (`/requests`, all JWT)
 
-`POST /` create, `GET /` mine (client + provider views), `GET /available` job board,
-`GET /interested` my interests, `GET /:id`, `PATCH /:id`, `POST|DELETE /:id/photos`,
+`POST /` create, `GET /` mine (client + provider views; the client list also returns `interestsCount` = active `INTERESTED` interests, from a single Prisma `_count`, not persisted), `GET /available` job board,
+`GET /interested` my interests (static GET routes MUST be declared before `GET /:id`; guarded by `requests.controller.routes.spec.ts`), `GET /:id`, `PATCH /:id`, `POST|DELETE /:id/photos`,
 `POST|DELETE|GET /:id/interest`, `GET /:id/interests` (owner), `POST /:id/assign-provider`,
 `POST /:id/unassign-provider`, `POST /:id/rate-client`. Webhook: `POST /webhooks/twilio`
 (`TwilioWebhookGuard` + `TwilioRateLimitGuard`, no JWT).
@@ -170,8 +170,8 @@ section above for the flagging flow.
   auto-cancelled/unassigned).
 - Controller resolves the caller's provider context (Professional or Company) in
   `resolveProviderContext`; both provider types must be supported in every provider-facing path.
-- Interested providers get the limited view (`fromEntityLimited`): no client contact/address until
-  assigned.
+- Interested providers get the limited view (`fromEntityLimited`): no client contact/address (and no `statusReason`) until
+  assigned. `RequestResponseDto` returns `statusReason` in the full view.
 - Request status changes triggered by WhatsApp replies happen in
   `RequestInteractionRespondedHandler`, not inside `RequestInteractionService`. Only replies to the `question_*`
   templates move state (P1: yes -> IN_PROGRESS, no -> NOT_COMPLETED; P2: done -> FINISHED, stopped -> INTERRUPTED,

@@ -103,6 +103,11 @@ export class PrismaRequestMapper {
       }
     }
 
+    // Read-model field (not persisted): active INTERESTED interests, when the query asked for it.
+    if (typeof request._count?.interests === 'number') {
+      (entity as any).interestsCount = request._count.interests;
+    }
+
     if (request.client) {
       (entity as any).client = {
         id: request.client.id,

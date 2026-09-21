@@ -342,6 +342,8 @@ When a public request is created, service providers (professionals or companies)
 
 Each interest has its own `status` (`RequestInterestStatus`): `INTERESTED` (Interesado), `CHOSEN` (Elegido), `NOT_CHOSEN` (No elegido), `WITHDRAWN` (Retirado). A provider that withdrew can express interest again (the row is reused). `GET /requests/interested` (provider's own list) returns all of them as `interestStatus`.
 
+Request responses include `statusReason` (reason recorded for `NOT_COMPLETED`/`INTERRUPTED`, or a support resolution note; omitted from the limited view for interested-but-unassigned providers). The client's `GET /requests` list also includes `interestsCount`: how many specialists are currently `INTERESTED` (excludes withdrawn / chosen / not chosen).
+
 ```json
 // Express interest request
 {
