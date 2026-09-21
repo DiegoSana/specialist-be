@@ -191,6 +191,19 @@ export class PrismaRequestRepository implements RequestRepository {
     return requests.map((r) => PrismaRequestMapper.toDomain(r));
   }
 
+  async findStaleByStatus(
+    status: RequestStatus,
+    updatedBefore: Date,
+  ): Promise<RequestEntity[]> {
+    const requests = await this.prisma.request.findMany({
+      where: { status, updatedAt: { lt: updatedBefore } },
+      include: { ...this.fullInclude },
+      orderBy: { updatedAt: 'asc' },
+    });
+
+    return requests.map((r) => PrismaRequestMapper.toDomain(r));
+  }
+
   async findPendingWithInterestsUpdatedBefore(
     updatedBefore: Date,
   ): Promise<RequestEntity[]> {

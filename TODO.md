@@ -36,6 +36,8 @@ Spec: `docs/EspecialistBRC — Estados del pedido.md`. PR1 = enum de 15 estados 
 - [ ] Pedido público que no se concreta con el elegido: el cliente publica de nuevo (no vuelve a la bolsa); `unassignProvider` queda como herramienta correctiva, no flujo cliente-facing.
 - [ ] Abandonado: solo aplica a `CONTACT_RELEASED` tras agotar recordatorios; `IN_PROGRESS -> ABANDONED` sin mapear.
 - [ ] Cierre automático (`FINISHED -> CLOSED` por vencimiento) califica con el mismo peso que un cierre confirmado.
+- [x] PR3 (`feat/estados-pedido-pr3`): `RequestExpirationJob` (Sistema) aplica PUBLISHED->EXPIRED (6d), SENT->NO_RESPONSE (6d), CONTACT_RELEASED->ABANDONED (8d, supuesto: margen tras el último recordatorio de 6d), FINISHED->CLOSED (7d); plazos por env `REQUEST_EXPIRY_DAYS_*`, job apagado por defecto (`REQUEST_EXPIRATION_ENABLED`).
+- [ ] TODO abierto: `IN_PROGRESS -> ABANDONED` NO implementado (pregunta abierta del spec); En curso solo deja de recibir recordatorios.
 
 ### ⬜ Hallazgos pendientes (2026-09-15)
 

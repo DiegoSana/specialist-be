@@ -148,6 +148,7 @@ export class RequestsNotificationsHandler implements OnModuleInit {
       const displayProviderName =
         providerName || event.payload.professionalName;
       const clientMadeChange = changedByUserId === event.payload.clientId;
+      const systemMadeChange = event.payload.changedByActorKind === 'SYSTEM';
       const statusLabel = this.statusLabel(toStatus);
       const requestRef = requestTitle ? `"${requestTitle}"` : 'la solicitud';
 
@@ -156,7 +157,9 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         await this.notifications.createForUser({
           userId: event.payload.clientId,
           type: 'REQUEST_STATUS_CHANGED',
-          title: `${displayProviderName || 'El especialista'} movió ${requestRef} a "${statusLabel}"`,
+          title: systemMadeChange
+            ? `${requestRef} pasó a "${statusLabel}"`
+            : `${displayProviderName || 'El especialista'} movió ${requestRef} a "${statusLabel}"`,
           body: this.statusChangeBody(toStatus),
           data: {
             requestId: event.payload.requestId,
@@ -188,7 +191,9 @@ export class RequestsNotificationsHandler implements OnModuleInit {
         await this.notifications.createForUser({
           userId: effectiveProviderUserId,
           type: 'REQUEST_STATUS_CHANGED',
-          title: `${clientName} movió ${requestRef} a "${statusLabel}"`,
+          title: systemMadeChange
+            ? `${requestRef} pasó a "${statusLabel}"`
+            : `${clientName} movió ${requestRef} a "${statusLabel}"`,
           body: this.statusChangeBody(toStatus),
           data: {
             requestId: event.payload.requestId,
@@ -225,6 +230,15 @@ export class RequestsNotificationsHandler implements OnModuleInit {
     }
     if (status === RequestStatus.CANCELLED) {
       return 'La solicitud fue cancelada.';
+    }
+    if (status === RequestStatus.EXPIRED) {
+      return 'Nadie fue elegido a tiempo. Podés volver a publicarla.';
+    }
+    if (status === RequestStatus.NO_RESPONSE) {
+      return 'El especialista no respondió. Podés enviarla a otro o publicarla en la bolsa.';
+    }
+    if (status === RequestStatus.ABANDONED) {
+      return 'No hubo respuestas tras el contacto. Podés volver a publicarla.';
     }
     return '';
   }
