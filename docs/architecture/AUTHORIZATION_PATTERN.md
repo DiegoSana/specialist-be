@@ -143,17 +143,10 @@ export class RequestEntity {
   canChangeStatusBy(ctx: RequestAuthContext, newStatus: RequestStatus): boolean {
     if (ctx.isAdmin) return true;
     
-    // Cliente puede cambiar a ciertos estados
-    if (ctx.isClient) {
-      return ['ACCEPTED', 'CANCELLED'].includes(newStatus);
-    }
-    
-    // Profesional puede cambiar a otros estados
-    if (ctx.isProfessional) {
-      return ['IN_PROGRESS', 'DONE'].includes(newStatus);
-    }
-    
-    return false;
+    // Tabla declarativa TRANSITIONS[estadoActual][nuevoEstado] -> actores permitidos
+    // (CLIENT | PROVIDER | SYSTEM | SUPPORT), ver request.entity.ts
+    const actor = this.resolveActorKind(ctx);
+    return !!TRANSITIONS[this.status]?.[newStatus]?.includes(actor);
   }
 }
 ```
@@ -273,11 +266,9 @@ canManagePhotosBy(ctx: RequestAuthContext): boolean {
 canChangeStatusBy(ctx: RequestAuthContext, newStatus: RequestStatus): boolean {
   if (ctx.isAdmin) return true;
   
-  const clientStatuses = ['ACCEPTED', 'CANCELLED'];
-  const professionalStatuses = ['IN_PROGRESS', 'DONE'];
-  
-  if (ctx.isClient && clientStatuses.includes(newStatus)) return true;
-  if (ctx.isProfessional && professionalStatuses.includes(newStatus)) return true;
+  // Ver TRANSITIONS en request.entity.ts (actores CLIENT/PROVIDER/SYSTEM/SUPPORT)
+  const actor = this.resolveActorKind(ctx);
+  if (TRANSITIONS[this.status]?.[newStatus]?.includes(actor)) return true;
   
   return false;
 }

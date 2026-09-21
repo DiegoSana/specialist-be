@@ -41,6 +41,9 @@ Spec: `docs/EspecialistBRC — Estados del pedido.md`. PR1 = enum de 15 estados 
 - [ ] Limitación PR4: no hay timestamp de entrada al estado; los "días desde que entra" usan `Request.updatedAt` (cualquier `save` lo reinicia). Resolver con el historial de estados de arriba.
 - [ ] PR4: las plantillas deben aprobarse en WhatsApp antes de usarse en producción (Twilio). Por definir en el spec: agrupar mensajes si una persona tiene varios pedidos en el mismo estado (hoy se mandan por separado).
 - [ ] TODO abierto: `IN_PROGRESS -> ABANDONED` NO implementado (pregunta abierta del spec); En curso solo deja de recibir recordatorios.
+- [x] PR5 (`feat/estados-pedido-pr5`): flujo de soporte para `UNDER_REVIEW` — `POST /admin/requests/:id/resolve-review` (Sistema/Soporte como actor `SUPPORT`, nota opcional en `statusReason`), listado con `GET /admin/requests?status=UNDER_REVIEW`, copy de notificación neutro para cambios de soporte, y docs de estados (diagramas, `API.md`, `DOMAIN_MODEL.md`, etc.) actualizados al modelo de 15 estados.
+- [ ] PR5: no existe un rol "Soporte" separado; el endpoint es solo admin. Crear un rol dedicado si hace falta (habilitaría `isSupport` sin `isAdmin`).
+- [ ] Fase 2 (frontend): actualizar `specialist-fe` (y `specialist-admin`, cuyo filtro de estados de `/admin/requests` aún asume los 5 viejos) al modelo de 15 estados — ver `handoff-brief.md`.
 
 ### ⬜ Hallazgos pendientes (2026-09-15)
 

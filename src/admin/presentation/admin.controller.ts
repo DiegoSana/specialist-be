@@ -23,6 +23,7 @@ import { UpdateUserWhatsAppOptOutDto } from '../application/dto/update-user-what
 import { UpdateProfessionalStatusDto } from '../application/dto/update-professional-status.dto';
 import { UpdateCompanyStatusDto } from '../application/dto/update-company-status.dto';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
+import { RequestStatus } from '@prisma/client';
 import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
@@ -179,7 +180,7 @@ export class AdminController {
   @ApiQuery({
     name: 'status',
     required: false,
-    enum: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DONE', 'CANCELLED'],
+    enum: Object.values(RequestStatus),
   })
   @ApiQuery({ name: 'title', required: false, type: String })
   @ApiQuery({

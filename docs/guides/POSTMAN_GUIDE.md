@@ -85,8 +85,8 @@ If you don't import the environment, you can create one manually:
 4. **Get My Professional Profile** → Verify created profile
 5. **Get Available Requests** → View available public requests
 6. **Express Interest** → Show interest in a request
-7. **Update Request Status** → Accept request (status: ACCEPTED)
-8. **Update Request Status** → Complete work (status: DONE)
+7. **Update Request Status** → Accept request (status: CONTACT_RELEASED)
+8. **Update Request Status** → Finish work (status: FINISHED)
 
 ### Use Case 3: Admin verifies professionals
 
@@ -130,11 +130,8 @@ Postman handles this automatically if:
 - `REJECTED`
 
 **RequestStatus:**
-- `PENDING`
-- `ACCEPTED`
-- `IN_PROGRESS`
-- `DONE`
-- `CANCELLED`
+- `DRAFT`, `PUBLISHED`, `SENT`, `CONTACT_RELEASED`, `IN_PROGRESS`, `FINISHED`, `CLOSED`, `UNDER_REVIEW`
+- `EXPIRED`, `NO_RESPONSE`, `REJECTED`, `CANCELLED`, `NOT_COMPLETED`, `INTERRUPTED`, `ABANDONED`
 
 ### Public Endpoints (no authentication)
 

@@ -261,7 +261,7 @@ specialist-admin/
 
 - **Solicitudes:**
   - Total de solicitudes
-  - Solicitudes por estado (PENDING, ACCEPTED, IN_PROGRESS, DONE, CANCELLED)
+  - Solicitudes por estado (los 15 `RequestStatus`: DRAFT, PUBLISHED, SENT, CONTACT_RELEASED, IN_PROGRESS, FINISHED, CLOSED, UNDER_REVIEW, ...)
   - Solicitudes creadas (últimos 7/30 días)
   - Tiempo promedio de respuesta
   - Tasa de aceptación

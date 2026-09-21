@@ -48,6 +48,13 @@ live in a separate `AdminWhatsAppDevController`, registered only when `NODE_ENV 
 OR `WHATSAPP_DEV_MODE_ENABLED=true` (pre-launch opt-in for the "production" Fly deploy, see
 below), and additionally 404 (not 403) at runtime unless `isWhatsAppDevMode()` is true.
 
+Admin support flow (`AdminRequestReviewController`, `JwtAuthGuard` + `AdminGuard`): `POST
+/admin/requests/:id/resolve-review` (body `{ note? }`) -> `RequestService.resolveReview` moves an
+`UNDER_REVIEW` request to `CLOSED` with `buildSupportAuthContext` (event `changedByActorKind: 'SUPPORT'`,
+neutral notification copy; the note goes to `statusReason`, so the regular A6 closed notice is sent,
+not A7). Candidates come from `GET /admin/requests?status=UNDER_REVIEW`. `UNDER_REVIEW` has no
+follow-up ladder (no automatic WhatsApp, per spec). MVP: admin-only, no dedicated support role (TODO).
+
 Admin (`/admin/requests/attention`, `JwtAuthGuard` + `AdminGuard`,
 `AdminRequestAttentionController`): `GET ?page=&limit=` paginated list of open
 `RequestAttentionFlag`s joined with request title/status; `POST /:id/resolve` (204). Read-only
@@ -59,11 +66,11 @@ request attention" below.
 - `RequestEntity`: `createDraft(...)`, `withChanges`, predicates per `RequestStatus`
   (15 states, see `docs/EspecialistBRC — Estados del pedido.md`: `DRAFT|PUBLISHED|SENT|CONTACT_RELEASED|IN_PROGRESS|FINISHED|CLOSED|UNDER_REVIEW` + terminals `EXPIRED|NO_RESPONSE|REJECTED|CANCELLED|NOT_COMPLETED|INTERRUPTED|ABANDONED`), `canBeReviewed()` (= CLOSED). Labels: `REQUEST_STATUS_LABELS_ES` (`request-status.metadata.ts`). `RequestService.create` builds the draft and saves it directly as `PUBLISHED` (public) or `SENT` (direct).
   `providerId` is a `ServiceProvider` id; `professionalId` getter is deprecated.
-  `RequestAuthContext { userId, serviceProviderId?, isAdmin?, hasActiveClientProfile?, hasActiveProviderProfile? }`.
+  `RequestAuthContext { userId, serviceProviderId?, isAdmin?, isSystem?, isSupport?, hasActiveClientProfile?, hasActiveProviderProfile? }`.
   Rules: `canBeViewedBy`, `canManagePhotosBy`, `canChangeStatusBy(ctx, newStatus)`,
   `canRateClientBy`, `canExpressInterestBy` (needs active provider), `canAssignProviderBy`
   (needs active client), `canUnassignProviderBy`.
-- Status transitions: declarative `TRANSITIONS` table in `request.entity.ts` mirroring the spec's "Quién puede mover cada cosa" (actors `CLIENT|PROVIDER|SYSTEM|SUPPORT`; `RequestAuthContext` gained `isSystem`/`isSupport`, producers land in later PRs; `IN_PROGRESS -> ABANDONED` intentionally unmapped, open question in the spec);
+- Status transitions: declarative `TRANSITIONS` table in `request.entity.ts` mirroring the spec's "Quién puede mover cada cosa" (actors `CLIENT|PROVIDER|SYSTEM|SUPPORT`; `RequestAuthContext` gained `isSystem` (expiration job) / `isSupport` (`resolveReview`); `IN_PROGRESS -> ABANDONED` intentionally unmapped, open question in the spec);
   admin any. Direct request needs `professionalId|companyId` (resolved to `providerId`) and an
   active provider; public request needs `tradeId` and starts unassigned.
 - `RequestInterestEntity` has a `status` (`RequestInterestStatus`: `INTERESTED|CHOSEN|NOT_CHOSEN|WITHDRAWN`) with

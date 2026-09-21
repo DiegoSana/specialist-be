@@ -71,7 +71,7 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - Ver solicitudes disponibles (job board) (`GET /requests/available`).
 - Expresar interés en solicitudes públicas (`POST /requests/:id/interest`).
 - Ver y retirar su interés (`GET/DELETE /requests/:id/interest`).
-- Ver solicitudes en las que está asignado (cambiar estado a IN_PROGRESS, DONE, agregar fotos).
+- Ver solicitudes en las que está asignado (avanzar el estado: aceptar/rechazar `SENT`, `IN_PROGRESS`, marcar `FINISHED`/`INTERRUPTED`, agregar fotos).
 - Calificar al cliente al finalizar el trabajo (`POST /requests/:id/rate-client`) **solo en solicitudes donde está asignado** (el backend valida con `canRateClientBy`; solo el proveedor asignado puede calificar).
 - Gestionar galería de su perfil (agregar/eliminar fotos).
 
@@ -102,6 +102,10 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - Verificar empresas (`POST /companies/:id/verify`).
 - Listar requests con filtros (`GET /admin/requests`) y ver el detalle completo de cualquier
   request, sin el chequeo de `canBeViewedBy` de participantes (`GET /admin/requests/:id`).
+- Actuar como **Soporte**: resolver requests en `UNDER_REVIEW` -> `CLOSED`
+  (`POST /admin/requests/:id/resolve-review`). MVP: no existe un rol de soporte separado, lo hace
+  cualquier admin (TODO: rol dedicado si hace falta). Los actores del modelo de estados son
+  Cliente, Especialista, Sistema (vencimientos/cierre automático) y Soporte.
 - Listar notificaciones y ver estadísticas de delivery (`GET /admin/notifications`, `GET /admin/notifications/stats`).
 - Reenviar notificaciones fallidas (`POST /admin/notifications/:id/resend`).
 - Ver el visor de conversaciones de WhatsApp: listar conversaciones y ver el hilo completo de una
