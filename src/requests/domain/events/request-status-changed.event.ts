@@ -1,5 +1,6 @@
 import { RequestStatus, ProviderType } from '@prisma/client';
 import { DomainEvent } from '../../../shared/domain/events/domain-event';
+import type { ActorKind } from '../entities/request.entity';
 
 export type RequestStatusChangedPayload = {
   requestId: string;
@@ -21,6 +22,8 @@ export type RequestStatusChangedPayload = {
   fromStatus: RequestStatus;
   toStatus: RequestStatus;
   changedByUserId: string;
+  /** Who moved the request (Sistema/Soporte are not users). Absent on legacy publishers. */
+  changedByActorKind?: ActorKind | null;
 };
 
 export class RequestStatusChangedEvent

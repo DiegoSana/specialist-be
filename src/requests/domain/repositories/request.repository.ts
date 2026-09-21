@@ -22,6 +22,16 @@ export interface RequestRepository {
   ): Promise<RequestEntity[]>;
 
   /**
+   * Find requests in `status` last updated before `updatedBefore`, regardless of whether a
+   * provider is assigned (unlike findByStatusAndUpdatedBefore, which only returns assigned
+   * ones). Used by the expiration job for PUBLISHED requests, which never have a provider.
+   */
+  findStaleByStatus(
+    status: RequestStatus,
+    updatedBefore: Date,
+  ): Promise<RequestEntity[]>;
+
+  /**
    * Find PENDING public requests that have at least one interest but no provider
    * assigned, and were updated before the given date.
    * Used for follow-up "assign a specialist" (e.g. 3 days with interests, no assignment).

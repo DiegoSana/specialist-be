@@ -20,7 +20,7 @@ export interface RequestAuthContext {
   hasActiveProviderProfile?: boolean;
 }
 
-type ActorKind = 'CLIENT' | 'PROVIDER' | 'SYSTEM' | 'SUPPORT';
+export type ActorKind = 'CLIENT' | 'PROVIDER' | 'SYSTEM' | 'SUPPORT';
 
 /**
  * Who can move a request from one status to another, mirroring
@@ -239,7 +239,7 @@ export class RequestEntity {
    * explicit context flags (there is no "system user"); client/provider are derived from
    * ownership/assignment, same as the rest of the entity's authorization checks.
    */
-  private resolveActorKind(ctx: RequestAuthContext): ActorKind | null {
+  resolveActorKind(ctx: RequestAuthContext): ActorKind | null {
     if (ctx.isSystem) return 'SYSTEM';
     if (ctx.isSupport) return 'SUPPORT';
     if (this.isClient(ctx)) return 'CLIENT';

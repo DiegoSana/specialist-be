@@ -231,6 +231,11 @@ export class RequestService {
     };
   }
 
+  /** Context for the Sistema actor (cron jobs applying expirations / automatic close). */
+  buildSystemAuthContext(): RequestAuthContext {
+    return { userId: 'system', isSystem: true };
+  }
+
   async findByClientId(clientId: string): Promise<RequestEntity[]> {
     return this.requestRepository.findByClientId(clientId);
   }
@@ -277,6 +282,7 @@ export class RequestService {
     }
 
     const fromStatus = request.status;
+    const actorKind = request.resolveActorKind(ctx);
     const saved = await this.requestRepository.save(
       request.withChanges({
         status: updateDto.status,
@@ -337,6 +343,7 @@ export class RequestService {
           fromStatus,
           toStatus: saved.status,
           changedByUserId: ctx.userId,
+          changedByActorKind: ctx.isAdmin ? null : actorKind,
         }),
       );
     }

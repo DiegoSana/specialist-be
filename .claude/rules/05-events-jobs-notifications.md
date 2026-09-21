@@ -55,6 +55,7 @@ Source of truth: `docs/guides/NOTIFICATIONS.md`, `docs/decisions/ADR-003-NOTIFIC
 | `FollowUpSchedulerJob` (requests) | hourly | `WHATSAPP_FOLLOWUP_ENABLED` |
 | `WhatsAppDispatchJob` (requests) | every minute | `WHATSAPP_FOLLOWUP_ENABLED` |
 | `MessageStatusCheckerJob` (requests) | every 5 min | `WHATSAPP_STATUS_CHECK_ENABLED` |
+| `RequestExpirationJob` (requests) | hourly at :30 | `REQUEST_EXPIRATION_ENABLED` |
 | `NotificationDispatchJob` | every minute | `NOTIFICATIONS_DISPATCH_ENABLED` |
 | `NotificationRetentionJob` | 03:15 daily | retention days env |
 

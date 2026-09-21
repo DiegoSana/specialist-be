@@ -118,6 +118,13 @@ endpoints (see `docs/guides/whatsapp/README.md`).
 Jobs: `FollowUpSchedulerJob` (hourly; also exposes `forceTriggerRule(ruleName, requestId)` for the
 admin "trigger now" endpoint), `WhatsAppDispatchJob` (1 min), `MessageStatusCheckerJob`
 (5 min); flags `WHATSAPP_FOLLOWUP_ENABLED`, `WHATSAPP_STATUS_CHECK_ENABLED`.
+`RequestExpirationJob` (hourly at :30, `REQUEST_EXPIRATION_ENABLED`, default off) is the Sistema actor: it uses
+`RequestRepository.findStaleByStatus` (no provider filter, unlike `findByStatusAndUpdatedBefore`) and
+`RequestService.updateStatus` with `buildSystemAuthContext()` (`{userId:'system', isSystem:true}`) for
+PUBLISHED->EXPIRED, SENT->NO_RESPONSE, CONTACT_RELEASED->ABANDONED, FINISHED->CLOSED (automatic close; rating
+stays enabled). Plazos: `REQUEST_EXPIRY_DAYS_*`. `IN_PROGRESS -> ABANDONED` is intentionally NOT applied (open
+question). `RequestStatusChangedEvent` now carries `changedByActorKind`; for `SYSTEM` the notification copy is
+neutral ("... pasó a ...") instead of "X movió ...".
 
 **AI reply classification**: `INTENT_DETECTION_PORT` (`domain/ports/intent-detection.port.ts`) is
 provided by `intent-detection.factory.ts` (mirrors `whatsapp-messaging.factory.ts`), switching on

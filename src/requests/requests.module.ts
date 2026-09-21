@@ -17,6 +17,7 @@ import { AdminWhatsAppService } from './application/services/admin-whatsapp.serv
 import { AdminRequestAttentionService } from './application/services/admin-request-attention.service';
 import { WhatsAppDispatchJob } from './application/jobs/whatsapp-dispatch.job';
 import { FollowUpSchedulerJob } from './application/jobs/follow-up-scheduler.job';
+import { RequestExpirationJob } from './application/jobs/request-expiration.job';
 import { FOLLOW_UP_RULES } from './application/jobs/follow-up-scheduler.job';
 import { MessageStatusCheckerJob } from './application/jobs/message-status-checker.job';
 import { DetectResponseIntentUseCase } from './application/use-cases/detect-response-intent.use-case';
@@ -87,6 +88,7 @@ import { SupportModule } from '../support/support.module';
     AdminRequestAttentionService,
     WhatsAppDispatchJob,
     FollowUpSchedulerJob,
+    RequestExpirationJob,
     MessageStatusCheckerJob,
     TwilioWebhookGuard,
     TwilioRateLimitGuard,

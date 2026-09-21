@@ -51,4 +51,25 @@ describe('RequestsNotificationsHandler.onStatusChanged', () => {
 
     expect(notifiedUserIds()).toEqual(['client-1', 'provider-1']);
   });
+
+  it('notifies both with neutral copy when the system actor made the change', async () => {
+    const event = new RequestStatusChangedEvent({
+      ...buildEvent('system').payload,
+      fromStatus: RequestStatus.CONTACT_RELEASED,
+      toStatus: RequestStatus.ABANDONED,
+      changedByUserId: 'system',
+      changedByActorKind: 'SYSTEM',
+    });
+
+    await (handler as any).onStatusChanged(event);
+
+    expect(notifiedUserIds()).toEqual(['client-1', 'provider-1']);
+    const titles = mockNotifications.createForUser.mock.calls.map(
+      (c: any[]) => c[0].title,
+    );
+    expect(titles).toEqual([
+      '"Arreglar canilla" pasó a "Abandonado"',
+      '"Arreglar canilla" pasó a "Abandonado"',
+    ]);
+  });
 });
