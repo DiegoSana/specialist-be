@@ -31,6 +31,12 @@
 - **Docs refrescados contra el código**: `DOMAIN_MODEL.md`, `ROLES_ARCHITECTURE.md`, `COMPANY_PROFILES.md`, `REVIEW_MODERATION.md`, `ADR-004` (`reviewCount` → `totalReviews`), `docs/README.md` (índice completo), `whatsapp/README.md` (regla PENDING 3 días), ports/defaults en `DOCKER.md`, `ENVIRONMENT_VARIABLES.md`, `NOTIFICATIONS.md`; `whatsapp-followup-implementation-status.md` marcado histórico; `admin-portal-plan.md` usa `specialist-be`.
 - **Fix**: `identity.module.ts` lee `JWT_EXPIRES_IN` (antes `JWT_EXPIRATION`, que `.env`/compose/docs no definían); `JWT_EXPIRATION` queda como fallback.
 
+### 🟡 Estados del pedido (2026-09-21, PR1 de 5 — rama `feat/estados-pedido-pr1`)
+Spec: `docs/EspecialistBRC — Estados del pedido.md`. PR1 = enum de 15 estados + tabla de transiciones por actor; el resto (sub-estados de interés, vencimientos, WhatsApp, soporte) va en PR2-PR5. Supuestos por defecto para las decisiones "Abiertas" del spec (revisar con datos reales):
+- [ ] Pedido público que no se concreta con el elegido: el cliente publica de nuevo (no vuelve a la bolsa); `unassignProvider` queda como herramienta correctiva, no flujo cliente-facing.
+- [ ] Abandonado: solo aplica a `CONTACT_RELEASED` tras agotar recordatorios; `IN_PROGRESS -> ABANDONED` sin mapear.
+- [ ] Cierre automático (`FINISHED -> CLOSED` por vencimiento) califica con el mismo peso que un cierre confirmado.
+
 ### ⬜ Hallazgos pendientes (2026-09-15)
 
 - [ ] `ReviewService.updateServiceProviderRating` no recalcula rating para Company (TODO en código; `CompanyService.updateRating` sin usar).

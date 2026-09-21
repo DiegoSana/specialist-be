@@ -44,7 +44,7 @@ describe('FollowUpSchedulerJob', () => {
       getName: jest.fn().mockReturnValue('ACCEPTED_3_DAYS'),
       getQuery: jest.fn().mockReturnValue({
         type: 'BY_STATUS',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
         days: 3,
       }),
       getDirection: jest.fn().mockReturnValue(InteractionDirection.TO_PROVIDER),
@@ -79,7 +79,7 @@ describe('FollowUpSchedulerJob', () => {
   describe('forceTriggerRule', () => {
     it('should create and immediately send a follow-up when the request is eligible (happy path)', async () => {
       const request = createMockRequest({
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
         providerId: 'service-provider-123',
       });
       mockRequestRepository.findById.mockResolvedValue(request);
@@ -130,7 +130,7 @@ describe('FollowUpSchedulerJob', () => {
     });
 
     it('should throw BadRequestException when the request status does not match a BY_STATUS rule', async () => {
-      const request = createMockRequest({ status: RequestStatus.PENDING });
+      const request = createMockRequest({ status: RequestStatus.PUBLISHED });
       mockRequestRepository.findById.mockResolvedValue(request);
 
       await expect(
@@ -142,7 +142,7 @@ describe('FollowUpSchedulerJob', () => {
 
     it('should throw BadRequestException when the recipient has no verified phone', async () => {
       const request = createMockRequest({
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
         providerId: 'service-provider-123',
       });
       mockRequestRepository.findById.mockResolvedValue(request);
@@ -159,7 +159,7 @@ describe('FollowUpSchedulerJob', () => {
 
   describe('scheduleFollowUps (open support conversation guard)', () => {
     const request = createMockRequest({
-      status: RequestStatus.ACCEPTED,
+      status: RequestStatus.CONTACT_RELEASED,
       providerId: 'service-provider-123',
     });
 
@@ -212,7 +212,7 @@ describe('FollowUpSchedulerJob', () => {
 
   describe('scheduleFollowUps (ladder-exhausted attention flag)', () => {
     const eligibleRequest = createMockRequest({
-      status: RequestStatus.ACCEPTED,
+      status: RequestStatus.CONTACT_RELEASED,
       providerId: 'service-provider-123',
     });
 
@@ -258,7 +258,7 @@ describe('FollowUpSchedulerJob', () => {
         getName: jest.fn().mockReturnValue('ACCEPTED_7_DAYS'),
         getQuery: jest.fn().mockReturnValue({
           type: 'BY_STATUS',
-          status: RequestStatus.ACCEPTED,
+          status: RequestStatus.CONTACT_RELEASED,
           days: 7,
         }),
         getDirection: jest

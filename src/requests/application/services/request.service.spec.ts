@@ -164,7 +164,7 @@ describe('RequestService', () => {
             clientId: 'client-123',
             isPublic: false,
             providerId: 'service-provider-123',
-            status: RequestStatus.PENDING,
+            status: RequestStatus.SENT,
           }),
         );
         expect(mockEventBus.publish).toHaveBeenCalledWith(
@@ -292,7 +292,7 @@ describe('RequestService', () => {
             isPublic: true,
             providerId: null,
             tradeId: 'trade-123',
-            status: RequestStatus.PENDING,
+            status: RequestStatus.PUBLISHED,
           }),
         );
         expect(mockEventBus.publish).toHaveBeenCalledWith(
@@ -395,10 +395,10 @@ describe('RequestService', () => {
   });
 
   describe('updateStatus', () => {
-    it('should allow assigned professional to update ACCEPTED to IN_PROGRESS', async () => {
+    it('should allow assigned professional to update CONTACT_RELEASED to IN_PROGRESS', async () => {
       const request = createMockRequest({
         providerId: 'service-provider-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
       const updatedRequest = createMockRequest({
         providerId: 'service-provider-123',
@@ -418,7 +418,7 @@ describe('RequestService', () => {
         expect.objectContaining({
           name: 'requests.request.status_changed',
           payload: expect.objectContaining({
-            fromStatus: RequestStatus.ACCEPTED,
+            fromStatus: RequestStatus.CONTACT_RELEASED,
             toStatus: RequestStatus.IN_PROGRESS,
           }),
         }),
@@ -428,7 +428,7 @@ describe('RequestService', () => {
     it('should allow client to cancel request', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
       const cancelledRequest = createMockRequest({
         clientId: 'client-123',
@@ -461,7 +461,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         providerId: 'service-provider-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
@@ -477,7 +477,7 @@ describe('RequestService', () => {
     it('should throw ForbiddenException if client tries invalid status change', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
@@ -493,10 +493,10 @@ describe('RequestService', () => {
     it('should allow admin to change any status', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
       const updatedRequest = createMockRequest({
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
@@ -504,10 +504,10 @@ describe('RequestService', () => {
 
       const ctx = createAuthContext('admin-user', null, true);
       const result = await service.updateStatus('req-123', ctx, {
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
       });
 
-      expect(result.status).toBe(RequestStatus.DONE);
+      expect(result.status).toBe(RequestStatus.CLOSED);
     });
   });
 
@@ -516,7 +516,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         photos: ['existing.jpg'],
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
       const updatedRequest = createMockRequest({
         photos: ['existing.jpg', 'http://example.com/new.jpg'],
@@ -560,7 +560,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         providerId: 'service-provider-123',
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
@@ -589,7 +589,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         photos: ['http://example.com/existing.jpg'],
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
@@ -617,7 +617,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         photos: ['photo1.jpg', 'photo2.jpg'],
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
       const updatedRequest = createMockRequest({ photos: ['photo1.jpg'] });
 
@@ -638,7 +638,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         providerId: 'service-provider-123',
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
@@ -655,7 +655,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         providerId: 'service-provider-123',
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
         clientRating: null,
       });
       const ratedRequest = createMockRequest({
@@ -696,7 +696,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         providerId: 'service-provider-123',
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
         clientRating: 4,
       });
 
@@ -712,7 +712,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         providerId: 'service-provider-123',
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
         clientRating: null,
       });
 
@@ -728,7 +728,7 @@ describe('RequestService', () => {
       const request = createMockRequest({
         clientId: 'client-123',
         providerId: 'service-provider-123',
-        status: RequestStatus.DONE,
+        status: RequestStatus.CLOSED,
         clientRating: null,
       });
 

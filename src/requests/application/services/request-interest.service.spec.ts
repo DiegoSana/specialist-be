@@ -229,7 +229,7 @@ describe('RequestInterestService', () => {
       clientId: 'client-123',
       providerId: null, // No provider assigned yet
       isPublic: true,
-      status: RequestStatus.PENDING,
+      status: RequestStatus.PUBLISHED,
       tradeId: 'trade-1',
     });
 
@@ -496,7 +496,7 @@ describe('RequestInterestService', () => {
       id: 'request-123',
       clientId: 'client-123',
       isPublic: true,
-      status: RequestStatus.PENDING,
+      status: RequestStatus.PUBLISHED,
     });
 
     it('should assign provider successfully', async () => {
@@ -510,7 +510,7 @@ describe('RequestInterestService', () => {
       const updatedRequest = createMockRequest({
         ...publicRequest,
         providerId: 'sp-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
 
       mockRequestRepository.findById.mockResolvedValue(publicRequest);
@@ -525,7 +525,7 @@ describe('RequestInterestService', () => {
       const result = await service.assignProvider('request-123', ctx, 'sp-123');
 
       expect(result.providerId).toBe('sp-123');
-      expect(result.status).toBe(RequestStatus.ACCEPTED);
+      expect(result.status).toBe(RequestStatus.CONTACT_RELEASED);
       // Interests are kept when assigning a provider (not deleted)
       expect(
         mockRequestInterestRepository.removeAllByRequestId,
@@ -580,7 +580,7 @@ describe('RequestInterestService', () => {
       const ctx = createAuthContext('client-123', null, null);
       const acceptedRequest = createMockRequest({
         ...publicRequest,
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
       mockRequestRepository.findById.mockResolvedValue(acceptedRequest);
 
@@ -600,7 +600,7 @@ describe('RequestInterestService', () => {
       const updatedRequest = createMockRequest({
         ...publicRequest,
         providerId: 'sp-123',
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
       });
 
       mockRequestRepository.findById.mockResolvedValue(publicRequest);

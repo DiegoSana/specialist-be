@@ -19,6 +19,7 @@ export class PrismaRequestMapper {
       request.quoteNotes,
       request.clientRating,
       request.clientRatingComment,
+      request.statusReason,
       request.createdAt,
       request.updatedAt,
     );
@@ -174,6 +175,8 @@ export class PrismaRequestMapper {
       updateData.clientRating = partial.clientRating;
     if (partial.clientRatingComment !== undefined)
       updateData.clientRatingComment = partial.clientRatingComment;
+    if (partial.statusReason !== undefined)
+      updateData.statusReason = partial.statusReason;
 
     return updateData;
   }

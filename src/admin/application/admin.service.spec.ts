@@ -508,7 +508,7 @@ describe('AdminService', () => {
       const request = createMockRequest({
         id: 'request-123',
         title: 'Fix the sink',
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
       });
       (request as any).client = {
         id: 'client-1',

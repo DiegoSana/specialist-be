@@ -28,7 +28,7 @@ runs `npm test` before deploying `main` to Fly.io, so a red suite blocks product
 - Authorization: test entity `canXxxBy` for each role (admin / owner / assigned provider /
   stranger) and test the service path with `await expect(...).rejects.toThrow(ForbiddenException)`.
 - Repositories are `save`-based: assert on `save` being called with an entity whose fields changed
-  (`expect.objectContaining({ status: RequestStatus.ACCEPTED })`), not on `update`.
+  (`expect.objectContaining({ status: RequestStatus.CONTACT_RELEASED })`), not on `update`.
 - Never hit the network or a DB in unit tests; Twilio/SMTP/Prisma are behind ports and mocked.
 - Test names in English, `describe('XService') > describe('method') > it('should ...')`.
 

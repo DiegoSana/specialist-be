@@ -13,6 +13,7 @@ import {
 import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
 import { RequestInteractionRespondedEvent } from '../../domain/events/request-interaction-responded.event';
 import { RequestService } from '../services/request.service';
+import { RequestEntity } from '../../domain/entities/request.entity';
 import { RequestInteractionService } from '../services/request-interaction.service';
 import { RequestInterestService } from '../services/request-interest.service';
 import { RequestAttentionService } from '../services/request-attention.service';
@@ -111,7 +112,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
         interaction.direction === 'TO_CLIENT' &&
         interaction.messageTemplate ===
           'follow_up_pending_3_days_with_interests' &&
-        request.status === RequestStatus.PENDING
+        request.status === RequestStatus.PUBLISHED
       ) {
         const assigned = await this.tryAssignProviderByNumber(
           requestId,
@@ -140,7 +141,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
       // Standard flow: map intent to status change
       const newStatus = this.mapIntentToStatus(
         event.payload.responseIntent,
-        request.status,
+        request,
       );
 
       if (!newStatus) {
@@ -298,27 +299,33 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
    * Map response intent to Request status change.
    * Returns null if no status change should occur.
    *
+   * Mechanical rename to the new 15-state machine (PR1 of the state-machine redesign, see
+   * docs/EspecialistBRC — Estados del pedido.md): this only needs to compile and not regress
+   * obviously. Mapping the real P1/P2/P3 question semantics (¿se pusieron de acuerdo?,
+   * ¿terminó?, ¿quedó conforme?) onto these replies is explicitly deferred to PR4.
+   *
    * Note: The logic considers the context of the follow-up message.
    * For example, if a follow-up asks "¿Ya empezaste?" and user responds "si",
    * it should be treated as STARTED, not CONFIRMED.
    */
   private mapIntentToStatus(
     intent: ResponseIntent,
-    currentStatus: RequestStatus,
+    request: RequestEntity,
   ): RequestStatus | null {
+    const currentStatus = request.status;
     switch (intent) {
       case ResponseIntent.CONFIRMED:
         // CONFIRMED can mean:
-        // 1. Accepting a request (PENDING -> ACCEPTED)
-        // 2. Confirming they started work (ACCEPTED -> IN_PROGRESS) - if context suggests it
-        if (currentStatus === RequestStatus.PENDING) {
-          return RequestStatus.ACCEPTED;
+        // 1. Accepting a direct request (SENT -> CONTACT_RELEASED)
+        // 2. Confirming they started work (CONTACT_RELEASED -> IN_PROGRESS) - if context suggests it
+        if (currentStatus === RequestStatus.SENT) {
+          return RequestStatus.CONTACT_RELEASED;
         }
-        // If request is ACCEPTED and user confirms, they likely started
+        // If contact was released and user confirms, they likely started
         // This handles cases where "si" is detected as CONFIRMED but context is "did you start?"
-        if (currentStatus === RequestStatus.ACCEPTED) {
+        if (currentStatus === RequestStatus.CONTACT_RELEASED) {
           this.logger.debug(
-            `CONFIRMED intent for ACCEPTED request - treating as STARTED`,
+            `CONFIRMED intent for CONTACT_RELEASED request - treating as STARTED`,
           );
           return RequestStatus.IN_PROGRESS;
         }
@@ -326,7 +333,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
 
       case ResponseIntent.STARTED:
         // STARTED means work has begun
-        if (currentStatus === RequestStatus.ACCEPTED) {
+        if (currentStatus === RequestStatus.CONTACT_RELEASED) {
           return RequestStatus.IN_PROGRESS;
         }
         return null;
@@ -334,16 +341,13 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
       case ResponseIntent.COMPLETED:
         // COMPLETED means work is done
         if (currentStatus === RequestStatus.IN_PROGRESS) {
-          return RequestStatus.DONE;
+          return RequestStatus.FINISHED;
         }
         return null;
 
       case ResponseIntent.CANCELLED:
         // CANCELLED can happen from any non-terminal state
-        if (
-          currentStatus !== RequestStatus.DONE &&
-          currentStatus !== RequestStatus.CANCELLED
-        ) {
+        if (!request.isTerminal()) {
           return RequestStatus.CANCELLED;
         }
         return null;
@@ -370,7 +374,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
       let direction: 'TO_CLIENT' | 'TO_PROVIDER' = 'TO_PROVIDER';
 
       switch (newStatus) {
-        case RequestStatus.ACCEPTED:
+        case RequestStatus.CONTACT_RELEASED:
           template = 'status_update_confirmed';
           direction = 'TO_PROVIDER';
           break;
@@ -378,7 +382,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
           template = 'status_update_started';
           direction = 'TO_PROVIDER';
           break;
-        case RequestStatus.DONE:
+        case RequestStatus.FINISHED:
           template = 'status_update_completed';
           direction = 'TO_PROVIDER';
           break;

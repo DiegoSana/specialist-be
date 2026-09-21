@@ -369,7 +369,7 @@ describe('Requests & Interest (e2e)', () => {
         .expect(200);
 
       expect(response.body.providerId).toBe(professional.serviceProviderId);
-      expect(response.body.status).toBe('ACCEPTED');
+      expect(response.body.status).toBe('CONTACT_RELEASED');
     });
 
     it('should allow client to assign a company', async () => {

@@ -149,7 +149,7 @@ export class RequestInterestService {
           'Can only express interest in public requests',
         );
       }
-      if (!request.isPending()) {
+      if (!request.isPublished()) {
         throw new BadRequestException(
           'Request is no longer accepting interest',
         );
@@ -341,8 +341,8 @@ export class RequestInterestService {
           'Can only assign providers to public requests',
         );
       }
-      if (!request.isPending()) {
-        throw new BadRequestException('Request is no longer pending');
+      if (!request.isPublished()) {
+        throw new BadRequestException('Request is no longer published');
       }
       throw new ForbiddenException('Cannot assign provider to this request');
     }
@@ -385,14 +385,15 @@ export class RequestInterestService {
       providerName = company.companyName;
     }
 
-    // Assign the provider and change status to ACCEPTED
+    // Assign the provider and release contact (CONTACT_RELEASED)
     // Also mark as no longer public
     // Note: We keep interests in DB so providers can see requests they were interested in
+    // (PR2 will mark the chosen interest CHOSEN and the rest NOT_CHOSEN instead of just keeping them)
     const fromStatus = request.status;
     const updatedRequest = await this.requestRepository.save(
       request.withChanges({
         providerId: serviceProviderId,
-        status: RequestStatus.ACCEPTED,
+        status: RequestStatus.CONTACT_RELEASED,
         isPublic: false,
       }),
     );
@@ -447,7 +448,7 @@ export class RequestInterestService {
 
   /**
    * Client unassigns the provider from a request.
-   * Changes status back to PENDING and makes request public again.
+   * Changes status back to PUBLISHED and makes request public again.
    */
   async unassignProvider(
     requestId: string,
@@ -476,9 +477,9 @@ export class RequestInterestService {
       if (!request.providerId) {
         throw new BadRequestException('Request has no provider assigned');
       }
-      if (!request.isAccepted()) {
+      if (!request.isContactReleased()) {
         throw new BadRequestException(
-          'Can only unassign provider from accepted requests',
+          'Can only unassign provider once contact was released',
         );
       }
       throw new ForbiddenException(
@@ -489,11 +490,11 @@ export class RequestInterestService {
     const fromStatus = request.status;
     const fromProviderId = request.providerId;
 
-    // Unassign provider, change status to PENDING, and make public again
+    // Unassign provider, revert to PUBLISHED, and make public again
     const updatedRequest = await this.requestRepository.save(
       request.withChanges({
         providerId: null,
-        status: RequestStatus.PENDING,
+        status: RequestStatus.PUBLISHED,
         isPublic: true,
       }),
     );

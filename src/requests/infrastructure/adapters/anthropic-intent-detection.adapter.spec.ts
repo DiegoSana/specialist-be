@@ -17,7 +17,7 @@ describe('AnthropicIntentDetectionAdapter', () => {
 
   const baseInput = {
     messageText: 'si, ya empecé',
-    currentStatus: RequestStatus.ACCEPTED,
+    currentStatus: RequestStatus.CONTACT_RELEASED,
     triggeringTemplate: 'follow_up_3_days',
     conversationHistory: [],
   };

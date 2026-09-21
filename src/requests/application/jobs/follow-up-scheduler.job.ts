@@ -332,9 +332,9 @@ export class FollowUpSchedulerJob {
           `Request status is ${request.status}, but rule '${ruleName}' requires ${query.status}. Change the request status first.`,
         );
       }
-    } else if (request.status !== RequestStatus.PENDING) {
+    } else if (request.status !== RequestStatus.PUBLISHED) {
       throw new BadRequestException(
-        `Request status is ${request.status}, but rule '${ruleName}' requires PENDING. Change the request status first.`,
+        `Request status is ${request.status}, but rule '${ruleName}' requires PUBLISHED. Change the request status first.`,
       );
     }
 

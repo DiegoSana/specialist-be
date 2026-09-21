@@ -132,7 +132,7 @@ async function prepareRequest(
   await prisma.request.update({
     where: { id: requestId },
     data: {
-      status: 'ACCEPTED',
+      status: 'CONTACT_RELEASED',
       updatedAt: fourDaysAgo,
     },
   });
