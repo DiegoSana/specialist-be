@@ -164,6 +164,18 @@ export class RequestResponseDto {
   @ApiPropertyOptional()
   clientRatingComment: string | null;
 
+  @ApiPropertyOptional({
+    description:
+      'Reason recorded for NOT_COMPLETED / INTERRUPTED (or a resolution note)',
+  })
+  statusReason: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Number of specialists currently INTERESTED (excludes withdrawn / chosen / not chosen). Only present on the client list.',
+  })
+  interestsCount?: number;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -208,11 +220,16 @@ export class RequestResponseDto {
     dto.status = entity.status;
     dto.clientRating = entity.clientRating;
     dto.clientRatingComment = entity.clientRatingComment;
+    dto.statusReason = entity.statusReason;
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;
 
     // Extract attached related data from entity (set by Prisma mapper)
     const entityAny = entity as any;
+
+    if (typeof entityAny.interestsCount === 'number') {
+      dto.interestsCount = entityAny.interestsCount;
+    }
 
     if (entityAny.client) {
       dto.client = {
@@ -315,6 +332,7 @@ export class RequestResponseDto {
     dto.status = entity.status;
     dto.clientRating = null;
     dto.clientRatingComment = null;
+    dto.statusReason = null;
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;
     dto.client = undefined;

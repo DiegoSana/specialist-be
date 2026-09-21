@@ -167,6 +167,41 @@ export class RequestsController {
     return RequestResponseDto.fromEntities(entities);
   }
 
+  // Static GET routes must be declared before ':id' or Nest matches 'interested' as an id.
+  @Get('interested')
+  @ApiOperation({
+    summary: 'Get all requests where I expressed interest (provider only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of requests where I expressed interest',
+    type: [InterestedRequestDto],
+  })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  async getMyInterestedRequests(
+    @CurrentUser() user: UserEntity,
+  ): Promise<InterestedRequestDto[]> {
+    const ctx = await this.requestInterestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
+
+    if (!ctx.serviceProviderId) {
+      throw new BadRequestException(
+        'Only providers (professionals or companies) can view interested requests',
+      );
+    }
+
+    const interests = await this.requestInterestService.getMyInterestedRequests(
+      ctx.serviceProviderId,
+    );
+
+    return InterestedRequestDto.fromInterestsWithRequests(
+      interests,
+      ctx.serviceProviderId,
+    );
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get request by ID' })
   @ApiResponse({
@@ -341,40 +376,6 @@ export class RequestsController {
       ctx,
     );
     return { hasInterest };
-  }
-
-  @Get('interested')
-  @ApiOperation({
-    summary: 'Get all requests where I expressed interest (provider only)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'List of requests where I expressed interest',
-    type: [InterestedRequestDto],
-  })
-  @ApiResponse({ status: 403, description: 'Not a provider' })
-  async getMyInterestedRequests(
-    @CurrentUser() user: UserEntity,
-  ): Promise<InterestedRequestDto[]> {
-    const ctx = await this.requestInterestService.buildAuthContext(
-      user.id,
-      user.isAdminUser(),
-    );
-
-    if (!ctx.serviceProviderId) {
-      throw new BadRequestException(
-        'Only providers (professionals or companies) can view interested requests',
-      );
-    }
-
-    const interests = await this.requestInterestService.getMyInterestedRequests(
-      ctx.serviceProviderId,
-    );
-
-    return InterestedRequestDto.fromInterestsWithRequests(
-      interests,
-      ctx.serviceProviderId,
-    );
   }
 
   @Get(':id/interests')

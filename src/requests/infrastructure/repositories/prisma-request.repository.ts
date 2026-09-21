@@ -80,6 +80,14 @@ export class PrismaRequestRepository implements RequestRepository {
       where: { clientId },
       include: {
         ...this.fullInclude,
+        // Single grouped count (no N+1) powering "N interesados" on the client list.
+        _count: {
+          select: {
+            interests: {
+              where: { status: RequestInterestStatus.INTERESTED },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
