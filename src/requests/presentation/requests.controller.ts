@@ -115,6 +115,10 @@ export class RequestsController {
     @CurrentUser() user: UserEntity,
     @Query('role') role?: 'client' | 'professional',
   ): Promise<RequestResponseDto[]> {
+    const ctx = await this.requestService.buildAuthContext(
+      user.id,
+      user.isAdminUser(),
+    );
     let entities;
     if (role === 'client' || (!role && user.isClient())) {
       entities = await this.requestService.findByClientId(user.id);
@@ -129,7 +133,7 @@ export class RequestsController {
     } else {
       entities = [];
     }
-    return RequestResponseDto.fromEntities(entities);
+    return RequestResponseDto.fromEntities(entities, ctx);
   }
 
   @Get('available')
@@ -222,7 +226,7 @@ export class RequestsController {
 
     try {
       const entity = await this.requestService.findByIdForUser(id, ctx);
-      return RequestResponseDto.fromEntity(entity);
+      return RequestResponseDto.fromEntity(entity, ctx);
     } catch (error: any) {
       if (error instanceof ForbiddenException && ctx.serviceProviderId) {
         try {
@@ -259,7 +263,7 @@ export class RequestsController {
       user.isAdminUser(),
     );
     const entity = await this.requestService.updateStatus(id, ctx, updateDto);
-    return RequestResponseDto.fromEntity(entity);
+    return RequestResponseDto.fromEntity(entity, ctx);
   }
 
   // ==================== PHOTOS ====================
@@ -283,7 +287,7 @@ export class RequestsController {
       user.isAdminUser(),
     );
     const entity = await this.requestService.addRequestPhoto(id, ctx, body.url);
-    return RequestResponseDto.fromEntity(entity);
+    return RequestResponseDto.fromEntity(entity, ctx);
   }
 
   @Delete(':id/photos')
@@ -309,7 +313,7 @@ export class RequestsController {
       ctx,
       body.url,
     );
-    return RequestResponseDto.fromEntity(entity);
+    return RequestResponseDto.fromEntity(entity, ctx);
   }
 
   // ==================== INTEREST (for public requests) ====================
@@ -424,7 +428,7 @@ export class RequestsController {
       ctx,
       dto.serviceProviderId,
     );
-    return RequestResponseDto.fromEntity(entity);
+    return RequestResponseDto.fromEntity(entity, ctx);
   }
 
   @Post(':id/unassign-provider')
@@ -447,7 +451,7 @@ export class RequestsController {
       user.isAdminUser(),
     );
     const entity = await this.requestInterestService.unassignProvider(id, ctx);
-    return RequestResponseDto.fromEntity(entity);
+    return RequestResponseDto.fromEntity(entity, ctx);
   }
 
   // ==================== CLIENT RATING (by professional) ====================
@@ -478,6 +482,6 @@ export class RequestsController {
       body.rating,
       body.comment,
     );
-    return RequestResponseDto.fromEntity(entity);
+    return RequestResponseDto.fromEntity(entity, ctx);
   }
 }

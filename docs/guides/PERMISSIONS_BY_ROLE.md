@@ -156,3 +156,9 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - [Patrón de autorización](./architecture/AUTHORIZATION_PATTERN.md)
 - [Estructura de la API](../API_STRUCTURE.md)
 - [Company Profiles](./architecture/COMPANY_PROFILES.md)
+
+## Request contact data and photos (2026-09)
+
+- Client/provider phone (and provider email) appear in request responses only for the client owner and the assigned provider once contact is released (`CONTACT_RELEASED` through `CLOSED`); admins always see them. Never in `DRAFT`/`PUBLISHED`/`SENT` or terminal no-agreement states, and never in the limited view for interested providers.
+- `IN_PROGRESS -> INTERRUPTED`: client or assigned provider.
+- Request photos can be added/removed on active states and on `CLOSED`; not on `EXPIRED|NO_RESPONSE|REJECTED|CANCELLED|NOT_COMPLETED|INTERRUPTED|ABANDONED`.

@@ -402,3 +402,6 @@ Configured origins are set via `CORS_ORIGINS` environment variable.
 
 Visit the Swagger documentation at `/api/docs` when the server is running.
 
+### Request contact fields (2026-09)
+
+`GET /requests`, `GET /requests/:id` and the mutation endpoints return the counterpart's contact (`client.phone`, `professional.whatsapp`, `professional.user.phone`, `company.phone`/`email`/`user.phone`) only to the client owner and the assigned provider once contact is released (`CONTACT_RELEASED`, `IN_PROGRESS`, `FINISHED`, `UNDER_REVIEW`, `CLOSED`) and to admins; otherwise the fields are `null`/absent.

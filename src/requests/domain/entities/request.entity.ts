@@ -54,7 +54,9 @@ const TRANSITIONS: Partial<
   },
   [RequestStatus.IN_PROGRESS]: {
     [RequestStatus.FINISHED]: ['PROVIDER'],
-    [RequestStatus.INTERRUPTED]: ['PROVIDER'],
+    // Both parties may report an interruption (FE brief item 6); the original spec only listed the
+    // provider — see the "Quién puede mover cada cosa" table in docs/EspecialistBRC — Estados del pedido.md.
+    [RequestStatus.INTERRUPTED]: ['CLIENT', 'PROVIDER'],
     // IN_PROGRESS -> ABANDONED is explicitly "por definir" in the spec (open question); not
     // mapped yet, see docs/EspecialistBRC — Estados del pedido.md, section "Decisiones/Abiertas".
   },
@@ -206,6 +208,17 @@ export class RequestEntity {
     );
   }
 
+  /** Contact data is shared once the client chose / the provider accepted, and stays visible afterwards. */
+  hasContactBeenReleased(): boolean {
+    return (
+      this.isContactReleased() ||
+      this.isInProgress() ||
+      this.isFinished() ||
+      this.isUnderReview() ||
+      this.isClosed()
+    );
+  }
+
   canBeReviewed(): boolean {
     return this.isClosed();
   }
@@ -274,15 +287,28 @@ export class RequestEntity {
   }
 
   /**
+   * Determines if a user can see the other party's contact data (phone/email).
+   * Rules:
+   * - Admins can always see it
+   * - Only the client owner and the assigned provider, and only once contact was released
+   *   (never in DRAFT/PUBLISHED/SENT, nor in terminal no-agreement states)
+   */
+  canViewCounterpartContactBy(ctx: RequestAuthContext): boolean {
+    if (ctx.isAdmin) return true;
+    if (!this.hasContactBeenReleased()) return false;
+    return this.isClient(ctx) || this.isAssignedProvider(ctx);
+  }
+
+  /**
    * Determines if a user can manage photos (add/remove) on this request.
    * Rules:
    * - Admins can manage photos on any request
    * - Client can manage photos on their requests
    * - Assigned provider can manage photos
-   * - Cannot manage photos once the request reached a terminal state
+   * - Not allowed on terminal states, except CLOSED (finished work keeps receiving photos)
    */
   canManagePhotosBy(ctx: RequestAuthContext): boolean {
-    if (this.isTerminal()) return false;
+    if (this.isTerminal() && !this.isClosed()) return false;
     if (ctx.isAdmin) return true;
     if (this.isClient(ctx)) return true;
     if (this.isAssignedProvider(ctx)) return true;

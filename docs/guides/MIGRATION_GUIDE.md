@@ -291,3 +291,7 @@ Main models:
 ---
 
 *Last Updated: February 2026*
+
+### Recent migration: schema/migration drift fix (2026-09)
+
+`20260921180000_fix_schema_migration_drift` adds objects that existed in `schema.prisma` (and in databases built with `db push`) but were never created by any migration: `ReviewStatus` enum, `requests.clientRating`/`clientRatingComment`, `reviews.status`/`moderatedAt`/`moderatedBy`, the `reviews_requestId_fkey`/`reviews_moderatedBy_fkey` constraints, and the removal of `request_interests_serviceProviderId_idx`. Every statement is idempotent (`IF NOT EXISTS` / guarded), so it is a no-op on databases that already have them (Fly/Supabase, existing local DBs) and completes a fresh database built only from migrations. Verified with `prisma migrate diff --from-migrations ... --to-schema-datamodel` against a scratch shadow DB (empty diff afterwards). Rollback: none needed (additive/idempotent); to undo on a scratch DB, drop the added columns manually.

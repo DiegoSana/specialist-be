@@ -164,9 +164,13 @@ describe('FollowUpSchedulerJob', () => {
     });
 
     beforeEach(() => {
-      mockConfig.get.mockImplementation((key: string, def?: string) =>
-        key === 'WHATSAPP_FOLLOWUP_ENABLED' ? 'true' : def,
-      );
+      // Window fully open so these specs don't depend on the wall-clock hour (default is 9-20h).
+      mockConfig.get.mockImplementation((key: string, def?: string) => {
+        if (key === 'WHATSAPP_FOLLOWUP_ENABLED') return 'true';
+        if (key === 'WHATSAPP_FOLLOWUP_WINDOW_START_HOUR') return '0';
+        if (key === 'WHATSAPP_FOLLOWUP_WINDOW_END_HOUR') return '24';
+        return def;
+      });
       mockQueryExecutor.getRequests.mockResolvedValue([request]);
       mockProfessionalService.findByServiceProviderId.mockResolvedValue({
         userId: 'provider-user-1',
@@ -217,9 +221,13 @@ describe('FollowUpSchedulerJob', () => {
     });
 
     beforeEach(() => {
-      mockConfig.get.mockImplementation((key: string, def?: string) =>
-        key === 'WHATSAPP_FOLLOWUP_ENABLED' ? 'true' : def,
-      );
+      // Window fully open so these specs don't depend on the wall-clock hour (default is 9-20h).
+      mockConfig.get.mockImplementation((key: string, def?: string) => {
+        if (key === 'WHATSAPP_FOLLOWUP_ENABLED') return 'true';
+        if (key === 'WHATSAPP_FOLLOWUP_WINDOW_START_HOUR') return '0';
+        if (key === 'WHATSAPP_FOLLOWUP_WINDOW_END_HOUR') return '24';
+        return def;
+      });
       mockQueryExecutor.getRequests.mockResolvedValue([eligibleRequest]);
       mockProfessionalService.findByServiceProviderId.mockResolvedValue({
         userId: 'provider-user-1',

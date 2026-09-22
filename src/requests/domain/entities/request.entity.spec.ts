@@ -105,6 +105,7 @@ describe('RequestEntity', () => {
         provider,
         'provider',
       ],
+      [RequestStatus.IN_PROGRESS, RequestStatus.INTERRUPTED, client, 'client'],
       [RequestStatus.FINISHED, RequestStatus.CLOSED, client, 'client'],
       [RequestStatus.FINISHED, RequestStatus.CLOSED, system, 'system'],
       [RequestStatus.FINISHED, RequestStatus.UNDER_REVIEW, client, 'client'],
@@ -271,6 +272,73 @@ describe('RequestEntity', () => {
       });
       expect(changed.statusReason).toBe('no agreement');
       expect(changed.isNotCompleted()).toBe(true);
+    });
+  });
+
+  describe('canViewCounterpartContactBy', () => {
+    const released: RequestStatus[] = [
+      RequestStatus.CONTACT_RELEASED,
+      RequestStatus.IN_PROGRESS,
+      RequestStatus.FINISHED,
+      RequestStatus.UNDER_REVIEW,
+      RequestStatus.CLOSED,
+    ];
+    const notReleased = Object.values(RequestStatus).filter(
+      (st) => !released.includes(st),
+    );
+
+    it.each(released)(
+      'client and assigned provider can see contact in %s',
+      (st) => {
+        expect(at(st).canViewCounterpartContactBy(client)).toBe(true);
+        expect(at(st).canViewCounterpartContactBy(provider)).toBe(true);
+      },
+    );
+
+    it.each(notReleased)('nobody but admin can see contact in %s', (st) => {
+      expect(at(st).canViewCounterpartContactBy(client)).toBe(false);
+      expect(at(st).canViewCounterpartContactBy(provider)).toBe(false);
+      expect(at(st).canViewCounterpartContactBy(admin)).toBe(true);
+    });
+
+    it('strangers and other providers never see contact', () => {
+      expect(
+        at(RequestStatus.IN_PROGRESS).canViewCounterpartContactBy(stranger),
+      ).toBe(false);
+    });
+  });
+
+  describe('canManagePhotosBy', () => {
+    it('allows photos on CLOSED for client, provider and admin', () => {
+      const closed = at(RequestStatus.CLOSED);
+      expect(closed.canManagePhotosBy(client)).toBe(true);
+      expect(closed.canManagePhotosBy(provider)).toBe(true);
+      expect(closed.canManagePhotosBy(admin)).toBe(true);
+      expect(closed.canManagePhotosBy(stranger)).toBe(false);
+    });
+
+    it.each([
+      RequestStatus.EXPIRED,
+      RequestStatus.NO_RESPONSE,
+      RequestStatus.REJECTED,
+      RequestStatus.CANCELLED,
+      RequestStatus.NOT_COMPLETED,
+      RequestStatus.INTERRUPTED,
+      RequestStatus.ABANDONED,
+    ])('still disallows photos in terminal state %s', (st) => {
+      expect(at(st).canManagePhotosBy(client)).toBe(false);
+      expect(at(st).canManagePhotosBy(admin)).toBe(false);
+    });
+
+    it.each([
+      RequestStatus.PUBLISHED,
+      RequestStatus.SENT,
+      RequestStatus.CONTACT_RELEASED,
+      RequestStatus.IN_PROGRESS,
+      RequestStatus.FINISHED,
+      RequestStatus.UNDER_REVIEW,
+    ])('allows photos in active state %s', (st) => {
+      expect(at(st).canManagePhotosBy(client)).toBe(true);
     });
   });
 });

@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { RequestStatus } from '@prisma/client';
-import { RequestEntity } from '../../domain/entities/request.entity';
+import {
+  RequestAuthContext,
+  RequestEntity,
+} from '../../domain/entities/request.entity';
 
 /**
  * Nested DTO for trade information in request response
@@ -31,6 +34,12 @@ export class RequestUserDto {
 
   @ApiPropertyOptional()
   profilePictureUrl: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Contact phone. Only present once contact was released and the viewer is the client or the assigned provider (or admin).',
+  })
+  phone?: string | null;
 }
 
 /**
@@ -202,8 +211,15 @@ export class RequestResponseDto {
    *
    * @param entity - Request domain entity (may include attached related data)
    */
-  static fromEntity(entity: RequestEntity): RequestResponseDto {
+  static fromEntity(
+    entity: RequestEntity,
+    viewer?: RequestAuthContext,
+  ): RequestResponseDto {
     const dto = new RequestResponseDto();
+    // Safe default: without a viewer context no contact data is exposed.
+    const showContact = viewer
+      ? entity.canViewCounterpartContactBy(viewer)
+      : false;
 
     // Core fields
     dto.id = entity.id;
@@ -237,6 +253,7 @@ export class RequestResponseDto {
         firstName: entityAny.client.firstName,
         lastName: entityAny.client.lastName,
         profilePictureUrl: entityAny.client.profilePictureUrl ?? null,
+        ...(showContact ? { phone: entityAny.client.phone ?? null } : {}),
       };
     }
 
@@ -251,11 +268,16 @@ export class RequestResponseDto {
               lastName: entityAny.professional.user.lastName,
               profilePictureUrl:
                 entityAny.professional.user.profilePictureUrl ?? null,
+              ...(showContact
+                ? { phone: entityAny.professional.user.phone ?? null }
+                : {}),
             }
           : null,
         averageRating: entityAny.professional.averageRating ?? 0,
         totalReviews: entityAny.professional.totalReviews ?? 0,
-        whatsapp: entityAny.professional?.user?.phone ?? null,
+        whatsapp: showContact
+          ? (entityAny.professional?.user?.phone ?? null)
+          : null,
       };
     }
 
@@ -268,8 +290,8 @@ export class RequestResponseDto {
         legalName: entityAny.company.legalName ?? null,
         taxId: entityAny.company.taxId ?? null,
         description: entityAny.company.description ?? null,
-        phone: entityAny.company?.user?.phone ?? null,
-        email: entityAny.company?.user?.email ?? null,
+        phone: showContact ? (entityAny.company?.user?.phone ?? null) : null,
+        email: showContact ? (entityAny.company?.user?.email ?? null) : null,
         website: entityAny.company.website ?? null,
         city: entityAny.company.city ?? null,
         zone: entityAny.company.zone ?? null,
@@ -283,6 +305,9 @@ export class RequestResponseDto {
               lastName: entityAny.company.user.lastName,
               profilePictureUrl:
                 entityAny.company.user.profilePictureUrl ?? null,
+              ...(showContact
+                ? { phone: entityAny.company.user.phone ?? null }
+                : {}),
             }
           : null,
         trades: (entityAny.company.trades || []).map((t: any) => ({
@@ -308,8 +333,13 @@ export class RequestResponseDto {
   /**
    * Convert multiple entities to DTOs.
    */
-  static fromEntities(entities: RequestEntity[]): RequestResponseDto[] {
-    return entities.map((entity) => RequestResponseDto.fromEntity(entity));
+  static fromEntities(
+    entities: RequestEntity[],
+    viewer?: RequestAuthContext,
+  ): RequestResponseDto[] {
+    return entities.map((entity) =>
+      RequestResponseDto.fromEntity(entity, viewer),
+    );
   }
 
   /**
