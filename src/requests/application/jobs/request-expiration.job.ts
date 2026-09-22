@@ -19,7 +19,7 @@ interface ExpirationRule {
 
 /**
  * Sistema actor: moves requests that sat too long in a state to their timeout state, per
- * "docs/EspecialistBRC — Estados del pedido.md" ("Vence si"). Plazos are env parameters.
+ * "docs/architecture/EspecialistBRC — Estados del pedido.md" ("Vence si"). Plazos are env parameters.
  *
  * TODO(open question in the spec): IN_PROGRESS -> ABANDONED is deliberately NOT applied here;
  * En curso only stops WhatsApp follow-ups and stays En curso.

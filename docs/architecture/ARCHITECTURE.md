@@ -109,7 +109,7 @@ This repository follows a Clean Architecture + DDD-inspired structure. For the p
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Estados de Request** (15 estados; detalle en `docs/EspecialistBRC — Estados del pedido.md`):
+**Estados de Request** (15 estados; detalle en `docs/architecture/EspecialistBRC — Estados del pedido.md`, decisión en `docs/decisions/ADR-006-REQUEST-STATE-MACHINE.md`):
 ```mermaid
 stateDiagram-v2
     direction LR
@@ -126,7 +126,7 @@ stateDiagram-v2
     CLOSED --> [*]
 ```
 
-Terminal alternates (never reach `CLOSED`): `EXPIRED` (bolsa, nobody chosen), `NO_RESPONSE` (direct, no answer), `REJECTED`, `CANCELLED` (client, before contact release), `NOT_COMPLETED` (no agreement), `INTERRUPTED` (work started, not finished), `ABANDONED` (contact released, nobody answered). Actors: client, provider, system (expirations/auto-close), support (`UNDER_REVIEW`). Full spec: `docs/EspecialistBRC — Estados del pedido.md`.
+Terminal alternates (never reach `CLOSED`): `EXPIRED` (bolsa, nobody chosen), `NO_RESPONSE` (direct, no answer), `REJECTED`, `CANCELLED` (client, before contact release), `NOT_COMPLETED` (no agreement), `INTERRUPTED` (work started, not finished), `ABANDONED` (contact released, nobody answered). Actors: client, provider, system (expirations/auto-close), support (`UNDER_REVIEW`). Full spec: `docs/architecture/EspecialistBRC — Estados del pedido.md`.
 
 **Servicios**:
 - `RequestService` - CRUD, cambios de estado, fotos

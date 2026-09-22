@@ -4,7 +4,7 @@ Documentación completa del sistema de follow-up automático de solicitudes vía
 
 ## ¿Cuándo se hace follow-up?
 
-Fuente: `docs/EspecialistBRC — Estados del pedido.md` ("Follow-up por WhatsApp"). Dos tipos de mensaje:
+Fuente: `docs/architecture/EspecialistBRC — Estados del pedido.md` ("Follow-up por WhatsApp"). Dos tipos de mensaje:
 **avisos** (`notice_*`, A1-A7: informan y llevan a la app, donde se hace la acción) y **preguntas**
 (`question_*`, P1-P3: la respuesta libre puede mover el estado). Una "escalera" (ladder) es la secuencia
 mensaje inicial + recordatorios que recibe **una** persona mientras el pedido está en **un** estado; máximo 3
@@ -38,7 +38,7 @@ se marca `AT_RISK`.
 **Limitación conocida**: no existe un timestamp de "entrada al estado"; los "días desde que entra al estado"
 se aproximan con `Request.updatedAt`. Cualquier otro `save` del pedido (ej. subir una foto) reinicia ese reloj
 para los días, aunque el conteo de mensajes por estado no se reinicia (no hay reenvíos). Un historial de
-estados (ver `TODO.md`) lo resolvería.
+estados (ver `../TODO.md`) lo resolvería.
 
 Respuestas: solo las plantillas `question_*` pueden cambiar el estado; una respuesta a un aviso nunca lo
 cambia, y si la respuesta no es clara (`UNKNOWN`/`NEEDS_INFO`) el estado no cambia. El clasificador recibe la

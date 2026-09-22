@@ -30,7 +30,7 @@ function firstNameOrDisplay(display: string, user?: NamedUser | null): string {
 }
 
 /**
- * Base variables shared by the spec's templates (docs/EspecialistBRC — Estados del pedido.md):
+ * Base variables shared by the spec's templates (docs/architecture/EspecialistBRC — Estados del pedido.md):
  * {nombre} = recipient, {contraparte} = the other party, {pedido}, {cliente}, {especialista},
  * {link} (deep link to the request in the recipient's side of the app). Templates only use the
  * subset they need; extra keys are ignored by MessageTemplateService.

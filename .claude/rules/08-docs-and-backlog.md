@@ -1,7 +1,6 @@
 ---
 paths:
   - "docs/**"
-  - "TODO.md"
   - "README.md"
 ---
 
@@ -21,7 +20,7 @@ paths:
 | New env var | `docs/guides/ENVIRONMENT_VARIABLES.md` (say whether secret or `fly.toml`) |
 | Architectural decision | new ADR `docs/decisions/ADR-005-<TOPIC>.md` (next free number; two files share 002) using the `write-adr` skill, plus a line in `docs/README.md` |
 | Notification type / template | `docs/guides/NOTIFICATIONS.md` or `docs/guides/whatsapp/README.md` |
-| Session/backlog progress | `TODO.md` ("Donde quedamos hoy" recap + checkboxes) |
+| Session/backlog progress | `../TODO.md` (global backlog in `/var/www/specialist/`, "Backend" section — "Donde quedamos hoy" recap + checkboxes; this repo has no local `TODO.md`, see that file's header) |
 
 ## Language
 

@@ -18,6 +18,7 @@
 - [**QUERY_REPOSITORIES.md**](./architecture/QUERY_REPOSITORIES.md) - Query repositories for stats and admin read models
 - [**STORAGE_IMPLEMENTATION.md**](./architecture/STORAGE_IMPLEMENTATION.md) - File storage system design
 - [**COMPANY_PROFILES.md**](./architecture/COMPANY_PROFILES.md) - Company profiles design & business rules ⭐ NEW
+- [**EspecialistBRC — Estados del pedido.md**](<./architecture/EspecialistBRC — Estados del pedido.md>) - Request state machine product spec (15 states, actors, WhatsApp follow-up rules & templates) ⭐ NEW
 
 ### Guides
 - [**DOCKER.md**](./guides/DOCKER.md) - Docker setup and commands
@@ -48,6 +49,7 @@
 - [**ADR-003-NOTIFICATIONS-DELIVERY-RETRY-RETENTION.md**](./decisions/ADR-003-NOTIFICATIONS-DELIVERY-RETRY-RETENTION.md) - Notification deliveries, retry with backoff, retention
 - [**ADR-004-SERVICE-PROVIDER-ABSTRACTION.md**](./decisions/ADR-004-SERVICE-PROVIDER-ABSTRACTION.md) - ServiceProvider polymorphic pattern
 - [**ADR-005-SUPPORT-CONVERSATIONS.md**](./decisions/ADR-005-SUPPORT-CONVERSATIONS.md) - Support conversations as a separate bounded context, WhatsApp messaging port promoted to `shared/` ⭐ NEW
+- [**ADR-006-REQUEST-STATE-MACHINE.md**](./decisions/ADR-006-REQUEST-STATE-MACHINE.md) - Replace the flat 5-state `RequestStatus` with a 15-state, actor-aware machine + WhatsApp follow-up ladders ⭐ NEW
 
 ---
 

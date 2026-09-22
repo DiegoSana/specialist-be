@@ -304,7 +304,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
 
   /**
    * Map a reply to a Request status change, per "Follow-up por WhatsApp" in
-   * docs/EspecialistBRC — Estados del pedido.md. Only the three QUESTION templates can move
+   * docs/architecture/EspecialistBRC — Estados del pedido.md. Only the three QUESTION templates can move
    * the state (notices lead to the app, so a reply to them never changes it), and the
    * template the person is answering disambiguates the generic intent:
    *

@@ -64,7 +64,7 @@ request attention" below.
 ## Domain
 
 - `RequestEntity`: `createDraft(...)`, `withChanges`, predicates per `RequestStatus`
-  (15 states, see `docs/EspecialistBRC — Estados del pedido.md`: `DRAFT|PUBLISHED|SENT|CONTACT_RELEASED|IN_PROGRESS|FINISHED|CLOSED|UNDER_REVIEW` + terminals `EXPIRED|NO_RESPONSE|REJECTED|CANCELLED|NOT_COMPLETED|INTERRUPTED|ABANDONED`), `canBeReviewed()` (= CLOSED). Labels: `REQUEST_STATUS_LABELS_ES` (`request-status.metadata.ts`). `RequestService.create` builds the draft and saves it directly as `PUBLISHED` (public) or `SENT` (direct).
+  (15 states, see `docs/architecture/EspecialistBRC — Estados del pedido.md`: `DRAFT|PUBLISHED|SENT|CONTACT_RELEASED|IN_PROGRESS|FINISHED|CLOSED|UNDER_REVIEW` + terminals `EXPIRED|NO_RESPONSE|REJECTED|CANCELLED|NOT_COMPLETED|INTERRUPTED|ABANDONED`), `canBeReviewed()` (= CLOSED). Labels: `REQUEST_STATUS_LABELS_ES` (`request-status.metadata.ts`). `RequestService.create` builds the draft and saves it directly as `PUBLISHED` (public) or `SENT` (direct).
   `providerId` is a `ServiceProvider` id; `professionalId` getter is deprecated.
   `RequestAuthContext { userId, serviceProviderId?, isAdmin?, isSystem?, isSupport?, hasActiveClientProfile?, hasActiveProviderProfile? }`.
   Rules: `canBeViewedBy`, `canManagePhotosBy`, `canChangeStatusBy(ctx, newStatus)`,

@@ -39,6 +39,6 @@ and `docs/API_STRUCTURE.md` first to see whether the capability already exists.
 7. **Verify**: run the `arch-check` skill. Optionally curl against `npm run start:dev` using seed
    users (`docs/guides/POSTMAN_GUIDE.md`, `VERIFICATION_TEST_COMMANDS.md` for token flow).
 8. **Docs**: `docs/API.md`, `docs/API_STRUCTURE.md`, `docs/guides/PERMISSIONS_BY_ROLE.md`, and a
-   line in `TODO.md` if it closes a backlog item. Mention frontend/admin repo follow-ups
+   line in `../TODO.md` if it closes a backlog item. Mention frontend/admin repo follow-ups
    (`/var/www/specialist/specialist-fe`, `specialist-admin`) in the final summary; do not edit them
    unless asked.
