@@ -150,6 +150,7 @@ export class ProfessionalService {
     const sanitized: any = {
       id: professional.id,
       userId: professional.userId,
+      serviceProviderId: professional.serviceProviderId,
       trades: professional.trades,
       description: professional.description,
       experienceYears: professional.experienceYears,
