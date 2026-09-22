@@ -115,6 +115,12 @@ describe('ProfessionalService', () => {
       expect(result[0]).toHaveProperty('id', 'prof-1');
       expect(result[0]).toHaveProperty('zone');
       expect(result[0]).toHaveProperty('city');
+      // serviceProviderId must survive sanitization: it's the stable cross-reference id
+      // consumers use to match a catalog entry back to e.g. a RequestInterest row.
+      expect(result[0]).toHaveProperty(
+        'serviceProviderId',
+        professionals[0].serviceProviderId,
+      );
     });
 
     it('should only search for active professionals', async () => {
