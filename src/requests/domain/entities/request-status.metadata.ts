@@ -2,7 +2,7 @@ import { RequestStatus } from '@prisma/client';
 
 /**
  * Single source of truth for the Spanish (es-AR) label of each RequestStatus, per
- * docs/EspecialistBRC — Estados del pedido.md. Import this instead of keeping a
+ * docs/architecture/EspecialistBRC — Estados del pedido.md. Import this instead of keeping a
  * per-file partial label map.
  */
 export const REQUEST_STATUS_LABELS_ES: Record<RequestStatus, string> = {

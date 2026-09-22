@@ -24,7 +24,7 @@ export type ActorKind = 'CLIENT' | 'PROVIDER' | 'SYSTEM' | 'SUPPORT';
 
 /**
  * Who can move a request from one status to another, mirroring
- * "docs/EspecialistBRC — Estados del pedido.md" ("Quién puede mover cada cosa") line for line.
+ * "docs/architecture/EspecialistBRC — Estados del pedido.md" ("Quién puede mover cada cosa") line for line.
  * SYSTEM/SUPPORT entries are wired ahead of their producers (request-expiration job, support
  * review endpoint) landing in later PRs — the table stays a complete mirror of the spec from day
  * one even though those transitions are unreachable until then.
@@ -55,10 +55,10 @@ const TRANSITIONS: Partial<
   [RequestStatus.IN_PROGRESS]: {
     [RequestStatus.FINISHED]: ['PROVIDER'],
     // Both parties may report an interruption (FE brief item 6); the original spec only listed the
-    // provider — see the "Quién puede mover cada cosa" table in docs/EspecialistBRC — Estados del pedido.md.
+    // provider — see the "Quién puede mover cada cosa" table in docs/architecture/EspecialistBRC — Estados del pedido.md.
     [RequestStatus.INTERRUPTED]: ['CLIENT', 'PROVIDER'],
     // IN_PROGRESS -> ABANDONED is explicitly "por definir" in the spec (open question); not
-    // mapped yet, see docs/EspecialistBRC — Estados del pedido.md, section "Decisiones/Abiertas".
+    // mapped yet, see docs/architecture/EspecialistBRC — Estados del pedido.md, section "Decisiones/Abiertas".
   },
   [RequestStatus.FINISHED]: {
     [RequestStatus.CLOSED]: ['CLIENT', 'SYSTEM'],
@@ -388,7 +388,7 @@ export class RequestEntity {
    *
    * This is a corrective/internal action, not the product's normal recovery path for a
    * request that didn't work out with the chosen provider (that path is "client creates a new
-   * request", per the spec's "Decisiones/Tomadas" — see docs/EspecialistBRC — Estados del
+   * request", per the spec's "Decisiones/Tomadas" — see docs/architecture/EspecialistBRC — Estados del
    * pedido.md). Revisit whether this should stay client-facing once re-publishing ships.
    */
   canUnassignProviderBy(ctx: RequestAuthContext): boolean {

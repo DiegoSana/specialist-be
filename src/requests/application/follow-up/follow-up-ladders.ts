@@ -25,7 +25,7 @@ const isAutoClosed = (r: RequestEntity) =>
   r.statusReason === AUTO_CLOSED_STATUS_REASON;
 
 /**
- * "Follow-up por WhatsApp: reglas por estado" from docs/EspecialistBRC — Estados del pedido.md.
+ * "Follow-up por WhatsApp: reglas por estado" from docs/architecture/EspecialistBRC — Estados del pedido.md.
  * Only the three question ladders (P1-P3) can move a request's state via the reply; the rest are
  * notices (A1-A7) whose action happens in the app. Day counts are proposals to tune.
  */
