@@ -68,7 +68,7 @@ Nadie cierra solo el pedido: el especialista puede marcar que terminó, pero el 
 
 | Actor | Puede |
 | --- | --- |
-| Cliente | Publicar, elegir, cancelar (solo antes de liberar el contacto), confirmar u objetar el terminado, informar que no se concretó, volver a publicar |
+| Cliente | Publicar, elegir, cancelar (solo antes de liberar el contacto), confirmar u objetar el terminado, informar que no se concretó o que se interrumpió (ajustado 2026-09-21: el brief de frontend lo permite a ambos roles), volver a publicar |
 | Especialista | Marcar interés, aceptar o rechazar, marcar terminado, informar que no se concretó o que se interrumpió |
 | Sistema | Aplicar vencimientos, cierre automático y Abandonado |
 | Soporte | Resolver los pedidos En revisión |

@@ -89,7 +89,10 @@ export class InterestedRequestDto {
 
       // Include full request details if assigned to me or not assigned to anyone
       if (assignedToMe || !assignedToOther) {
-        dto.fullRequest = RequestResponseDto.fromEntity(request);
+        dto.fullRequest = RequestResponseDto.fromEntity(request, {
+          userId: '',
+          serviceProviderId: currentServiceProviderId,
+        });
       }
     } else {
       // Request not found (shouldn't happen, but handle gracefully)

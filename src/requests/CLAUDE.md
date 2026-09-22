@@ -205,3 +205,9 @@ testing each extracted `processInboundMessage` method), `request-interaction-res
 `request-attention.service.spec.ts` (idempotency), `request-attention-flagged.handler.spec.ts`
 (in `src/notifications/application/handlers/`). Cross-context: `user.service.spec.ts`
 (`findAdminUserIds`/`setWhatsAppOptedOut`), `profile-activation.service.spec.ts` (opt-out gate).
+
+## Contact visibility, photos and interruption (fix/migration-gap-and-request-permissions)
+
+- `RequestEntity.canViewCounterpartContactBy(ctx)`: contact (phone, provider email) is only exposed to the client owner and the assigned provider once contact was released (`hasContactBeenReleased()`: `CONTACT_RELEASED|IN_PROGRESS|FINISHED|UNDER_REVIEW|CLOSED`), plus admins. `RequestResponseDto.fromEntity(entity, viewerCtx)` gates `client.phone`, `professional.whatsapp`, `professional.user.phone`, `company.phone|email|user.phone` on it; with no viewer context nothing is exposed. Controllers must pass the auth ctx.
+- `IN_PROGRESS -> INTERRUPTED` is allowed for both client and provider (FE brief item 6); the original spec only listed the provider.
+- `canManagePhotosBy`: photos are still allowed on `CLOSED` (finished work), disallowed on the other terminal states.

@@ -40,6 +40,9 @@ export class AdminRequestReviewController {
       user.id,
       dto.note,
     );
-    return RequestResponseDto.fromEntity(request);
+    return RequestResponseDto.fromEntity(request, {
+      userId: user.id,
+      isAdmin: true,
+    });
   }
 }

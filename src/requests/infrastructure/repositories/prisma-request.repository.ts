@@ -16,6 +16,7 @@ export class PrismaRequestRepository implements RequestRepository {
         firstName: true,
         lastName: true,
         email: true,
+        phone: true,
         profilePictureUrl: true,
       },
     },

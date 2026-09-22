@@ -114,6 +114,7 @@ export class PrismaRequestMapper {
         firstName: request.client.firstName,
         lastName: request.client.lastName,
         email: request.client.email,
+        phone: request.client.phone,
         profilePictureUrl: request.client.profilePictureUrl,
       };
     }
