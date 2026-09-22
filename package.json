@@ -26,6 +26,7 @@
     "whatsapp:debug": "ts-node test/scripts/whatsapp/debugging/debug-whatsapp.ts",
     "whatsapp:test": "ts-node test/scripts/whatsapp/testing/test-full-flow.ts",
     "whatsapp:test-single": "ts-node test/scripts/whatsapp/testing/test-single-followup.ts",
+    "seed:diverse-requests": "tsx test/scripts/seed-data/generate-diverse-requests.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
