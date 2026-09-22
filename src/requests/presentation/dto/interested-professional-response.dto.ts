@@ -38,9 +38,13 @@ export class InterestedProfessionalResponseDto {
   @ApiProperty({ description: 'When interest was expressed' })
   createdAt: Date;
 
-  // Provider info (populated when available)
+  // Provider info (populated when available). No contact fields here on purpose: an interested
+  // provider has not been chosen yet, and the whole point of "elegir" is that contact only
+  // releases once the client picks one — see RequestEntity.canViewCounterpartContactBy for the
+  // equivalent rule on the main request response.
   @ApiPropertyOptional({
-    description: 'Provider info',
+    description:
+      'Provider info (no contact fields — see canViewCounterpartContactBy)',
     type: 'object',
     properties: {
       id: { type: 'string' },
@@ -49,8 +53,6 @@ export class InterestedProfessionalResponseDto {
       profileImage: { type: 'string', nullable: true },
       averageRating: { type: 'number' },
       totalReviews: { type: 'number' },
-      whatsapp: { type: 'string', nullable: true },
-      phone: { type: 'string', nullable: true },
     },
   })
   provider?: {
@@ -60,8 +62,6 @@ export class InterestedProfessionalResponseDto {
     profileImage: string | null;
     averageRating: number;
     totalReviews: number;
-    whatsapp: string | null;
-    phone: string | null;
   };
 
   /**
@@ -88,8 +88,6 @@ export class InterestedProfessionalResponseDto {
         profileImage: entity.provider.profileImage,
         averageRating: entity.provider.averageRating,
         totalReviews: entity.provider.totalReviews,
-        whatsapp: entity.provider.whatsapp || null,
-        phone: entity.provider.phone || null,
       };
     }
 
