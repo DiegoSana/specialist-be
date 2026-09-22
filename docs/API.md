@@ -127,7 +127,7 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 | `POST` | `/requests/:id/interest` | Express interest (provider) | ✅ Provider |
 | `DELETE` | `/requests/:id/interest` | Withdraw interest (keeps the row as `WITHDRAWN`; only while `INTERESTED`) | ✅ Provider |
 | `GET` | `/requests/:id/interest` | Check my interest status | ✅ Provider |
-| `GET` | `/requests/:id/interests` | List interested providers (`WITHDRAWN` ones are excluded) | ✅ |
+| `GET` | `/requests/:id/interests` | List interested providers (`WITHDRAWN` ones are excluded; no `phone`/`whatsapp` — contact only releases once the client chooses one, see `canViewCounterpartContactBy`) | ✅ |
 | `POST` | `/requests/:id/assign` | Assign provider (client) | ✅ |
 
 > **Note**: "Provider" = Professional or Company. Both can view available requests, express interest, and be assigned to jobs.
