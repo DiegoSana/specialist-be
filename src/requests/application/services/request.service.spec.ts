@@ -88,6 +88,7 @@ describe('RequestService', () => {
       add: jest.fn(),
       remove: jest.fn(),
       removeAllByRequestId: jest.fn(),
+      resetDecided: jest.fn(),
     };
 
     mockEventBus = {
@@ -508,6 +509,81 @@ describe('RequestService', () => {
       });
 
       expect(result.status).toBe(RequestStatus.CLOSED);
+    });
+
+    it('should normalize providerId/isPublic and reset decided interests when an admin forces PUBLISHED while a provider is assigned', async () => {
+      const request = createMockRequest({
+        clientId: 'client-123',
+        providerId: 'service-provider-123',
+        isPublic: false,
+        status: RequestStatus.IN_PROGRESS,
+      });
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockRequestRepository.save.mockImplementation(async (r: any) => r);
+
+      const ctx = createAuthContext('admin-user', null, true);
+      const result = await service.updateStatus('req-123', ctx, {
+        status: RequestStatus.PUBLISHED,
+      });
+
+      expect(mockRequestRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: RequestStatus.PUBLISHED,
+          providerId: null,
+          isPublic: true,
+        }),
+      );
+      expect(result.providerId).toBeNull();
+      expect(result.isPublic).toBe(true);
+      expect(mockRequestInterestRepository.resetDecided).toHaveBeenCalledWith(
+        'req-123',
+      );
+    });
+
+    it('should not reset decided interests when moving to PUBLISHED without an assigned provider', async () => {
+      const request = createMockRequest({
+        clientId: 'client-123',
+        providerId: null,
+        isPublic: true,
+        status: RequestStatus.DRAFT,
+      });
+      const updatedRequest = createMockRequest({
+        providerId: null,
+        isPublic: true,
+        status: RequestStatus.PUBLISHED,
+      });
+
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockRequestRepository.save.mockResolvedValue(updatedRequest);
+
+      const ctx = createAuthContext('admin-user', null, true);
+      await service.updateStatus('req-123', ctx, {
+        status: RequestStatus.PUBLISHED,
+      });
+
+      expect(mockRequestInterestRepository.resetDecided).not.toHaveBeenCalled();
+    });
+
+    it('should not reset decided interests when an admin forces a non-PUBLISHED status while a provider is assigned', async () => {
+      const request = createMockRequest({
+        clientId: 'client-123',
+        providerId: 'service-provider-123',
+        status: RequestStatus.IN_PROGRESS,
+      });
+      const updatedRequest = createMockRequest({
+        providerId: 'service-provider-123',
+        status: RequestStatus.FINISHED,
+      });
+
+      mockRequestRepository.findById.mockResolvedValue(request);
+      mockRequestRepository.save.mockResolvedValue(updatedRequest);
+
+      const ctx = createAuthContext('admin-user', null, true);
+      await service.updateStatus('req-123', ctx, {
+        status: RequestStatus.FINISHED,
+      });
+
+      expect(mockRequestInterestRepository.resetDecided).not.toHaveBeenCalled();
     });
   });
 

@@ -185,6 +185,18 @@ section above for the flagging flow.
   and skips only the `hasPendingFollowUp`/"<1 day since last interaction" cron-spam guards, which
   don't apply to an explicit human action. It never mutates `Request.updatedAt` or any other field
   to make the request artificially "old enough".
+- `RequestService.updateStatus` auto-normalizes when `updateDto.status === PUBLISHED`, the
+  request's current status isn't already `PUBLISHED`, and it still has a non-null `providerId`:
+  it clears `providerId`, forces `isPublic: true`, and (after the request itself saves, mirroring
+  `unassignProvider`'s ordering) calls `requestInterestRepository.resetDecided(requestId)` -
+  exactly the three side effects `RequestInterestService.unassignProvider` applies. This exists
+  because `canChangeStatusBy` gives `ctx.isAdmin` an unconditional bypass of `TRANSITIONS`, so an
+  admin (via `PATCH /requests/:id` or `PUT /admin/requests/:id/status`) could otherwise force a
+  request straight to `PUBLISHED` while leaving a stale `providerId`, `isPublic: false`, and
+  interests stuck `CHOSEN`/`NOT_CHOSEN` - defeating the "client can pick a new interested provider"
+  flow `PUBLISHED` is supposed to represent. Keep this invariant in mind if `TRANSITIONS` or the
+  admin bypass ever change: any new path that can set `PUBLISHED` gets this normalization for free
+  since it lives in `updateStatus`, not in a specific caller.
 
 ## Tests
 

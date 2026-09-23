@@ -310,12 +310,33 @@ export class RequestService {
 
     const fromStatus = request.status;
     const actorKind = request.resolveActorKind(ctx);
+
+    // Normalize to the invariants `unassignProvider` already enforces whenever a caller (e.g. an
+    // admin, who bypasses the TRANSITIONS table entirely via canChangeStatusBy) forces a request
+    // back to PUBLISHED while a provider is still assigned. Without this, a request can end up
+    // PUBLISHED with a stale providerId, isPublic still false, and interests stuck
+    // CHOSEN/NOT_CHOSEN — defeating the "client can pick a new interested provider" flow PUBLISHED
+    // is supposed to represent. Only the dedicated unassign-provider use case took care of this
+    // before; this makes it hold regardless of which caller sets the status.
+    const shouldNormalizeToPublished =
+      updateDto.status === RequestStatus.PUBLISHED &&
+      fromStatus !== RequestStatus.PUBLISHED &&
+      request.providerId !== null;
+
     const saved = await this.requestRepository.save(
       request.withChanges({
         status: updateDto.status,
         statusReason: updateDto.statusReason,
+        ...(shouldNormalizeToPublished
+          ? { providerId: null, isPublic: true }
+          : {}),
       }),
     );
+
+    if (shouldNormalizeToPublished) {
+      // Mirrors unassignProvider's ordering: reset interests only after the request itself saved.
+      await this.requestInterestRepository.resetDecided(requestId);
+    }
 
     if (updateDto.status && updateDto.status !== fromStatus) {
       // Get names for notification
