@@ -511,12 +511,14 @@ describe('RequestService', () => {
       expect(result.status).toBe(RequestStatus.CLOSED);
     });
 
-    it('should normalize providerId/isPublic and reset decided interests when an admin forces PUBLISHED while a provider is assigned', async () => {
+    it('should normalize providerId/isPublic/clientRating and reset decided interests when an admin forces PUBLISHED while a provider is assigned', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
         providerId: 'service-provider-123',
         isPublic: false,
         status: RequestStatus.IN_PROGRESS,
+        clientRating: 5,
+        clientRatingComment: 'Great client',
       });
       mockRequestRepository.findById.mockResolvedValue(request);
       mockRequestRepository.save.mockImplementation(async (r: any) => r);
@@ -531,10 +533,14 @@ describe('RequestService', () => {
           status: RequestStatus.PUBLISHED,
           providerId: null,
           isPublic: true,
+          clientRating: null,
+          clientRatingComment: null,
         }),
       );
       expect(result.providerId).toBeNull();
       expect(result.isPublic).toBe(true);
+      expect(result.clientRating).toBeNull();
+      expect(result.clientRatingComment).toBeNull();
       expect(mockRequestInterestRepository.resetDecided).toHaveBeenCalledWith(
         'req-123',
       );

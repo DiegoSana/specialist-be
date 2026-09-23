@@ -187,9 +187,17 @@ section above for the flagging flow.
   to make the request artificially "old enough".
 - `RequestService.updateStatus` auto-normalizes when `updateDto.status === PUBLISHED`, the
   request's current status isn't already `PUBLISHED`, and it still has a non-null `providerId`:
-  it clears `providerId`, forces `isPublic: true`, and (after the request itself saves, mirroring
-  `unassignProvider`'s ordering) calls `requestInterestRepository.resetDecided(requestId)` -
-  exactly the three side effects `RequestInterestService.unassignProvider` applies. This exists
+  it clears `providerId`, forces `isPublic: true`, clears `clientRating`/`clientRatingComment`,
+  and (after the request itself saves, mirroring `unassignProvider`'s ordering) calls
+  `requestInterestRepository.resetDecided(requestId)` - exactly the same side effects
+  `RequestInterestService.unassignProvider` applies (that method resets the same two rating
+  fields for the same reason). Both fields are scoped to a single provider engagement and must
+  not survive into a freshly-reassigned one, now that unassign-then-reassign is a supported flow;
+  the analogous stale-`Review` row (unique per `requestId`, so a leftover row would otherwise
+  block reviewing the next provider) is cleaned up separately by
+  `RequestPublishedAgainHandler` in the **reputation context**, reacting to the
+  `RequestStatusChangedEvent` (`toStatus: PUBLISHED`) both call sites publish - see
+  `src/reputation/CLAUDE.md`. This exists
   because `canChangeStatusBy` gives `ctx.isAdmin` an unconditional bypass of `TRANSITIONS`, so an
   admin (via `PATCH /requests/:id` or `PUT /admin/requests/:id/status`) could otherwise force a
   request straight to `PUBLISHED` while leaving a stale `providerId`, `isPublic: false`, and

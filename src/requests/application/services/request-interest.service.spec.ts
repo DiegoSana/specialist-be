@@ -737,7 +737,7 @@ describe('RequestInterestService', () => {
   });
 
   describe('unassignProvider', () => {
-    it('should revert the request and reset decided interests to INTERESTED', async () => {
+    it('should revert the request, clear the client rating, and reset decided interests to INTERESTED', async () => {
       const ctx = createAuthContext('client-123', null, null);
       const assigned = createMockRequest({
         id: 'request-123',
@@ -745,12 +745,16 @@ describe('RequestInterestService', () => {
         providerId: 'sp-123',
         isPublic: false,
         status: RequestStatus.CONTACT_RELEASED,
+        clientRating: 4,
+        clientRatingComment: 'Good client',
       });
       const reverted = createMockRequest({
         ...assigned,
         providerId: null,
         isPublic: true,
         status: RequestStatus.PUBLISHED,
+        clientRating: null,
+        clientRatingComment: null,
       });
       mockRequestRepository.findById.mockResolvedValue(assigned);
       mockRequestRepository.save.mockResolvedValue(reverted);
@@ -776,6 +780,15 @@ describe('RequestInterestService', () => {
       const result = await service.unassignProvider('request-123', ctx);
 
       expect(result.status).toBe(RequestStatus.PUBLISHED);
+      expect(mockRequestRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerId: null,
+          status: RequestStatus.PUBLISHED,
+          isPublic: true,
+          clientRating: null,
+          clientRatingComment: null,
+        }),
+      );
       expect(mockRequestInterestRepository.resetDecided).toHaveBeenCalledWith(
         'request-123',
       );

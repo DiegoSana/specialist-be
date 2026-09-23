@@ -335,7 +335,10 @@ export class RequestService {
     // PUBLISHED with a stale providerId, isPublic still false, and interests stuck
     // CHOSEN/NOT_CHOSEN — defeating the "client can pick a new interested provider" flow PUBLISHED
     // is supposed to represent. Only the dedicated unassign-provider use case took care of this
-    // before; this makes it hold regardless of which caller sets the status.
+    // before; this makes it hold regardless of which caller sets the status. Also resets
+    // clientRating/clientRatingComment: those (like the Review row, cleaned up separately by
+    // RequestPublishedAgainHandler in the reputation context) are scoped to the previous provider's
+    // engagement and must not survive into a freshly-reassigned one.
     const shouldNormalizeToPublished =
       updateDto.status === RequestStatus.PUBLISHED &&
       fromStatus !== RequestStatus.PUBLISHED &&
@@ -346,7 +349,12 @@ export class RequestService {
         status: updateDto.status,
         statusReason: updateDto.statusReason,
         ...(shouldNormalizeToPublished
-          ? { providerId: null, isPublic: true }
+          ? {
+              providerId: null,
+              isPublic: true,
+              clientRating: null,
+              clientRatingComment: null,
+            }
           : {}),
       }),
     );

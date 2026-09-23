@@ -563,12 +563,18 @@ export class RequestInterestService {
       await this.requestInterestRepository.findByRequestId(requestId)
     ).filter((i) => i.isChosen() || i.isNotChosen());
 
-    // Unassign provider, revert to PUBLISHED, and make public again
+    // Unassign provider, revert to PUBLISHED, and make public again. Also reset
+    // clientRating/clientRatingComment: they're scoped to the outgoing provider's engagement and
+    // must not block the next assigned provider from being rated (the stale Review row, if any, is
+    // cleaned up separately by RequestPublishedAgainHandler in the reputation context, reacting to
+    // the RequestStatusChangedEvent published below).
     const updatedRequest = await this.requestRepository.save(
       request.withChanges({
         providerId: null,
         status: RequestStatus.PUBLISHED,
         isPublic: true,
+        clientRating: null,
+        clientRatingComment: null,
       }),
     );
 
