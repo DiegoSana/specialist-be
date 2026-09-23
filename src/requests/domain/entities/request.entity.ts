@@ -69,6 +69,33 @@ const TRANSITIONS: Partial<
   },
 };
 
+/**
+ * Statuses that only make sense once a provider is attached to the request. Every legitimate
+ * non-admin path into one of these (see TRANSITIONS above) is only reachable after
+ * `RequestInterestService.assignProvider` has already set `providerId`, so this is a no-op for
+ * normal traffic. It exists purely to close the admin bypass in `canChangeStatusBy`
+ * (`if (ctx.isAdmin) return true`): without it an admin can force a request straight into e.g.
+ * IN_PROGRESS or CLOSED while `providerId` is still null (directly, or after a PUBLISHED
+ * normalization cleared it — see `RequestService.updateStatus`), leaving the request stuck "in
+ * progress" with nobody assigned. Checked unconditionally (not just for admins) in
+ * `RequestService.updateStatus` since it is a domain invariant, not a permission rule.
+ * DRAFT/PUBLISHED/EXPIRED/CANCELLED are deliberately excluded: they either don't require a
+ * provider, or (CANCELLED) are legitimately reachable both with and without one per TRANSITIONS.
+ */
+export const PROVIDER_REQUIRED_STATUSES: Set<RequestStatus> = new Set([
+  RequestStatus.SENT,
+  RequestStatus.CONTACT_RELEASED,
+  RequestStatus.IN_PROGRESS,
+  RequestStatus.FINISHED,
+  RequestStatus.CLOSED,
+  RequestStatus.UNDER_REVIEW,
+  RequestStatus.NOT_COMPLETED,
+  RequestStatus.INTERRUPTED,
+  RequestStatus.ABANDONED,
+  RequestStatus.REJECTED,
+  RequestStatus.NO_RESPONSE,
+]);
+
 export class RequestEntity {
   static createDraft(params: {
     id: string;

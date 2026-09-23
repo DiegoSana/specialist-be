@@ -21,6 +21,7 @@ import {
 import {
   RequestEntity,
   RequestAuthContext,
+  PROVIDER_REQUIRED_STATUSES,
 } from '../../domain/entities/request.entity';
 import { CreateRequestDto } from '../dto/create-request.dto';
 import { UpdateRequestDto } from '../dto/update-request.dto';
@@ -310,6 +311,23 @@ export class RequestService {
 
     const fromStatus = request.status;
     const actorKind = request.resolveActorKind(ctx);
+
+    // Domain invariant, enforced unconditionally (not just for ctx.isAdmin): a request can only
+    // move into one of these statuses once a provider is attached. Every legitimate non-admin
+    // transition into them already goes through `RequestInterestService.assignProvider`, which
+    // sets providerId first, so this is a no-op for normal traffic. It exists to close the admin
+    // bypass in `canChangeStatusBy` (`if (ctx.isAdmin) return true`), which would otherwise let an
+    // admin force e.g. IN_PROGRESS or CLOSED while providerId is still null - see
+    // PROVIDER_REQUIRED_STATUSES' doc comment in request.entity.ts.
+    if (
+      updateDto.status &&
+      PROVIDER_REQUIRED_STATUSES.has(updateDto.status) &&
+      request.providerId === null
+    ) {
+      throw new BadRequestException(
+        `Cannot set status to ${updateDto.status}: no provider is assigned to this request`,
+      );
+    }
 
     // Normalize to the invariants `unassignProvider` already enforces whenever a caller (e.g. an
     // admin, who bypasses the TRANSITIONS table entirely via canChangeStatusBy) forces a request

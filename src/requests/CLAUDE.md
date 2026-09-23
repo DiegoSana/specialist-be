@@ -197,6 +197,19 @@ section above for the flagging flow.
   flow `PUBLISHED` is supposed to represent. Keep this invariant in mind if `TRANSITIONS` or the
   admin bypass ever change: any new path that can set `PUBLISHED` gets this normalization for free
   since it lives in `updateStatus`, not in a specific caller.
+- `RequestService.updateStatus` also unconditionally rejects (`BadRequestException`, before the
+  `PUBLISHED` normalization above) setting `updateDto.status` to one of the 11
+  `PROVIDER_REQUIRED_STATUSES` (`request.entity.ts`: `SENT, CONTACT_RELEASED, IN_PROGRESS,
+  FINISHED, CLOSED, UNDER_REVIEW, NOT_COMPLETED, INTERRUPTED, ABANDONED, REJECTED, NO_RESPONSE`)
+  while `request.providerId` is `null` - message `` `Cannot set status to ${status}: no provider is
+  assigned to this request` ``. This is checked for every caller, not just `ctx.isAdmin`, because
+  it's a domain invariant rather than a permission rule: every legitimate non-admin path into these
+  statuses already goes through `RequestInterestService.assignProvider`, which sets `providerId`
+  first, so the check is a no-op for normal traffic and only closes the same `canChangeStatusBy`
+  admin-bypass gap the `PUBLISHED` normalization above closes (e.g. without it, an admin could force
+  `IN_PROGRESS -> PUBLISHED` (`providerId` cleared) `-> IN_PROGRESS` again with no provider
+  attached). `DRAFT`, `PUBLISHED`, `EXPIRED`, `CANCELLED` are intentionally exempt - they either
+  don't need a provider or (`CANCELLED`) are reachable both with and without one per `TRANSITIONS`.
 
 ## Tests
 
