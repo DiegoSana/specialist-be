@@ -25,9 +25,7 @@
       "**/.env",
       "**/.env.*"
     ],
-    "usePolling": true,
-    "interval": 1000,
-    "binaryInterval": 3000
+    "usePolling": false
   }
 }
 
