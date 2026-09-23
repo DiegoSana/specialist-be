@@ -56,6 +56,7 @@ describe('AdminService', () => {
       getAllRequestsForAdmin: jest.fn(),
       getRequestStats: jest.fn(),
       findById: jest.fn(),
+      updateStatus: jest.fn(),
     };
 
     mockRequestInterestService = {
@@ -579,6 +580,46 @@ describe('AdminService', () => {
 
       await expect(
         service.getRequestByIdForAdmin('missing', adminUser),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateRequestStatus', () => {
+    const adminUser = createMockUser({ id: 'admin-123', isAdmin: true });
+
+    it('should build a lightweight admin auth context and delegate to RequestService.updateStatus', async () => {
+      const updatedRequest = createMockRequest({
+        id: 'request-123',
+        status: RequestStatus.CLOSED,
+      });
+      mockRequestService.updateStatus.mockResolvedValue(updatedRequest);
+
+      const result = await service.updateRequestStatus(
+        'request-123',
+        { status: RequestStatus.CLOSED, statusReason: 'Resuelto' },
+        adminUser,
+      );
+
+      expect(mockRequestService.updateStatus).toHaveBeenCalledWith(
+        'request-123',
+        { userId: 'admin-123', isAdmin: true },
+        { status: RequestStatus.CLOSED, statusReason: 'Resuelto' },
+      );
+      expect(result.id).toBe('request-123');
+      expect(result.status).toBe(RequestStatus.CLOSED);
+    });
+
+    it('should propagate ForbiddenException/NotFoundException from RequestService.updateStatus', async () => {
+      mockRequestService.updateStatus.mockRejectedValue(
+        new NotFoundException('Request not found'),
+      );
+
+      await expect(
+        service.updateRequestStatus(
+          'missing',
+          { status: RequestStatus.CLOSED },
+          adminUser,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });

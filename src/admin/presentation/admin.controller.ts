@@ -22,6 +22,7 @@ import { UpdateUserVerificationDto } from '../application/dto/update-user-verifi
 import { UpdateUserWhatsAppOptOutDto } from '../application/dto/update-user-whatsapp-opt-out.dto';
 import { UpdateProfessionalStatusDto } from '../application/dto/update-professional-status.dto';
 import { UpdateCompanyStatusDto } from '../application/dto/update-company-status.dto';
+import { UpdateRequestStatusDto } from '../application/dto/update-request-status.dto';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { RequestStatus } from '@prisma/client';
 import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
@@ -227,6 +228,21 @@ export class AdminController {
     @CurrentUser() user: UserEntity,
   ) {
     return this.adminService.getRequestByIdForAdmin(id, user);
+  }
+
+  @Put('requests/:id/status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update request status (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Request status updated successfully',
+  })
+  async updateRequestStatus(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateRequestStatusDto,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.adminService.updateRequestStatus(id, updateDto, user);
   }
 
   @Get('companies')

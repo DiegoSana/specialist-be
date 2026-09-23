@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from './dto/update-professional-status.dto';
 import { UpdateCompanyStatusDto } from './dto/update-company-status.dto';
+import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { UserService } from '../../identity/application/services/user.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
@@ -11,6 +12,7 @@ import { RequestInterestService } from '../../requests/application/services/requ
 import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { RequestStatus } from '@prisma/client';
 import { AdminRequestDetailResponseDto } from '../presentation/dto/admin-request-detail-response.dto';
+import { RequestResponseDto } from '../../requests/presentation/dto/request-response.dto';
 
 @Injectable()
 export class AdminService {
@@ -158,6 +160,27 @@ export class AdminService {
       request,
       interestedProviders,
     );
+  }
+
+  /**
+   * Admin override: moves a request to any status. RequestEntity.canChangeStatusBy grants
+   * admins an unconditional bypass, so no additional validation is done here beyond what
+   * RequestService.updateStatus already enforces (notification side-effects, actor-kind
+   * resolution). Builds the auth context directly (lightweight admin pattern used elsewhere
+   * in this service) rather than the heavier async RequestService.buildAuthContext.
+   */
+  async updateRequestStatus(
+    requestId: string,
+    updateDto: UpdateRequestStatusDto,
+    actingUser: UserEntity,
+  ): Promise<RequestResponseDto> {
+    const ctx = { userId: actingUser.id, isAdmin: true };
+    const entity = await this.requestService.updateStatus(
+      requestId,
+      ctx,
+      updateDto,
+    );
+    return RequestResponseDto.fromEntity(entity, ctx);
   }
 
   async getAllCompanies(page: number = 1, limit: number = 10) {

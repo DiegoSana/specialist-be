@@ -25,7 +25,13 @@ professionals`, `GET professionals/:id`, `PUT professionals/:id/status`, `GET re
 (each item's `provider` is `{ id, type, name } | null`), `GET requests/:id` (full detail: client,
 trade, unified `provider` with `trades`, `interestedProviders` via
 `RequestInterestService.getInterestedProviders` with an admin-bypass ctx - no `canBeViewedBy`
-check), `GET companies`, `GET companies/:id`, `PUT companies/:id/status`, `GET dashboard/stats`.
+check), `PUT requests/:id/status` (body `{ status: RequestStatus, statusReason? }`, delegates to
+`RequestService.updateStatus` with the same lightweight admin ctx `{ userId, isAdmin: true }`;
+`RequestEntity.canChangeStatusBy` grants admin an unconditional bypass, so this can move a request
+to any of the 15 statuses; returns `RequestResponseDto.fromEntity` from the `requests` context -
+the one case in this file that imports a sibling context's `presentation/` DTO, mirroring the
+`InterestedProfessionalResponseDto` reuse already done in `AdminRequestDetailResponseDto`), `GET
+companies`, `GET companies/:id`, `PUT companies/:id/status`, `GET dashboard/stats`.
 Review moderation lives in `/reviews/admin/pending|:id/approve|:id/reject` (Reputation);
 notification admin in `/admin/notifications` (Notifications); company verification in
 `/companies/:id/verify` (Profiles).
@@ -39,7 +45,7 @@ notification admin in `/admin/notifications` (Notifications); company verificati
   in the owning service, with the admin `UserEntity` passed as acting user.
 - DTOs: `update-user-status.dto.ts`, `update-user-verification.dto.ts`,
   `update-user-whatsapp-opt-out.dto.ts`, `update-professional-status.dto.ts`,
-  `update-company-status.dto.ts`.
+  `update-company-status.dto.ts`, `update-request-status.dto.ts`.
 
 ## Backlog
 
