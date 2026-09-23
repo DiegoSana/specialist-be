@@ -8,6 +8,9 @@ import { CompanyEntity } from '../../profiles/domain/entities/company.entity';
 import { RequestService } from '../../requests/application/services/request.service';
 import { RequestInterestService } from '../../requests/application/services/request-interest.service';
 import { RequestInterestEntity } from '../../requests/domain/entities/request-interest.entity';
+import { ReviewService } from '../../reputation/application/services/review.service';
+import { ReviewEntity } from '../../reputation/domain/entities/review.entity';
+import { ReviewStatus } from '../../reputation/domain/value-objects/review-status';
 import {
   createMockUser,
   createMockProfessional,
@@ -22,6 +25,7 @@ describe('AdminService', () => {
   let mockCompanyService: any;
   let mockRequestService: any;
   let mockRequestInterestService: any;
+  let mockReviewService: any;
 
   beforeEach(async () => {
     mockUserService = {
@@ -63,6 +67,10 @@ describe('AdminService', () => {
       getInterestedProviders: jest.fn(),
     };
 
+    mockReviewService = {
+      findByRequestId: jest.fn().mockResolvedValue(null),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
@@ -74,6 +82,7 @@ describe('AdminService', () => {
           provide: RequestInterestService,
           useValue: mockRequestInterestService,
         },
+        { provide: ReviewService, useValue: mockReviewService },
       ],
     }).compile();
 
@@ -571,6 +580,8 @@ describe('AdminService', () => {
       });
       expect(result.interestedProviders).toHaveLength(1);
       expect(result.interestedProviders[0].id).toBe('interest-1');
+      expect(result.isPublic).toBe(request.isPublic);
+      expect(result.review).toBeNull();
     });
 
     it('should propagate NotFoundException when the request does not exist', async () => {
@@ -581,6 +592,59 @@ describe('AdminService', () => {
       await expect(
         service.getRequestByIdForAdmin('missing', adminUser),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should include the review when one exists for the request', async () => {
+      const request = createMockRequest({
+        id: 'request-123',
+        status: RequestStatus.CLOSED,
+      });
+      const review = ReviewEntity.create({
+        id: 'review-1',
+        reviewerId: 'client-1',
+        serviceProviderId: 'provider-1',
+        requestId: 'request-123',
+        rating: 5,
+        comment: 'Great job!',
+        status: ReviewStatus.APPROVED,
+      });
+
+      mockRequestService.findById.mockResolvedValue(request);
+      mockRequestInterestService.getInterestedProviders.mockResolvedValue([]);
+      mockReviewService.findByRequestId.mockResolvedValue(review);
+
+      const result = await service.getRequestByIdForAdmin(
+        'request-123',
+        adminUser,
+      );
+
+      expect(mockReviewService.findByRequestId).toHaveBeenCalledWith(
+        'request-123',
+      );
+      expect(result.review).toEqual({
+        id: 'review-1',
+        rating: 5,
+        comment: 'Great job!',
+        status: ReviewStatus.APPROVED,
+      });
+    });
+
+    it('should return a null review when the request has no review yet', async () => {
+      const request = createMockRequest({
+        id: 'request-123',
+        status: RequestStatus.CLOSED,
+      });
+
+      mockRequestService.findById.mockResolvedValue(request);
+      mockRequestInterestService.getInterestedProviders.mockResolvedValue([]);
+      mockReviewService.findByRequestId.mockResolvedValue(null);
+
+      const result = await service.getRequestByIdForAdmin(
+        'request-123',
+        adminUser,
+      );
+
+      expect(result.review).toBeNull();
     });
   });
 

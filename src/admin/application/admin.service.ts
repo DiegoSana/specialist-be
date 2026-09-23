@@ -9,6 +9,7 @@ import { ProfessionalService } from '../../profiles/application/services/profess
 import { CompanyService } from '../../profiles/application/services/company.service';
 import { RequestService } from '../../requests/application/services/request.service';
 import { RequestInterestService } from '../../requests/application/services/request-interest.service';
+import { ReviewService } from '../../reputation/application/services/review.service';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { RequestStatus } from '@prisma/client';
 import { AdminRequestDetailResponseDto } from '../presentation/dto/admin-request-detail-response.dto';
@@ -22,6 +23,7 @@ export class AdminService {
     private readonly companyService: CompanyService,
     private readonly requestService: RequestService,
     private readonly requestInterestService: RequestInterestService,
+    private readonly reviewService: ReviewService,
   ) {}
 
   async getAllUsers(
@@ -150,15 +152,18 @@ export class AdminService {
     actingUser: UserEntity,
   ): Promise<AdminRequestDetailResponseDto> {
     const request = await this.requestService.findById(requestId);
-    const interestedProviders =
-      await this.requestInterestService.getInterestedProviders(requestId, {
+    const [interestedProviders, review] = await Promise.all([
+      this.requestInterestService.getInterestedProviders(requestId, {
         userId: actingUser.id,
         isAdmin: true,
-      });
+      }),
+      this.reviewService.findByRequestId(requestId),
+    ]);
 
     return AdminRequestDetailResponseDto.fromEntity(
       request,
       interestedProviders,
+      review,
     );
   }
 
