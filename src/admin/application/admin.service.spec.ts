@@ -519,6 +519,8 @@ describe('AdminService', () => {
         id: 'request-123',
         title: 'Fix the sink',
         status: RequestStatus.PUBLISHED,
+        clientRating: 4,
+        clientRatingComment: 'Paid on time',
       });
       (request as any).client = {
         id: 'client-1',
@@ -582,6 +584,8 @@ describe('AdminService', () => {
       expect(result.interestedProviders[0].id).toBe('interest-1');
       expect(result.isPublic).toBe(request.isPublic);
       expect(result.review).toBeNull();
+      expect(result.clientRating).toBe(4);
+      expect(result.clientRatingComment).toBe('Paid on time');
     });
 
     it('should propagate NotFoundException when the request does not exist', async () => {
@@ -645,6 +649,8 @@ describe('AdminService', () => {
       );
 
       expect(result.review).toBeNull();
+      expect(result.clientRating).toBeNull();
+      expect(result.clientRatingComment).toBeNull();
     });
   });
 

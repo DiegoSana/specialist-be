@@ -26,9 +26,12 @@ professionals`, `GET professionals/:id`, `PUT professionals/:id/status`, `GET re
 (each item's `provider` is `{ id, type, name } | null`), `GET requests/:id` (full detail: client,
 trade, unified `provider` with `trades`, `interestedProviders` via
 `RequestInterestService.getInterestedProviders` with an admin-bypass ctx - no `canBeViewedBy`
-check; also `isPublic: boolean` and `review: { id, rating, comment, status } | null` - the
+check; also `isPublic: boolean`, `review: { id, rating, comment, status } | null` - the
 request's single review, resolved via `ReviewService.findByRequestId`, `null` when none exists
-yet), `PUT requests/:id/status` (body `{ status: RequestStatus, statusReason? }`, delegates to
+yet -, and `clientRating: number | null` / `clientRatingComment: string | null` - the provider's
+rating of the client, plain scalars mapped directly from the entity (`entity.clientRating`),
+unlike `review` no async lookup needed; independent rating with no moderation status, distinct
+from the Reputation `review` above), `PUT requests/:id/status` (body `{ status: RequestStatus, statusReason? }`, delegates to
 `RequestService.updateStatus` with the same lightweight admin ctx `{ userId, isAdmin: true }`;
 `RequestEntity.canChangeStatusBy` grants admin an unconditional bypass, so this can move a request
 to any of the 15 statuses; returns `RequestResponseDto.fromEntity` from the `requests` context -

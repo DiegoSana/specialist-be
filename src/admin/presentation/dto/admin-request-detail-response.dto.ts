@@ -136,6 +136,15 @@ export class AdminRequestDetailResponseDto {
   @ApiProperty({ type: AdminRequestReviewDto, nullable: true })
   review: AdminRequestReviewDto | null;
 
+  @ApiPropertyOptional({
+    description:
+      "Provider's rating of the client (1-5), set via POST /requests/:id/rate-client after the request is CLOSED. Independent of the Reputation `review` above (client rating the provider) and has no moderation status.",
+  })
+  clientRating: number | null;
+
+  @ApiPropertyOptional()
+  clientRatingComment: string | null;
+
   static fromEntity(
     entity: RequestEntity,
     interestedProviders: RequestInterestEntity[],
@@ -174,6 +183,9 @@ export class AdminRequestDetailResponseDto {
       InterestedProfessionalResponseDto.fromEntities(interestedProviders);
 
     dto.review = review ? AdminRequestReviewDto.fromEntity(review) : null;
+
+    dto.clientRating = entity.clientRating;
+    dto.clientRatingComment = entity.clientRatingComment;
 
     return dto;
   }
