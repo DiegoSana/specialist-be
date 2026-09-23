@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ReviewService } from './application/services/review.service';
+import { RequestPublishedAgainHandler } from './application/handlers/request-published-again.handler';
 import { REVIEW_REPOSITORY } from './domain/repositories/review.repository';
 import { PrismaReviewRepository } from './infrastructure/repositories/prisma-review.repository';
 // Presentation
@@ -17,6 +18,7 @@ import { IdentityModule } from '../identity/identity.module';
   controllers: [ReviewsController, ProfessionalReviewsController],
   providers: [
     ReviewService,
+    RequestPublishedAgainHandler,
     {
       provide: REVIEW_REPOSITORY,
       useClass: PrismaReviewRepository,

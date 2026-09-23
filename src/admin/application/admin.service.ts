@@ -2,15 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateProfessionalStatusDto } from './dto/update-professional-status.dto';
 import { UpdateCompanyStatusDto } from './dto/update-company-status.dto';
+import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { UserService } from '../../identity/application/services/user.service';
 import { ProfessionalService } from '../../profiles/application/services/professional.service';
 import { CompanyService } from '../../profiles/application/services/company.service';
 import { RequestService } from '../../requests/application/services/request.service';
 import { RequestInterestService } from '../../requests/application/services/request-interest.service';
+import { ReviewService } from '../../reputation/application/services/review.service';
 import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { RequestStatus } from '@prisma/client';
 import { AdminRequestDetailResponseDto } from '../presentation/dto/admin-request-detail-response.dto';
+import { RequestResponseDto } from '../../requests/presentation/dto/request-response.dto';
 
 @Injectable()
 export class AdminService {
@@ -20,6 +23,7 @@ export class AdminService {
     private readonly companyService: CompanyService,
     private readonly requestService: RequestService,
     private readonly requestInterestService: RequestInterestService,
+    private readonly reviewService: ReviewService,
   ) {}
 
   async getAllUsers(
@@ -148,16 +152,40 @@ export class AdminService {
     actingUser: UserEntity,
   ): Promise<AdminRequestDetailResponseDto> {
     const request = await this.requestService.findById(requestId);
-    const interestedProviders =
-      await this.requestInterestService.getInterestedProviders(requestId, {
+    const [interestedProviders, review] = await Promise.all([
+      this.requestInterestService.getInterestedProviders(requestId, {
         userId: actingUser.id,
         isAdmin: true,
-      });
+      }),
+      this.reviewService.findByRequestId(requestId),
+    ]);
 
     return AdminRequestDetailResponseDto.fromEntity(
       request,
       interestedProviders,
+      review,
     );
+  }
+
+  /**
+   * Admin override: moves a request to any status. RequestEntity.canChangeStatusBy grants
+   * admins an unconditional bypass, so no additional validation is done here beyond what
+   * RequestService.updateStatus already enforces (notification side-effects, actor-kind
+   * resolution). Builds the auth context directly (lightweight admin pattern used elsewhere
+   * in this service) rather than the heavier async RequestService.buildAuthContext.
+   */
+  async updateRequestStatus(
+    requestId: string,
+    updateDto: UpdateRequestStatusDto,
+    actingUser: UserEntity,
+  ): Promise<RequestResponseDto> {
+    const ctx = { userId: actingUser.id, isAdmin: true };
+    const entity = await this.requestService.updateStatus(
+      requestId,
+      ctx,
+      updateDto,
+    );
+    return RequestResponseDto.fromEntity(entity, ctx);
   }
 
   async getAllCompanies(page: number = 1, limit: number = 10) {

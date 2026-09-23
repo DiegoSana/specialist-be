@@ -21,6 +21,7 @@ import {
 import {
   RequestEntity,
   RequestAuthContext,
+  PROVIDER_REQUIRED_STATUSES,
 } from '../../domain/entities/request.entity';
 import { CreateRequestDto } from '../dto/create-request.dto';
 import { UpdateRequestDto } from '../dto/update-request.dto';
@@ -310,12 +311,58 @@ export class RequestService {
 
     const fromStatus = request.status;
     const actorKind = request.resolveActorKind(ctx);
+
+    // Domain invariant, enforced unconditionally (not just for ctx.isAdmin): a request can only
+    // move into one of these statuses once a provider is attached. Every legitimate non-admin
+    // transition into them already goes through `RequestInterestService.assignProvider`, which
+    // sets providerId first, so this is a no-op for normal traffic. It exists to close the admin
+    // bypass in `canChangeStatusBy` (`if (ctx.isAdmin) return true`), which would otherwise let an
+    // admin force e.g. IN_PROGRESS or CLOSED while providerId is still null - see
+    // PROVIDER_REQUIRED_STATUSES' doc comment in request.entity.ts.
+    if (
+      updateDto.status &&
+      PROVIDER_REQUIRED_STATUSES.has(updateDto.status) &&
+      request.providerId === null
+    ) {
+      throw new BadRequestException(
+        `Cannot set status to ${updateDto.status}: no provider is assigned to this request`,
+      );
+    }
+
+    // Normalize to the invariants `unassignProvider` already enforces whenever a caller (e.g. an
+    // admin, who bypasses the TRANSITIONS table entirely via canChangeStatusBy) forces a request
+    // back to PUBLISHED while a provider is still assigned. Without this, a request can end up
+    // PUBLISHED with a stale providerId, isPublic still false, and interests stuck
+    // CHOSEN/NOT_CHOSEN — defeating the "client can pick a new interested provider" flow PUBLISHED
+    // is supposed to represent. Only the dedicated unassign-provider use case took care of this
+    // before; this makes it hold regardless of which caller sets the status. Also resets
+    // clientRating/clientRatingComment: those (like the Review row, cleaned up separately by
+    // RequestPublishedAgainHandler in the reputation context) are scoped to the previous provider's
+    // engagement and must not survive into a freshly-reassigned one.
+    const shouldNormalizeToPublished =
+      updateDto.status === RequestStatus.PUBLISHED &&
+      fromStatus !== RequestStatus.PUBLISHED &&
+      request.providerId !== null;
+
     const saved = await this.requestRepository.save(
       request.withChanges({
         status: updateDto.status,
         statusReason: updateDto.statusReason,
+        ...(shouldNormalizeToPublished
+          ? {
+              providerId: null,
+              isPublic: true,
+              clientRating: null,
+              clientRatingComment: null,
+            }
+          : {}),
       }),
     );
+
+    if (shouldNormalizeToPublished) {
+      // Mirrors unassignProvider's ordering: reset interests only after the request itself saved.
+      await this.requestInterestRepository.resetDecided(requestId);
+    }
 
     if (updateDto.status && updateDto.status !== fromStatus) {
       // Get names for notification

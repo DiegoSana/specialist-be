@@ -3,6 +3,13 @@ import { RequestStatus, ProviderType } from '@prisma/client';
 import { RequestEntity } from '../../../requests/domain/entities/request.entity';
 import { RequestInterestEntity } from '../../../requests/domain/entities/request-interest.entity';
 import { InterestedProfessionalResponseDto } from '../../../requests/presentation/dto/interested-professional-response.dto';
+import { ReviewEntity } from '../../../reputation/domain/entities/review.entity';
+// NOTE: ReviewEntity.status is typed with this domain value object, not the @prisma/client
+// ReviewStatus enum - the two are structurally identical (PENDING|APPROVED|REJECTED) but
+// TypeScript treats string enums as nominal types, so assigning review.status into a field typed
+// with the Prisma enum fails to compile. Using the domain type here (already an allowed
+// cross-context import alongside RequestEntity/RequestInterestEntity above) avoids that mismatch.
+import { ReviewStatus } from '../../../reputation/domain/value-objects/review-status';
 
 class AdminRequestClientDto {
   @ApiProperty()
@@ -35,6 +42,29 @@ class AdminRequestProviderTradeDto {
 
   @ApiProperty()
   name: string;
+}
+
+class AdminRequestReviewDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  rating: number;
+
+  @ApiPropertyOptional()
+  comment: string | null;
+
+  @ApiProperty({ enum: ReviewStatus })
+  status: ReviewStatus;
+
+  static fromEntity(review: ReviewEntity): AdminRequestReviewDto {
+    const dto = new AdminRequestReviewDto();
+    dto.id = review.id;
+    dto.rating = review.rating;
+    dto.comment = review.comment;
+    dto.status = review.status;
+    return dto;
+  }
 }
 
 class AdminRequestProviderDto {
@@ -85,6 +115,9 @@ export class AdminRequestDetailResponseDto {
   @ApiPropertyOptional()
   address: string | null;
 
+  @ApiProperty()
+  isPublic: boolean;
+
   @ApiProperty({ type: [String] })
   photos: string[];
 
@@ -100,9 +133,22 @@ export class AdminRequestDetailResponseDto {
   @ApiProperty({ type: [InterestedProfessionalResponseDto] })
   interestedProviders: InterestedProfessionalResponseDto[];
 
+  @ApiProperty({ type: AdminRequestReviewDto, nullable: true })
+  review: AdminRequestReviewDto | null;
+
+  @ApiPropertyOptional({
+    description:
+      "Provider's rating of the client (1-5), set via POST /requests/:id/rate-client after the request is CLOSED. Independent of the Reputation `review` above (client rating the provider) and has no moderation status.",
+  })
+  clientRating: number | null;
+
+  @ApiPropertyOptional()
+  clientRatingComment: string | null;
+
   static fromEntity(
     entity: RequestEntity,
     interestedProviders: RequestInterestEntity[],
+    review: ReviewEntity | null = null,
   ): AdminRequestDetailResponseDto {
     const dto = new AdminRequestDetailResponseDto();
     const entityAny = entity as any;
@@ -114,6 +160,7 @@ export class AdminRequestDetailResponseDto {
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;
     dto.address = entity.address;
+    dto.isPublic = entity.isPublic;
     dto.photos = entity.photos;
 
     dto.trade = entityAny.trade
@@ -134,6 +181,11 @@ export class AdminRequestDetailResponseDto {
 
     dto.interestedProviders =
       InterestedProfessionalResponseDto.fromEntities(interestedProviders);
+
+    dto.review = review ? AdminRequestReviewDto.fromEntity(review) : null;
+
+    dto.clientRating = entity.clientRating;
+    dto.clientRatingComment = entity.clientRatingComment;
 
     return dto;
   }

@@ -185,6 +185,39 @@ section above for the flagging flow.
   and skips only the `hasPendingFollowUp`/"<1 day since last interaction" cron-spam guards, which
   don't apply to an explicit human action. It never mutates `Request.updatedAt` or any other field
   to make the request artificially "old enough".
+- `RequestService.updateStatus` auto-normalizes when `updateDto.status === PUBLISHED`, the
+  request's current status isn't already `PUBLISHED`, and it still has a non-null `providerId`:
+  it clears `providerId`, forces `isPublic: true`, clears `clientRating`/`clientRatingComment`,
+  and (after the request itself saves, mirroring `unassignProvider`'s ordering) calls
+  `requestInterestRepository.resetDecided(requestId)` - exactly the same side effects
+  `RequestInterestService.unassignProvider` applies (that method resets the same two rating
+  fields for the same reason). Both fields are scoped to a single provider engagement and must
+  not survive into a freshly-reassigned one, now that unassign-then-reassign is a supported flow;
+  the analogous stale-`Review` row (unique per `requestId`, so a leftover row would otherwise
+  block reviewing the next provider) is cleaned up separately by
+  `RequestPublishedAgainHandler` in the **reputation context**, reacting to the
+  `RequestStatusChangedEvent` (`toStatus: PUBLISHED`) both call sites publish - see
+  `src/reputation/CLAUDE.md`. This exists
+  because `canChangeStatusBy` gives `ctx.isAdmin` an unconditional bypass of `TRANSITIONS`, so an
+  admin (via `PATCH /requests/:id` or `PUT /admin/requests/:id/status`) could otherwise force a
+  request straight to `PUBLISHED` while leaving a stale `providerId`, `isPublic: false`, and
+  interests stuck `CHOSEN`/`NOT_CHOSEN` - defeating the "client can pick a new interested provider"
+  flow `PUBLISHED` is supposed to represent. Keep this invariant in mind if `TRANSITIONS` or the
+  admin bypass ever change: any new path that can set `PUBLISHED` gets this normalization for free
+  since it lives in `updateStatus`, not in a specific caller.
+- `RequestService.updateStatus` also unconditionally rejects (`BadRequestException`, before the
+  `PUBLISHED` normalization above) setting `updateDto.status` to one of the 11
+  `PROVIDER_REQUIRED_STATUSES` (`request.entity.ts`: `SENT, CONTACT_RELEASED, IN_PROGRESS,
+  FINISHED, CLOSED, UNDER_REVIEW, NOT_COMPLETED, INTERRUPTED, ABANDONED, REJECTED, NO_RESPONSE`)
+  while `request.providerId` is `null` - message `` `Cannot set status to ${status}: no provider is
+  assigned to this request` ``. This is checked for every caller, not just `ctx.isAdmin`, because
+  it's a domain invariant rather than a permission rule: every legitimate non-admin path into these
+  statuses already goes through `RequestInterestService.assignProvider`, which sets `providerId`
+  first, so the check is a no-op for normal traffic and only closes the same `canChangeStatusBy`
+  admin-bypass gap the `PUBLISHED` normalization above closes (e.g. without it, an admin could force
+  `IN_PROGRESS -> PUBLISHED` (`providerId` cleared) `-> IN_PROGRESS` again with no provider
+  attached). `DRAFT`, `PUBLISHED`, `EXPIRED`, `CANCELLED` are intentionally exempt - they either
+  don't need a provider or (`CANCELLED`) are reachable both with and without one per `TRANSITIONS`.
 
 ## Tests
 
