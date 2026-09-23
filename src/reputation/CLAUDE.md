@@ -34,8 +34,11 @@ PENDING), `/reviews/admin/pending` GET, `/:id/approve` POST, `/:id/reject` POST 
   token `ReviewService` already uses) and deletes it if found (`REVIEW_REPOSITORY.delete(id)`).
   Injects `REVIEW_REPOSITORY` directly rather than going through `ReviewService.delete`, because
   that method enforces `canBeModifiedBy` (author while pending) - the wrong shape of authorization
-  for a system-triggered cleanup that must also remove an already-APPROVED review. Wrapped in
-  try/catch + `Logger`, mirrors `RequestAttentionFlaggedHandler`'s pattern in `notifications`.
+  for a system-triggered cleanup that must also remove an already-APPROVED review. After deleting,
+  it calls the now-public `ReviewService.updateServiceProviderRating(serviceProviderId)` - the same
+  recalculation `approve`/`delete` already trigger - so removing an APPROVED review doesn't leave
+  the provider's cached `averageRating`/`totalReviews` stale. Wrapped in try/catch + `Logger`,
+  mirrors `RequestAttentionFlaggedHandler`'s pattern in `notifications`.
   Exists because `Review.requestId` is unique (at most one review per request, ever): both
   `RequestInterestService.unassignProvider` and `RequestService.updateStatus`'s PUBLISHED
   normalization publish this event with `toStatus: PUBLISHED` whenever they clear a stale

@@ -6,6 +6,7 @@ describe('RequestPublishedAgainHandler', () => {
   let handler: RequestPublishedAgainHandler;
   let mockEventBus: any;
   let mockReviewRepository: any;
+  let mockReviewService: any;
 
   beforeEach(() => {
     mockEventBus = { on: jest.fn() };
@@ -13,10 +14,14 @@ describe('RequestPublishedAgainHandler', () => {
       findByRequestId: jest.fn(),
       delete: jest.fn(),
     };
+    mockReviewService = {
+      updateServiceProviderRating: jest.fn(),
+    };
 
     handler = new RequestPublishedAgainHandler(
       mockEventBus,
       mockReviewRepository,
+      mockReviewService,
     );
   });
 
@@ -37,8 +42,11 @@ describe('RequestPublishedAgainHandler', () => {
       changedByUserId: 'admin-user',
     });
 
-  it('deletes the existing review when the request is republished (toStatus PUBLISHED)', async () => {
-    mockReviewRepository.findByRequestId.mockResolvedValue({ id: 'review-1' });
+  it('deletes the existing review and recalculates the provider rating when the request is republished (toStatus PUBLISHED)', async () => {
+    mockReviewRepository.findByRequestId.mockResolvedValue({
+      id: 'review-1',
+      serviceProviderId: 'provider-1',
+    });
 
     await (handler as any).onStatusChanged(buildEvent(RequestStatus.PUBLISHED));
 
@@ -46,6 +54,9 @@ describe('RequestPublishedAgainHandler', () => {
       'request-123',
     );
     expect(mockReviewRepository.delete).toHaveBeenCalledWith('review-1');
+    expect(mockReviewService.updateServiceProviderRating).toHaveBeenCalledWith(
+      'provider-1',
+    );
   });
 
   it('does nothing (but does not throw) when there is no existing review', async () => {
@@ -56,6 +67,9 @@ describe('RequestPublishedAgainHandler', () => {
     ).resolves.not.toThrow();
 
     expect(mockReviewRepository.delete).not.toHaveBeenCalled();
+    expect(
+      mockReviewService.updateServiceProviderRating,
+    ).not.toHaveBeenCalled();
   });
 
   it('does nothing when toStatus is not PUBLISHED', async () => {
@@ -63,6 +77,9 @@ describe('RequestPublishedAgainHandler', () => {
 
     expect(mockReviewRepository.findByRequestId).not.toHaveBeenCalled();
     expect(mockReviewRepository.delete).not.toHaveBeenCalled();
+    expect(
+      mockReviewService.updateServiceProviderRating,
+    ).not.toHaveBeenCalled();
   });
 
   it('never throws even if the repository fails', async () => {

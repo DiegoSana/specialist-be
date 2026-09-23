@@ -6,6 +6,7 @@ import {
   REVIEW_REPOSITORY,
 } from '../../domain/repositories/review.repository';
 import { RequestStatusChangedEvent } from '../../../requests/domain/events/request-status-changed.event';
+import { ReviewService } from '../services/review.service';
 
 /**
  * Reacts to a request being (re)published: both `RequestInterestService.unassignProvider` and
@@ -23,6 +24,13 @@ import { RequestStatusChangedEvent } from '../../../requests/domain/events/reque
  * Lives in `reputation` (not `requests`) to avoid a circular module dependency —
  * `ReputationModule` already imports `RequestsModule`, not the other way around — mirroring
  * `RequestAttentionFlaggedHandler`'s cross-context pattern in `notifications`.
+ *
+ * Deletes via `REVIEW_REPOSITORY` directly rather than `ReviewService.delete`, since that method
+ * enforces reviewer-only authorization and refuses to delete an already-moderated review — the
+ * wrong shape for this system cleanup, which must remove a stale review regardless of its status.
+ * It does, however, call `ReviewService.updateServiceProviderRating` afterward (the same
+ * recalculation `delete`/`approve` already trigger) so a deleted APPROVED review doesn't leave the
+ * provider's cached averageRating/totalReviews stale.
  */
 @Injectable()
 export class RequestPublishedAgainHandler implements OnModuleInit {
@@ -32,6 +40,7 @@ export class RequestPublishedAgainHandler implements OnModuleInit {
     @Inject(EVENT_BUS) private readonly eventBus: any,
     @Inject(REVIEW_REPOSITORY)
     private readonly reviewRepository: ReviewRepository,
+    private readonly reviewService: ReviewService,
   ) {}
 
   onModuleInit(): void {
@@ -63,6 +72,9 @@ export class RequestPublishedAgainHandler implements OnModuleInit {
         return;
       }
       await this.reviewRepository.delete(existingReview.id);
+      await this.reviewService.updateServiceProviderRating(
+        existingReview.serviceProviderId,
+      );
     } catch (err) {
       this.logger.error(
         `Failed handling ${event.name} (requestId=${event.payload.requestId})`,

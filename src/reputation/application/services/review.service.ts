@@ -342,9 +342,14 @@ export class ReviewService {
   /**
    * Update the rating for a service provider based on approved reviews
    */
-  private async updateServiceProviderRating(
-    serviceProviderId: string,
-  ): Promise<void> {
+  /**
+   * Recalculates a ServiceProvider's averageRating/totalReviews from its currently APPROVED
+   * reviews. Public so callers that remove or moderate a review outside this service's own
+   * `approve`/`delete` methods (e.g. `RequestPublishedAgainHandler`, which deletes a stale review
+   * via the repository directly to bypass reviewer-only authorization) can keep the cached rating
+   * in sync instead of leaving it stale.
+   */
+  async updateServiceProviderRating(serviceProviderId: string): Promise<void> {
     // Only count APPROVED reviews for rating calculation
     const reviews =
       await this.reviewRepository.findApprovedByServiceProviderId(
