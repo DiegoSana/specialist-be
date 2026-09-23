@@ -215,4 +215,69 @@ describe('UserService', () => {
       expect(mockEventBus.publish).not.toHaveBeenCalled();
     });
   });
+
+  describe('reactivateWhatsAppForUser', () => {
+    let service: UserService;
+    let mockUserRepository: any;
+    let mockUserQueryRepository: any;
+    let mockEventBus: any;
+
+    beforeEach(() => {
+      mockUserRepository = {
+        findById: jest.fn(),
+        save: jest.fn((u) => Promise.resolve(u)),
+      };
+      mockUserQueryRepository = {};
+      mockEventBus = { publish: jest.fn() };
+      service = new UserService(
+        mockUserRepository,
+        mockUserQueryRepository,
+        mockEventBus,
+      );
+    });
+
+    it('throws NotFoundException when the user does not exist', async () => {
+      mockUserRepository.findById.mockResolvedValue(null);
+
+      await expect(
+        service.reactivateWhatsAppForUser('missing-user'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('is a no-op and does not touch the repository save/event bus when the user is not opted out', async () => {
+      const user = createMockUser({ id: 'user-1', whatsappOptedOut: false });
+      mockUserRepository.findById.mockResolvedValue(user);
+
+      const result = await service.reactivateWhatsAppForUser('user-1');
+
+      expect(result).toBe(user);
+      expect(mockUserRepository.save).not.toHaveBeenCalled();
+      expect(mockEventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it('clears the flag and publishes UserWhatsAppReactivatedEvent when the user is opted out', async () => {
+      const user = createMockUser({
+        id: 'user-1',
+        whatsappOptedOut: true,
+        whatsappOptedOutAt: new Date(),
+      });
+      mockUserRepository.findById.mockResolvedValue(user);
+
+      const result = await service.reactivateWhatsAppForUser('user-1');
+
+      expect(result.whatsappOptedOut).toBe(false);
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          whatsappOptedOut: false,
+          whatsappOptedOutAt: null,
+        }),
+      );
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: UserWhatsAppReactivatedEvent.EVENT_NAME,
+          payload: { userId: 'user-1' },
+        }),
+      );
+    });
+  });
 });
