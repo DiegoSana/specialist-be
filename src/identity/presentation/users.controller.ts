@@ -22,6 +22,7 @@ import { UserProfileResponseDto } from '../../profiles/application/dto/user-prof
 import { JwtAuthGuard } from '../infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
 import { UserEntity } from '../domain/entities/user.entity';
+import { UserService } from '../application/services/user.service';
 
 /**
  * Response DTO for provider profiles status
@@ -57,6 +58,7 @@ export class UsersController {
   constructor(
     private readonly clientService: ClientService,
     private readonly profileToggleService: ProfileToggleService,
+    private readonly userService: UserService,
   ) {}
 
   @Get('me')
@@ -105,6 +107,32 @@ export class UsersController {
     @CurrentUser() user: UserEntity,
   ): Promise<UserProfileResponseDto> {
     const updatedProfile = await this.clientService.activateClientProfile(
+      user.id,
+    );
+    return UserProfileResponseDto.fromEntity(updatedProfile);
+  }
+
+  @Post('me/whatsapp-reactivate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reactivate WhatsApp for the current user',
+    description:
+      "Self-service reactivation of the current user's WhatsApp opt-out. If the user is " +
+      'currently opted out, clears the flag and triggers the same event path as the admin ' +
+      'override. If the user is not opted out, this is a no-op (safe to call repeatedly). ' +
+      'One-directional: there is no self-service way to opt out through this endpoint - ' +
+      'that only happens via the WhatsApp reply classifier ("STOP"/"BAJA").',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'WhatsApp reactivated (or already was not opted out); returns the current profile',
+    type: UserProfileResponseDto,
+  })
+  async reactivateWhatsApp(
+    @CurrentUser() user: UserEntity,
+  ): Promise<UserProfileResponseDto> {
+    const updatedProfile = await this.userService.reactivateWhatsAppForUser(
       user.id,
     );
     return UserProfileResponseDto.fromEntity(updatedProfile);

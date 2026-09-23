@@ -46,6 +46,19 @@ export class UserProfileResponseDto {
   @ApiProperty()
   emailVerified: boolean;
 
+  @ApiProperty({
+    description:
+      'Whether the user has opted out of receiving WhatsApp messages (self-service or admin-set).',
+  })
+  whatsappOptedOut: boolean;
+
+  @ApiProperty({
+    nullable: true,
+    description:
+      'When the user opted out of WhatsApp; null if never opted out or already reactivated.',
+  })
+  whatsappOptedOutAt: Date | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -71,6 +84,8 @@ export class UserProfileResponseDto {
     dto.hasCompanyProfile = user.hasCompanyProfile;
     dto.phoneVerified = user.phoneVerified;
     dto.emailVerified = user.emailVerified;
+    dto.whatsappOptedOut = user.whatsappOptedOut;
+    dto.whatsappOptedOutAt = user.whatsappOptedOutAt;
     dto.createdAt = user.createdAt;
     dto.updatedAt = user.updatedAt;
     return dto;

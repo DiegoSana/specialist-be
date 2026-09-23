@@ -52,9 +52,10 @@ Authorization: Bearer <token>
 | `POST` | `/auth/login` | Login with email/password | ❌ |
 | `GET` | `/auth/google` | Initiate Google OAuth | ❌ |
 | `GET` | `/auth/facebook` | Initiate Facebook OAuth | ❌ |
-| `GET` | `/users/me` | Get current user profile | ✅ |
+| `GET` | `/users/me` | Get current user profile (includes `whatsappOptedOut`, `whatsappOptedOutAt`) | ✅ |
 | `PATCH` | `/users/me` | Update current user profile | ✅ |
 | `POST` | `/users/me/client-profile` | Activate client profile | ✅ |
+| `POST` | `/users/me/whatsapp-reactivate` | Self-service: clear own `whatsappOptedOut` if currently opted out (no-op otherwise); returns the refreshed profile. One-directional - there is no self-service way to opt out here | ✅ |
 
 ### 📱 Identity - Verification (`/identity/verification`)
 
