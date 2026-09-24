@@ -135,11 +135,12 @@ export class UserService {
   }
 
   /**
-   * Set (or clear) the WhatsApp opt-out flag. Two callers funnel through here: the WhatsApp
-   * reply classifier (when a user asks to stop receiving messages) and the admin manual
-   * override (UserService.updateWhatsAppOptOutForUser) — see ProfileActivationService, which
-   * treats an opted-out user as having no active profile (WhatsApp is the mandatory
-   * channel for coordinating requests).
+   * Set (or clear) the WhatsApp opt-out flag. Several callers funnel through here: the WhatsApp
+   * reply classifier (when a user asks to stop receiving messages), the admin manual override
+   * (UserService.updateWhatsAppOptOutForUser), and the self-service endpoints
+   * (UserService.optOutWhatsAppForUser / reactivateWhatsAppForUser) — see
+   * ProfileActivationService, which treats an opted-out user as having no active profile
+   * (WhatsApp is the mandatory channel for coordinating requests).
    *
    * Publishes UserWhatsAppOptedOutEvent on the false -> true transition and
    * UserWhatsAppReactivatedEvent on the true -> false transition (never both, never when the
@@ -350,8 +351,9 @@ export class UserService {
    * Self-service: let a user reactivate their own WhatsApp opt-out. No-op when the user is
    * not currently opted out (a double-click shouldn't throw), else delegates to
    * setWhatsAppOptedOut(userId, false) so the same event/email path as the admin override
-   * runs. Deliberately one-directional: there is no self-service way to opt OUT here (that
-   * happens only via the WhatsApp reply classifier) - this method never sets the flag to true.
+   * runs. Its counterpart, optOutWhatsAppForUser, is the mirror-image self-service opt-out -
+   * together they make this flow bidirectional for the user themselves, alongside the admin
+   * override (updateWhatsAppOptOutForUser) and the WhatsApp reply classifier.
    */
   async reactivateWhatsAppForUser(userId: string): Promise<UserEntity> {
     const user = await this.userRepository.findById(userId, true);
@@ -362,6 +364,25 @@ export class UserService {
       return user;
     }
     return this.setWhatsAppOptedOut(userId, false);
+  }
+
+  /**
+   * Self-service counterpart to reactivateWhatsAppForUser: let a user opt themselves out of
+   * WhatsApp. No-op when the user is already opted out (a double-click shouldn't throw), else
+   * delegates to setWhatsAppOptedOut(userId, true) so the same event/email path as the admin
+   * override and the WhatsApp reply classifier runs. This makes the previously one-directional
+   * self-service flow bidirectional: self-service opt-out now exists alongside the admin
+   * override and the WhatsApp reply classifier as ways to set the flag to true.
+   */
+  async optOutWhatsAppForUser(userId: string): Promise<UserEntity> {
+    const user = await this.userRepository.findById(userId, true);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.whatsappOptedOut) {
+      return user;
+    }
+    return this.setWhatsAppOptedOut(userId, true);
   }
 
   // ─────────────────────────────────────────────────────────────

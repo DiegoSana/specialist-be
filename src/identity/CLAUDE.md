@@ -11,8 +11,10 @@ verification. Does NOT own client/professional/company profiles (Profiles contex
   `whatsappOptedOut`/`whatsappOptedOutAt` per row), `setWhatsAppOptedOut(userId, optedOut)`,
   `updateWhatsAppOptOutForUser(targetUserId, actingUser, optedOut)` (admin override, no-op if
   unchanged, delegates to `setWhatsAppOptedOut`), `reactivateWhatsAppForUser(userId)` (self-service,
-  no-op if not opted out, else delegates to `setWhatsAppOptedOut(userId, false)`; one-directional -
-  there is no self-service opt-out), `findAdminUserIds()` (via `UserQueryRepository`,
+  no-op if not opted out, else delegates to `setWhatsAppOptedOut(userId, false)`),
+  `optOutWhatsAppForUser(userId)` (self-service, mirror image of `reactivateWhatsAppForUser`:
+  no-op if already opted out, else delegates to `setWhatsAppOptedOut(userId, true)` - together
+  these two make the self-service flow bidirectional), `findAdminUserIds()` (via `UserQueryRepository`,
   no fixed/hardcoded admin id — used to fan out admin notifications, see Requests context's
   `RequestAttentionFlaggedHandler`).
 - `AuthenticationService`: `register`, `login`, `validateUser`, `validateUserById`, `googleLogin`,
@@ -29,7 +31,9 @@ verification. Does NOT own client/professional/company profiles (Profiles contex
 `/auth/register|login|google|google/callback|facebook|facebook/callback` (all `@Public()`),
 `/users/me` GET/PATCH (now also returns `whatsappOptedOut`/`whatsappOptedOutAt` via
 `UserProfileResponseDto`), `/users/me/client-profile` POST, `/users/me/whatsapp-reactivate` POST
-(self-service reactivation, see `UserService.reactivateWhatsAppForUser`), `/users/me/provider-profiles`
+(self-service reactivation, see `UserService.reactivateWhatsAppForUser`),
+`/users/me/whatsapp-opt-out` POST (self-service opt-out, mirror image, see
+`UserService.optOutWhatsAppForUser`), `/users/me/provider-profiles`
 GET, `/identity/verification/phone|email/request|confirm` POST.
 
 ## UserEntity essentials
@@ -57,14 +61,16 @@ GET, `/identity/verification/phone|email/request|confirm` POST.
 - `domain/events/user-whatsapp-opted-out.event.ts` (`UserWhatsAppOptedOutEvent`,
   `identity.user.whatsapp_opted_out`) is the first domain event from this context. Published from
   `UserService.setWhatsAppOptedOut` on the `false -> true` transition, regardless of whether the
-  caller was the WhatsApp reply classifier (Requests context) or the admin manual override
-  (`updateWhatsAppOptOutForUser`, `PUT /admin/users/:id/whatsapp-opt-out`). Its sibling
+  caller was the WhatsApp reply classifier (Requests context), the admin manual override
+  (`updateWhatsAppOptOutForUser`, `PUT /admin/users/:id/whatsapp-opt-out`), or the self-service
+  `POST /users/me/whatsapp-opt-out` (`UserService.optOutWhatsAppForUser`). Its sibling
   `domain/events/user-whatsapp-reactivated.event.ts` (`UserWhatsAppReactivatedEvent`,
   `identity.user.whatsapp_reactivated`) is published from the same method on the `true -> false`
   transition — reachable via the admin override or the self-service `POST
-  /users/me/whatsapp-reactivate` (`UserService.reactivateWhatsAppForUser`); there is still no
-  self-service/automatic opt-out path (only the admin override or the WhatsApp reply classifier
-  can set it to `true`). Neither event fires when the value doesn't actually change. Both are consumed by
+  /users/me/whatsapp-reactivate` (`UserService.reactivateWhatsAppForUser`). The flow is now
+  bidirectional for the user themselves: self-service opt-out and self-service reactivation are
+  mirror images of each other, alongside the admin override and (opt-out only) the WhatsApp reply
+  classifier. Neither event fires when the value doesn't actually change. Both are consumed by
   `UserWhatsAppOptedOutHandler` in the Notifications context (mirrors
   `RequestAttentionFlaggedHandler`'s cross-context pattern — do not import `NotificationsModule`
   into `IdentityModule`).

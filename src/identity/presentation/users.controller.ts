@@ -120,8 +120,8 @@ export class UsersController {
       "Self-service reactivation of the current user's WhatsApp opt-out. If the user is " +
       'currently opted out, clears the flag and triggers the same event path as the admin ' +
       'override. If the user is not opted out, this is a no-op (safe to call repeatedly). ' +
-      'One-directional: there is no self-service way to opt out through this endpoint - ' +
-      'that only happens via the WhatsApp reply classifier ("STOP"/"BAJA").',
+      'Its counterpart, POST /users/me/whatsapp-opt-out, is the mirror-image self-service ' +
+      'opt-out.',
   })
   @ApiResponse({
     status: 200,
@@ -133,6 +133,32 @@ export class UsersController {
     @CurrentUser() user: UserEntity,
   ): Promise<UserProfileResponseDto> {
     const updatedProfile = await this.userService.reactivateWhatsAppForUser(
+      user.id,
+    );
+    return UserProfileResponseDto.fromEntity(updatedProfile);
+  }
+
+  @Post('me/whatsapp-opt-out')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Opt out of WhatsApp for the current user',
+    description:
+      "Self-service opt-out of the current user's WhatsApp messages. If the user is not " +
+      'currently opted out, sets the flag and triggers the same event path as the admin ' +
+      'override. If the user is already opted out, this is a no-op (safe to call ' +
+      'repeatedly). Its counterpart, POST /users/me/whatsapp-reactivate, is the mirror-image ' +
+      'self-service reactivation.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'WhatsApp opted out (or already was opted out); returns the current profile',
+    type: UserProfileResponseDto,
+  })
+  async optOutWhatsApp(
+    @CurrentUser() user: UserEntity,
+  ): Promise<UserProfileResponseDto> {
+    const updatedProfile = await this.userService.optOutWhatsAppForUser(
       user.id,
     );
     return UserProfileResponseDto.fromEntity(updatedProfile);
