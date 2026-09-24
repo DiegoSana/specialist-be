@@ -44,7 +44,8 @@ fly secrets list
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
+| `DATABASE_URL` | Runtime PostgreSQL connection string. On Supabase, use the **transaction pooler** (port `6543`, `?pgbouncer=true`), not the direct connection - the app opens/reuses connections per request and the pooler handles that far better than raw Postgres. | `postgresql://user:pass@pooler-host:6543/db?pgbouncer=true` |
+| `DIRECT_URL` | Direct/session PostgreSQL connection (port `5432`), used only by `prisma migrate deploy` (via `release_command` in `fly.toml`) and `prisma migrate dev`. pgBouncer's transaction mode doesn't support the prepared statements migrations need. | `postgresql://user:pass@direct-host:5432/db` |
 | `JWT_SECRET` | Secret key for JWT tokens | `your-super-secret-key` |
 | `JWT_EXPIRES_IN` | JWT token expiration | `7d` |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | |

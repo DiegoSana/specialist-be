@@ -4,7 +4,12 @@
 #
 
 app = 'specialist-api'
-primary_region = 'gru'
+# 'sea' (Seattle) instead of 'gru' (São Paulo) so the app runs close to the Supabase
+# project, which is in us-west-2 (Oregon) - every DB round trip was previously crossing
+# the Brazil<->Oregon distance, adding ~150-250ms of pure network latency to EVERY query
+# (compounded by any endpoint doing several sequential queries). If the Supabase project
+# ever moves to sa-east-1 (closer to the real Argentina user base), move this back to 'gru'.
+primary_region = 'sea'
 
 [build]
   dockerfile = 'Dockerfile.prod'
@@ -42,7 +47,11 @@ primary_region = 'gru'
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 0
+  # Was 0: on this low-traffic pre-launch deploy the machine was fully stopping between
+  # requests, so the next request paid a full cold start (Nest bootstrap + new DB
+  # connection) on top of the region latency above. Keeping 1 warm removes that cost;
+  # revisit if free-tier resource usage becomes a concern.
+  min_machines_running = 1
   processes = ['app']
 
   [[http_service.checks]]
