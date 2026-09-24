@@ -17,6 +17,13 @@
 
 Un mismo usuario puede ser Cliente y tener además perfil Profesional o Empresa (solo uno activo a la vez). Ver [Company Profiles](./architecture/COMPANY_PROFILES.md).
 
+**Restricción MVP (multi-perfil):** un usuario "cliente puro" (`hasClientProfile: true` y sin
+ningún perfil de proveedor todavía) **no puede** crear un perfil Profesional ni de Empresa
+(`POST /professionals/me`, `POST /companies/me` responden `403 Forbidden`). Un usuario que ya
+tiene **cualquier** perfil de proveedor (Profesional o Empresa) sí puede crear el otro tipo de
+proveedor, aunque también tenga perfil de cliente. Ver `UserEntity.canCreateProfessionalProfile()`
+/ `canCreateCompanyProfile()`.
+
 ### Perfiles: activo y verificado
 
 Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
@@ -57,6 +64,8 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - Moderar reseñas (aprobar/rechazar).
 - Acceder a endpoints de admin.
 - Ver datos sensibles de otros usuarios (email, teléfono de otros proveedores en listados públicos).
+- Crear un perfil Profesional o de Empresa si es "cliente puro" (sin ningún perfil de proveedor
+  todavía) — restricción MVP, ver arriba.
 
 ---
 

@@ -271,6 +271,12 @@ export class ProfessionalService {
       throw new BadRequestException('User account is not active');
     }
 
+    if (!user.canCreateProfessionalProfile()) {
+      throw new ForbiddenException(
+        'A client account cannot create a professional profile',
+      );
+    }
+
     // Check if professional profile already exists
     const existing = await this.professionalRepository.findByUserId(userId);
     if (existing) {
