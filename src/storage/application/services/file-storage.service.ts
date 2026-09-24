@@ -39,9 +39,16 @@ export class FileStorageService {
       throw new BadRequestException('No file provided');
     }
 
-    // Validate file type
-    const fileType = new FileTypeVO(file.mimetype, uploadDto.category);
-    new FileSizeVO(file.size, fileType.getMaxSize());
+    // Validate file type. FileTypeVO/FileSizeVO are domain value objects and correctly throw a
+    // plain Error rather than a Nest exception (domain must stay HTTP-agnostic) - translate that
+    // into a proper 400 here at the application boundary instead of letting it bubble unhandled
+    // into a raw 500.
+    try {
+      const fileType = new FileTypeVO(file.mimetype, uploadDto.category);
+      new FileSizeVO(file.size, fileType.getMaxSize());
+    } catch (err: any) {
+      throw new BadRequestException(err.message);
+    }
 
     // Validate requestId if provided
     if (uploadDto.requestId) {

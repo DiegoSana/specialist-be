@@ -35,12 +35,24 @@ export class FileTypeVO {
     switch (this.category) {
       case 'profile-picture':
       case 'project-image':
+        return [
+          AllowedMimeType.IMAGE_JPEG,
+          AllowedMimeType.IMAGE_PNG,
+          AllowedMimeType.IMAGE_WEBP,
+          AllowedMimeType.IMAGE_GIF,
+        ];
+      // Request photos can be images or a short video of the job (see components/requests/
+      // request-photos-section.tsx and the new-request picker on the frontend, both of which
+      // already accept video/* for this category).
       case 'request-photo':
         return [
           AllowedMimeType.IMAGE_JPEG,
           AllowedMimeType.IMAGE_PNG,
           AllowedMimeType.IMAGE_WEBP,
           AllowedMimeType.IMAGE_GIF,
+          AllowedMimeType.VIDEO_MP4,
+          AllowedMimeType.VIDEO_WEBM,
+          AllowedMimeType.VIDEO_QUICKTIME,
         ];
       case 'project-video':
         return [

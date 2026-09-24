@@ -98,6 +98,65 @@ describe('FileStorageService', () => {
       expect(mockFileStorageRepository.upload).toHaveBeenCalled();
     });
 
+    it('should allow a video upload for the request-photo category', async () => {
+      const mockVideoFile: Express.Multer.File = {
+        ...mockFile,
+        originalname: 'test.mp4',
+        mimetype: 'video/mp4',
+        size: 1024,
+      };
+      const uploadedFile = {
+        id: 'file-456',
+        path: 'uploads/file.mp4',
+        category: FileCategory.REQUEST_PHOTO,
+        ownerId: 'user-123',
+      };
+
+      mockFileStorageRepository.upload.mockResolvedValue(uploadedFile);
+
+      const result = await service.uploadFile(
+        mockVideoFile,
+        { category: FileCategory.REQUEST_PHOTO },
+        'user-123',
+      );
+
+      expect(result).toEqual(uploadedFile);
+    });
+
+    it('should throw BadRequestException (not a raw 500) for a mimetype not allowed by the category', async () => {
+      const mockVideoFile: Express.Multer.File = {
+        ...mockFile,
+        originalname: 'test.mp4',
+        mimetype: 'video/mp4',
+        size: 1024,
+      };
+
+      await expect(
+        service.uploadFile(
+          mockVideoFile,
+          { category: FileCategory.PROFILE_PICTURE },
+          'user-123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockFileStorageRepository.upload).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when the file exceeds the size cap for its type', async () => {
+      const oversizedImage: Express.Multer.File = {
+        ...mockFile,
+        size: 11 * 1024 * 1024, // over the 10MB image cap
+      };
+
+      await expect(
+        service.uploadFile(
+          oversizedImage,
+          { category: FileCategory.PROFILE_PICTURE },
+          'user-123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockFileStorageRepository.upload).not.toHaveBeenCalled();
+    });
+
     it('should throw NotFoundException when request not found', async () => {
       mockRequestService.findById.mockRejectedValue(
         new NotFoundException('Request not found'),
