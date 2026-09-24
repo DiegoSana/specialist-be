@@ -49,7 +49,8 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/users/me` | `GET` | Obtener mi perfil (incluye `whatsappOptedOut`, `whatsappOptedOutAt`) | Cualquier usuario autenticado |
 | `/api/users/me` | `PATCH` | Actualizar mi perfil | Cualquier usuario autenticado |
 | `/api/users/me/client-profile` | `POST` | Activar perfil de cliente | Cualquier usuario autenticado |
-| `/api/users/me/whatsapp-reactivate` | `POST` | Reactivar WhatsApp propio si está optado-out (no-op si no lo está); devuelve el perfil actualizado. Unidireccional: no existe un opt-out self-service por esta vía | Cualquier usuario autenticado |
+| `/api/users/me/whatsapp-reactivate` | `POST` | Reactivar WhatsApp propio si está optado-out (no-op si no lo está); devuelve el perfil actualizado. Imagen especular de `/api/users/me/whatsapp-opt-out` | Cualquier usuario autenticado |
+| `/api/users/me/whatsapp-opt-out` | `POST` | Optar por salir de WhatsApp propio si no está optado-out (no-op si ya lo está); devuelve el perfil actualizado. Imagen especular de `/api/users/me/whatsapp-reactivate` | Cualquier usuario autenticado |
 
 #### 👷 Profiles - Professionals (`/professionals`)
 

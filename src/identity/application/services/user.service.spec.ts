@@ -280,4 +280,65 @@ describe('UserService', () => {
       );
     });
   });
+
+  describe('optOutWhatsAppForUser', () => {
+    let service: UserService;
+    let mockUserRepository: any;
+    let mockUserQueryRepository: any;
+    let mockEventBus: any;
+
+    beforeEach(() => {
+      mockUserRepository = {
+        findById: jest.fn(),
+        save: jest.fn((u) => Promise.resolve(u)),
+      };
+      mockUserQueryRepository = {};
+      mockEventBus = { publish: jest.fn() };
+      service = new UserService(
+        mockUserRepository,
+        mockUserQueryRepository,
+        mockEventBus,
+      );
+    });
+
+    it('throws NotFoundException when the user does not exist', async () => {
+      mockUserRepository.findById.mockResolvedValue(null);
+
+      await expect(
+        service.optOutWhatsAppForUser('missing-user'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('is a no-op and does not touch the repository save/event bus when the user is already opted out', async () => {
+      const user = createMockUser({ id: 'user-1', whatsappOptedOut: true });
+      mockUserRepository.findById.mockResolvedValue(user);
+
+      const result = await service.optOutWhatsAppForUser('user-1');
+
+      expect(result).toBe(user);
+      expect(mockUserRepository.save).not.toHaveBeenCalled();
+      expect(mockEventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it('sets the flag and publishes UserWhatsAppOptedOutEvent when the user is not opted out', async () => {
+      const user = createMockUser({ id: 'user-1', whatsappOptedOut: false });
+      mockUserRepository.findById.mockResolvedValue(user);
+
+      const result = await service.optOutWhatsAppForUser('user-1');
+
+      expect(result.whatsappOptedOut).toBe(true);
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          whatsappOptedOut: true,
+          whatsappOptedOutAt: expect.any(Date),
+        }),
+      );
+      expect(mockEventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: UserWhatsAppOptedOutEvent.EVENT_NAME,
+          payload: { userId: 'user-1' },
+        }),
+      );
+    });
+  });
 });

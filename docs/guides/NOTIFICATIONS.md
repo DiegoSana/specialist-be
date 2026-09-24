@@ -192,7 +192,7 @@ A daily job deletes notifications older than:
 | `REVIEW_APPROVED` | Admin approves review | Service Provider |
 | `REQUEST_ATTENTION_FLAGGED` | A request is flagged `AT_RISK`/`ABANDONED`/`ESCALATED` | Every admin |
 | `COMPANY_VERIFIED` / `COMPANY_REJECTED` / `COMPANY_SUSPENDED` | An admin moves a Company to ACTIVE/VERIFIED, REJECTED or SUSPENDED (`profiles.company.status_changed`, via verify or `PUT /admin/companies/:id/status`; only if the status changed) | The company owner, forced to `EMAIL` |
-| `WHATSAPP_OPTED_OUT` | `User.whatsappOptedOut` transitions `false -> true` (WhatsApp reply "STOP" or admin override via `PUT /admin/users/:id/whatsapp-opt-out`) | The opted-out user, forced to `EMAIL` regardless of their `preferredExternalChannel` (see below) |
+| `WHATSAPP_OPTED_OUT` | `User.whatsappOptedOut` transitions `false -> true` (WhatsApp reply "STOP", admin override via `PUT /admin/users/:id/whatsapp-opt-out`, or self-service via `POST /users/me/whatsapp-opt-out`) | The opted-out user, forced to `EMAIL` regardless of their `preferredExternalChannel` (see below) |
 | `WHATSAPP_REACTIVATED` | `User.whatsappOptedOut` transitions `true -> false` (today only via admin override, `PUT /admin/users/:id/whatsapp-opt-out`) | The reactivated user, forced to `EMAIL` regardless of their `preferredExternalChannel` (see below) |
 | `SUPPORT_CONVERSATION_NEEDS_ATTENTION` | A `SupportConversation` (Support context) is created, or reopened by a new inbound message after being `RESOLVED` - never on message 2..N of an already-`OPEN` conversation | Every admin, in-app only (`includeExternal: false`) |
 
