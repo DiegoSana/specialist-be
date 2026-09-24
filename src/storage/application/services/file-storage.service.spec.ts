@@ -8,6 +8,7 @@ import { FileStorageService } from './file-storage.service';
 import { FILE_STORAGE_REPOSITORY } from '../../domain/repositories/file-storage.repository';
 import { RequestService } from '../../../requests/application/services/request.service';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { CompanyService } from '../../../profiles/application/services/company.service';
 import {
   createMockRequest,
   createMockProfessional,
@@ -19,6 +20,7 @@ describe('FileStorageService', () => {
   let mockFileStorageRepository: any;
   let mockRequestService: any;
   let mockProfessionalService: any;
+  let mockCompanyService: any;
 
   beforeEach(async () => {
     mockFileStorageRepository = {
@@ -35,6 +37,10 @@ describe('FileStorageService', () => {
       findByUserId: jest.fn(),
     };
 
+    mockCompanyService = {
+      findByUserId: jest.fn().mockRejectedValue(new Error('not a company')),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FileStorageService,
@@ -44,6 +50,7 @@ describe('FileStorageService', () => {
         },
         { provide: RequestService, useValue: mockRequestService },
         { provide: ProfessionalService, useValue: mockProfessionalService },
+        { provide: CompanyService, useValue: mockCompanyService },
       ],
     }).compile();
 
@@ -321,8 +328,75 @@ describe('FileStorageService', () => {
       });
     });
 
-    describe('request photos - PUBLIC requests', () => {
-      it('should allow any logged-in user to access PUBLIC request photos', async () => {
+    describe('request photos - PUBLIC (marketplace) requests, provider already assigned', () => {
+      // Once a provider has been assigned to a PUBLIC (marketplace) request, its
+      // photos/videos become private again, same as a DIRECT request: only the client,
+      // the assigned provider, and admins may access them - even though isPublic is
+      // still true. Every other specialist, including one who expressed interest but
+      // wasn't chosen, loses access at that point.
+      it('should deny a random logged-in user (not client, not assigned) from PUBLIC request photos once a provider is assigned', async () => {
+        const publicRequest = createMockRequest({
+          id: 'req-123',
+          isPublic: true,
+          clientId: 'client-user',
+          providerId: 'service-provider-chosen',
+        });
+
+        mockFileStorageRepository.findByPath.mockResolvedValue({
+          category: FileCategory.REQUEST_PHOTO,
+          ownerId: 'client-user',
+          requestId: 'req-123',
+          belongsTo: (userId: string) => userId === 'client-user',
+        });
+        mockRequestService.findById.mockResolvedValue(publicRequest);
+        mockProfessionalService.findByUserId.mockRejectedValue(
+          new Error('not a professional'),
+        );
+
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'random-user',
+          false,
+        );
+
+        expect(result).toBe(false);
+      });
+
+      it('should deny a specialist who expressed interest but was not chosen from PUBLIC request photos', async () => {
+        const publicRequest = createMockRequest({
+          id: 'req-123',
+          isPublic: true,
+          clientId: 'client-user',
+          providerId: 'service-provider-chosen',
+        });
+        const interestedProfessional = createMockProfessional({
+          id: 'prof-interested',
+          userId: 'interested-user',
+        });
+        (interestedProfessional as any).serviceProviderId =
+          'service-provider-interested'; // not the one assigned to the request
+
+        mockFileStorageRepository.findByPath.mockResolvedValue({
+          category: FileCategory.REQUEST_PHOTO,
+          ownerId: 'client-user',
+          requestId: 'req-123',
+          belongsTo: () => false,
+        });
+        mockRequestService.findById.mockResolvedValue(publicRequest);
+        mockProfessionalService.findByUserId.mockResolvedValue(
+          interestedProfessional,
+        );
+
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'interested-user',
+          false,
+        );
+
+        expect(result).toBe(false);
+      });
+
+      it('should allow the client to access PUBLIC request photos', async () => {
         const publicRequest = createMockRequest({
           id: 'req-123',
           isPublic: true,
@@ -337,10 +411,39 @@ describe('FileStorageService', () => {
         });
         mockRequestService.findById.mockResolvedValue(publicRequest);
 
-        // Random logged-in user should have access
         const result = await service.canAccessFile(
           'uploads/file.jpg',
-          'random-user',
+          'client-user',
+          false,
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should allow the chosen professional to access PUBLIC request photos', async () => {
+        const publicRequest = createMockRequest({
+          id: 'req-123',
+          isPublic: true,
+          clientId: 'client-user',
+          providerId: 'service-provider-123',
+        });
+        const professional = createMockProfessional({
+          id: 'prof-123',
+          userId: 'professional-user',
+        });
+
+        mockFileStorageRepository.findByPath.mockResolvedValue({
+          category: FileCategory.REQUEST_PHOTO,
+          ownerId: 'client-user',
+          requestId: 'req-123',
+          belongsTo: () => false,
+        });
+        mockRequestService.findById.mockResolvedValue(publicRequest);
+        mockProfessionalService.findByUserId.mockResolvedValue(professional);
+
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'professional-user',
           false,
         );
 
@@ -365,6 +468,161 @@ describe('FileStorageService', () => {
         const result = await service.canAccessFile(
           'uploads/file.jpg',
           null,
+          false,
+        );
+
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('request photos - PUBLIC (marketplace) requests, no provider assigned yet', () => {
+      // While a public request is still open (no provider chosen yet), specialists need
+      // to see its photos/videos to size/quote the job before deciding whether to express
+      // interest. Any authenticated user gets access during this window - it closes the
+      // moment a provider is assigned (see the sibling describe block above).
+      it('should allow a random authenticated user to access PUBLIC request photos while no provider is assigned', async () => {
+        const openPublicRequest = createMockRequest({
+          id: 'req-123',
+          isPublic: true,
+          clientId: 'client-user',
+          providerId: null,
+        });
+
+        mockFileStorageRepository.findByPath.mockResolvedValue({
+          category: FileCategory.REQUEST_PHOTO,
+          ownerId: 'client-user',
+          requestId: 'req-123',
+          belongsTo: () => false,
+        });
+        mockRequestService.findById.mockResolvedValue(openPublicRequest);
+
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'random-user',
+          false,
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should allow a specialist who expressed interest (but was not chosen, since no one has been chosen yet) to access PUBLIC request photos while no provider is assigned', async () => {
+        const openPublicRequest = createMockRequest({
+          id: 'req-123',
+          isPublic: true,
+          clientId: 'client-user',
+          providerId: null,
+        });
+        const interestedProfessional = createMockProfessional({
+          id: 'prof-interested',
+          userId: 'interested-user',
+        });
+        (interestedProfessional as any).serviceProviderId =
+          'service-provider-interested';
+
+        mockFileStorageRepository.findByPath.mockResolvedValue({
+          category: FileCategory.REQUEST_PHOTO,
+          ownerId: 'client-user',
+          requestId: 'req-123',
+          belongsTo: () => false,
+        });
+        mockRequestService.findById.mockResolvedValue(openPublicRequest);
+        mockProfessionalService.findByUserId.mockResolvedValue(
+          interestedProfessional,
+        );
+
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'interested-user',
+          false,
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should deny non-logged-in users from PUBLIC request photos while no provider is assigned', async () => {
+        const openPublicRequest = createMockRequest({
+          id: 'req-123',
+          isPublic: true,
+          clientId: 'client-user',
+          providerId: null,
+        });
+
+        mockFileStorageRepository.findByPath.mockResolvedValue({
+          category: FileCategory.REQUEST_PHOTO,
+          ownerId: 'client-user',
+          requestId: 'req-123',
+          belongsTo: () => false,
+        });
+        mockRequestService.findById.mockResolvedValue(openPublicRequest);
+
+        // No user (not logged in)
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          null,
+          false,
+        );
+
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('request photos - assigned company as provider', () => {
+      it('should allow the assigned company (user acting as its owner) to access request photos', async () => {
+        const directRequest = createMockRequest({
+          id: 'req-123',
+          isPublic: false,
+          clientId: 'client-user',
+          providerId: 'service-provider-company-123',
+        });
+
+        mockFileStorageRepository.findByPath.mockResolvedValue({
+          category: FileCategory.REQUEST_PHOTO,
+          ownerId: 'client-user',
+          requestId: 'req-123',
+          belongsTo: () => false,
+        });
+        mockRequestService.findById.mockResolvedValue(directRequest);
+        mockProfessionalService.findByUserId.mockRejectedValue(
+          new Error('not a professional'),
+        );
+        mockCompanyService.findByUserId.mockResolvedValue({
+          serviceProviderId: 'service-provider-company-123',
+        });
+
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'company-owner-user',
+          false,
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should deny a different company from request photos', async () => {
+        const directRequest = createMockRequest({
+          id: 'req-123',
+          isPublic: false,
+          clientId: 'client-user',
+          providerId: 'service-provider-company-123',
+        });
+
+        mockFileStorageRepository.findByPath.mockResolvedValue({
+          category: FileCategory.REQUEST_PHOTO,
+          ownerId: 'client-user',
+          requestId: 'req-123',
+          belongsTo: () => false,
+        });
+        mockRequestService.findById.mockResolvedValue(directRequest);
+        mockProfessionalService.findByUserId.mockRejectedValue(
+          new Error('not a professional'),
+        );
+        mockCompanyService.findByUserId.mockResolvedValue({
+          serviceProviderId: 'service-provider-company-999',
+        });
+
+        const result = await service.canAccessFile(
+          'uploads/file.jpg',
+          'other-company-owner-user',
           false,
         );
 
