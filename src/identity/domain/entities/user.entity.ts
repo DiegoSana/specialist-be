@@ -139,12 +139,25 @@ export class UserEntity {
     return this.isAdmin;
   }
 
+  /**
+   * A "pure client" (hasClientProfile && no provider profile yet) cannot create a
+   * Professional profile in the MVP. A user who already has a Company profile can
+   * always add a Professional profile too, even if they also have a client profile.
+   */
   canCreateProfessionalProfile(): boolean {
-    return this.isActive();
+    return (
+      this.isActive() && (!this.hasClientProfile || this.hasCompanyProfile)
+    );
   }
 
+  /**
+   * Same rule as `canCreateProfessionalProfile`, mirrored for Company: an existing
+   * Professional profile is what unlocks Company creation for a client.
+   */
   canCreateCompanyProfile(): boolean {
-    return this.isActive();
+    return (
+      this.isActive() && (!this.hasClientProfile || this.hasProfessionalProfile)
+    );
   }
 
   canCreateRequest(): boolean {

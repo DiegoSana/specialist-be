@@ -1,3 +1,4 @@
+import { ForbiddenException } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import {
   CompanyEntity,
@@ -5,6 +6,7 @@ import {
 } from '../../domain/entities/company.entity';
 import { CompanyStatusChangedEvent } from '../../domain/events/company-status-changed.event';
 import { createMockUser } from '../../../__mocks__/test-utils';
+import { UserStatus } from '@prisma/client';
 
 describe('CompanyService status change events', () => {
   let service: CompanyService;
@@ -95,6 +97,91 @@ describe('CompanyService status change events', () => {
       await service.updateStatus('company-1', CompanyStatus.ACTIVE, admin);
 
       expect(mockEventBus.publish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createProfile', () => {
+    const createDto = {
+      companyName: 'Remodelaciones Express',
+      tradeIds: ['trade-1'],
+    };
+
+    let mockUserService: any;
+    let mockTradeRepository: any;
+    let createProfileService: CompanyService;
+
+    beforeEach(() => {
+      mockUserService = { findByIdOrFail: jest.fn(), findById: jest.fn() };
+      mockTradeRepository = { findById: jest.fn() };
+      mockCompanyRepository = {
+        ...mockCompanyRepository,
+        findByUserId: jest.fn(),
+        findByTaxId: jest.fn(),
+        save: jest.fn(),
+        updateTrades: jest.fn(),
+      };
+
+      createProfileService = new CompanyService(
+        mockCompanyRepository,
+        {} as any,
+        mockUserService,
+        mockTradeRepository,
+        mockProfileToggleService,
+        mockEventBus,
+      );
+    });
+
+    it('throws ForbiddenException for a pure client (no provider profile yet)', async () => {
+      const pureClient = createMockUser({
+        status: UserStatus.ACTIVE,
+        hasClientProfile: true,
+        hasProfessionalProfile: false,
+        hasCompanyProfile: false,
+      });
+      mockUserService.findByIdOrFail.mockResolvedValue(pureClient);
+
+      await expect(
+        createProfileService.createProfile('user-123', createDto as any),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockCompanyRepository.findByUserId).not.toHaveBeenCalled();
+    });
+
+    it('allows a client who already has a professional profile to create a company profile', async () => {
+      const clientWithProfessional = createMockUser({
+        id: 'user-123',
+        status: UserStatus.ACTIVE,
+        hasClientProfile: true,
+        hasProfessionalProfile: true,
+        hasCompanyProfile: false,
+      });
+      const updatedUser = createMockUser({
+        id: 'user-123',
+        status: UserStatus.ACTIVE,
+        hasClientProfile: true,
+        hasProfessionalProfile: true,
+        hasCompanyProfile: true,
+      });
+      const savedCompany = buildCompany(CompanyStatus.PENDING_VERIFICATION);
+
+      mockUserService.findByIdOrFail.mockResolvedValue(clientWithProfessional);
+      mockUserService.findById.mockResolvedValue(updatedUser);
+      mockCompanyRepository.findByUserId.mockResolvedValue(null);
+      mockTradeRepository.findById.mockResolvedValue({
+        id: 'trade-1',
+        name: 'Electricista',
+        category: null,
+        description: null,
+      });
+      mockCompanyRepository.save.mockResolvedValue(savedCompany);
+      mockCompanyRepository.updateTrades.mockResolvedValue(undefined);
+
+      const result = await createProfileService.createProfile(
+        'user-123',
+        createDto as any,
+      );
+
+      expect(result).toHaveProperty('company');
+      expect(mockCompanyRepository.save).toHaveBeenCalled();
     });
   });
 });

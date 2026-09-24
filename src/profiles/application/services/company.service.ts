@@ -186,6 +186,12 @@ export class CompanyService {
       throw new BadRequestException('User account is not active');
     }
 
+    if (!user.canCreateCompanyProfile()) {
+      throw new ForbiddenException(
+        'A client account cannot create a company profile',
+      );
+    }
+
     // Check if company profile already exists
     const existing = await this.companyRepository.findByUserId(userId);
     if (existing) {

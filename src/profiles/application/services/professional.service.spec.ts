@@ -241,6 +241,7 @@ describe('ProfessionalService', () => {
       const user = createMockUser({
         id: 'user-123',
         status: UserStatus.ACTIVE,
+        hasClientProfile: false,
       });
       const updatedUser = createMockUser({
         id: 'user-123',
@@ -289,7 +290,10 @@ describe('ProfessionalService', () => {
     });
 
     it('should throw BadRequestException if professional profile already exists', async () => {
-      const user = createMockUser({ status: UserStatus.ACTIVE });
+      const user = createMockUser({
+        status: UserStatus.ACTIVE,
+        hasClientProfile: false,
+      });
       const existingProfessional = createMockProfessional();
 
       mockUserService.findByIdOrFail.mockResolvedValue(user);
@@ -303,7 +307,10 @@ describe('ProfessionalService', () => {
     });
 
     it('should throw NotFoundException if trade not found', async () => {
-      const user = createMockUser({ status: UserStatus.ACTIVE });
+      const user = createMockUser({
+        status: UserStatus.ACTIVE,
+        hasClientProfile: false,
+      });
 
       mockUserService.findByIdOrFail.mockResolvedValue(user);
       mockProfessionalRepository.findByUserId.mockResolvedValue(null);
@@ -312,6 +319,55 @@ describe('ProfessionalService', () => {
       await expect(
         service.createProfile('user-123', createDto),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException for a pure client (no provider profile yet)', async () => {
+      const pureClient = createMockUser({
+        status: UserStatus.ACTIVE,
+        hasClientProfile: true,
+        hasProfessionalProfile: false,
+        hasCompanyProfile: false,
+      });
+
+      mockUserService.findByIdOrFail.mockResolvedValue(pureClient);
+
+      await expect(
+        service.createProfile('user-123', createDto),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockProfessionalRepository.findByUserId).not.toHaveBeenCalled();
+    });
+
+    it('should allow a client who already has a company profile to create a professional profile', async () => {
+      const clientWithCompany = createMockUser({
+        id: 'user-123',
+        status: UserStatus.ACTIVE,
+        hasClientProfile: true,
+        hasProfessionalProfile: false,
+        hasCompanyProfile: true,
+      });
+      const updatedUser = createMockUser({
+        id: 'user-123',
+        status: UserStatus.ACTIVE,
+        hasClientProfile: true,
+        hasProfessionalProfile: true,
+        hasCompanyProfile: true,
+      });
+      const newProfessional = createMockProfessional({ userId: 'user-123' });
+
+      mockUserService.findByIdOrFail
+        .mockResolvedValueOnce(clientWithCompany)
+        .mockResolvedValueOnce(updatedUser);
+      mockProfessionalRepository.findByUserId.mockResolvedValue(null);
+      mockTradeRepository.findById.mockResolvedValue({
+        id: 'trade-1',
+        name: 'Electricista',
+      });
+      mockProfessionalRepository.save.mockResolvedValue(newProfessional);
+
+      const result = await service.createProfile('user-123', createDto);
+
+      expect(result).toHaveProperty('professional');
+      expect(mockProfessionalRepository.save).toHaveBeenCalled();
     });
   });
 
