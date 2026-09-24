@@ -20,6 +20,7 @@ import { UploadFileDto } from '../dto/upload-file.dto';
 // Cross-context dependencies - using Services instead of Repositories (DDD)
 import { RequestService } from '../../../requests/application/services/request.service';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { CompanyService } from '../../../profiles/application/services/company.service';
 
 @Injectable()
 export class FileStorageService {
@@ -28,6 +29,7 @@ export class FileStorageService {
     private readonly fileStorageRepository: FileStorageRepository,
     private readonly requestService: RequestService,
     private readonly professionalService: ProfessionalService,
+    private readonly companyService: CompanyService,
   ) {}
 
   async uploadFile(
@@ -154,33 +156,54 @@ export class FileStorageService {
       return true;
     }
 
-    // For request photos, check access based on request type
+    // For request photos/videos:
+    // - A public (marketplace) request with no provider assigned yet is visible to any
+    //   authenticated user (see the isPublic/!providerId check below) - specialists need
+    //   to see photos to size/quote the job before expressing interest.
+    // - Once a provider is assigned, or for a direct request (isPublic === false) at any
+    //   time, access is restricted to the client, the assigned provider, and admins -
+    //   never the general public, and never a specialist who merely expressed interest
+    //   but wasn't chosen.
     if (file.category === FileCategory.REQUEST_PHOTO && file.requestId) {
       try {
         const request = await this.requestService.findById(file.requestId);
 
-        // PUBLIC REQUESTS: All logged-in users can see photos
-        if (request.isPublic) {
-          return true; // userId is already verified as not null above
-        }
-
-        // DIRECT REQUESTS: Only client and assigned specialist can see photos
         // Check if user is the client (owner)
         if (request.clientId === userId) {
           return true;
         }
 
-        // Check if user is the assigned service provider (professional or company)
+        // While a public (marketplace) request has no assigned provider yet, any
+        // authenticated user may view its photos/videos - specialists need to see them
+        // to size/quote the job before expressing interest. This window closes the
+        // moment a provider is assigned (see below): from then on only the client, the
+        // assigned provider, and admins may access the files, even though isPublic is
+        // still true. Direct requests (isPublic === false) never get this bypass.
+        if (request.isPublic && !request.providerId) {
+          return true;
+        }
+
+        // Check if user is the assigned service provider (professional or company).
+        // request.providerId is the ServiceProvider actually chosen/assigned to the
+        // request - not merely a specialist who expressed interest before being chosen.
         if (request.providerId) {
           try {
             const professional =
               await this.professionalService.findByUserId(userId);
-            // Compare serviceProviderId with the request's providerId
             if (professional.serviceProviderId === request.providerId) {
               return true;
             }
           } catch {
             // User doesn't have a professional profile
+          }
+
+          try {
+            const company = await this.companyService.findByUserId(userId);
+            if (company.serviceProviderId === request.providerId) {
+              return true;
+            }
+          } catch {
+            // User doesn't have a company profile
           }
         }
 
