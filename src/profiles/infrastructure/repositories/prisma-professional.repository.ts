@@ -74,6 +74,9 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
   }): Promise<ProfessionalEntity[]> {
     const where: any = {};
 
+    // Hidden providers never appear in public/client-facing search results.
+    where.isVisible = true;
+
     if (criteria.canOperate !== undefined && criteria.canOperate) {
       where.status = {
         in: [ProfessionalStatus.ACTIVE, ProfessionalStatus.VERIFIED],
@@ -170,6 +173,7 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
             description: professional.description,
             experienceYears: professional.experienceYears,
             status: professional.status,
+            isVisible: professional.isVisible,
             zone: professional.zone,
             city: professional.city,
             address: professional.address,
@@ -189,6 +193,7 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
           description: professional.description,
           experienceYears: professional.experienceYears,
           status: professional.status,
+          isVisible: professional.isVisible,
           zone: professional.zone,
           city: professional.city,
           address: professional.address,

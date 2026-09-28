@@ -79,6 +79,9 @@ export class PrismaCompanyRepository implements CompanyRepository {
   async search(params: CompanySearchParams): Promise<CompanyEntity[]> {
     const where: any = {};
 
+    // Hidden providers never appear in public/client-facing search results.
+    where.isVisible = true;
+
     if (params.canOperate !== undefined && params.canOperate) {
       where.status = {
         in: [PrismaCompanyStatus.ACTIVE, PrismaCompanyStatus.VERIFIED],

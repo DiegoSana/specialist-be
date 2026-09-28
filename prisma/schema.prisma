@@ -100,6 +100,7 @@ model Professional {
   description       String?
   experienceYears   Int?
   status            ProfessionalStatus @default(PENDING_VERIFICATION)
+  isVisible         Boolean            @default(true)
   zone              String?
   city              String             @default("Bariloche")
   address           String?
@@ -153,6 +154,7 @@ model Company {
 
   // Status
   status       CompanyStatus @default(PENDING_VERIFICATION)
+  isVisible    Boolean       @default(true)
   profileImage String?
   gallery      String[]
 

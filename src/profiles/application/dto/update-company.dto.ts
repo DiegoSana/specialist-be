@@ -1,9 +1,10 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
   IsOptional,
   IsArray,
   IsNumber,
+  IsBoolean,
   Min,
   Max,
   ArrayMinSize,
@@ -11,6 +12,15 @@ import {
 } from 'class-validator';
 
 export class UpdateCompanyDto {
+  @ApiProperty({
+    example: true,
+    required: false,
+    description: 'Whether this profile appears in public search/listing',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isVisible?: boolean;
+
   @ApiPropertyOptional({ description: 'Company name' })
   @IsOptional()
   @IsString()

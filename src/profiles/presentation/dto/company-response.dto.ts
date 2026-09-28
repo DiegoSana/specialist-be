@@ -104,6 +104,10 @@ export class CompanyResponseDto {
   @ApiProperty()
   active: boolean;
 
+  /** Whether this profile appears in public search/listing. */
+  @ApiProperty()
+  isVisible: boolean;
+
   @ApiProperty()
   averageRating: number;
 
@@ -151,6 +155,7 @@ export class CompanyResponseDto {
     dto.profileImage = entity.profileImage;
     dto.gallery = entity.gallery;
     dto.active = entity.canOperate();
+    dto.isVisible = entity.isVisible;
     dto.averageRating = entity.averageRating;
     dto.totalReviews = entity.totalReviews;
     dto.createdAt = entity.createdAt;
