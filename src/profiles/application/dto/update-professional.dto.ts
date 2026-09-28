@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsNumber,
   IsArray,
+  IsBoolean,
   Min,
   Max,
   IsUrl,
@@ -10,6 +11,15 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateProfessionalDto {
+  @ApiProperty({
+    example: true,
+    required: false,
+    description: 'Whether this profile appears in public search/listing',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isVisible?: boolean;
+
   @ApiProperty({
     example: ['uuid-of-trade-1', 'uuid-of-trade-2'],
     required: false,

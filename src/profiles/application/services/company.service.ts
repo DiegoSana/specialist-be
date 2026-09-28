@@ -95,6 +95,7 @@ export class CompanyService {
       company.city,
       company.zone,
       company.status,
+      company.isVisible,
       company.profileImage,
       company.gallery,
       company.createdAt,
@@ -254,6 +255,7 @@ export class CompanyService {
         createDto.city || 'Bariloche',
         createDto.zone || null,
         CompanyStatus.PENDING_VERIFICATION,
+        true,
         createDto.profileImage || null,
         createDto.gallery || [],
         now,
@@ -366,6 +368,9 @@ export class CompanyService {
         updateDto.city !== undefined ? updateDto.city : company.city,
         updateDto.zone !== undefined ? updateDto.zone : company.zone,
         company.status,
+        updateDto.isVisible !== undefined
+          ? updateDto.isVisible
+          : company.isVisible,
         updateDto.profileImage !== undefined
           ? updateDto.profileImage
           : company.profileImage,
@@ -416,6 +421,7 @@ export class CompanyService {
         company.city,
         company.zone,
         company.status,
+        company.isVisible,
         company.profileImage,
         updatedGallery,
         company.createdAt,
@@ -463,6 +469,7 @@ export class CompanyService {
         company.city,
         company.zone,
         company.status,
+        company.isVisible,
         company.profileImage,
         updatedGallery,
         company.createdAt,

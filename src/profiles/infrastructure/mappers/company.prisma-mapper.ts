@@ -57,6 +57,7 @@ export class CompanyPrismaMapper {
       company.city,
       company.zone,
       company.status as CompanyStatus,
+      company.isVisible,
       company.profileImage,
       company.gallery as string[],
       company.createdAt,
@@ -82,6 +83,7 @@ export class CompanyPrismaMapper {
       city: entity.city,
       zone: entity.zone,
       status: entity.status as PrismaCompanyStatus,
+      isVisible: entity.isVisible,
       profileImage: entity.profileImage,
       gallery: entity.gallery,
     };
@@ -100,6 +102,7 @@ export class CompanyPrismaMapper {
       city: entity.city,
       zone: entity.zone,
       status: entity.status as PrismaCompanyStatus,
+      isVisible: entity.isVisible,
       profileImage: entity.profileImage,
       gallery: entity.gallery,
     };

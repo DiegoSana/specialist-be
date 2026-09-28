@@ -97,6 +97,10 @@ export class ProfessionalResponseDto {
   @ApiProperty()
   active: boolean;
 
+  /** Whether this profile appears in public search/listing. */
+  @ApiProperty()
+  isVisible: boolean;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -141,6 +145,7 @@ export class ProfessionalResponseDto {
     dto.profileImage = entity.profileImage;
     dto.gallery = entity.gallery;
     dto.active = entity.canOperate();
+    dto.isVisible = entity.isVisible;
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;
 

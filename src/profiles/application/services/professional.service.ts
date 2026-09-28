@@ -126,6 +126,7 @@ export class ProfessionalService {
         professional.description,
         professional.experienceYears,
         status,
+        professional.isVisible,
         professional.zone,
         professional.city,
         professional.address,
@@ -155,6 +156,7 @@ export class ProfessionalService {
       description: professional.description,
       experienceYears: professional.experienceYears,
       status: professional.status,
+      isVisible: professional.isVisible,
       zone: professional.zone,
       city: professional.city,
       // address, phone (user), website are intentionally omitted for public access
@@ -319,6 +321,7 @@ export class ProfessionalService {
         createDto.description || null,
         createDto.experienceYears || null,
         ProfessionalStatus.PENDING_VERIFICATION,
+        true,
         createDto.zone || null,
         createDto.city || 'Bariloche',
         createDto.address || null,
@@ -407,6 +410,9 @@ export class ProfessionalService {
           ? updateDto.experienceYears
           : professional.experienceYears,
         professional.status,
+        updateDto.isVisible !== undefined
+          ? updateDto.isVisible
+          : professional.isVisible,
         updateDto.zone !== undefined ? updateDto.zone : professional.zone,
         updateDto.city ? updateDto.city : professional.city,
         updateDto.address !== undefined
@@ -461,6 +467,7 @@ export class ProfessionalService {
         professional.description,
         professional.experienceYears,
         professional.status,
+        professional.isVisible,
         professional.zone,
         professional.city,
         professional.address,
@@ -503,6 +510,7 @@ export class ProfessionalService {
         professional.description,
         professional.experienceYears,
         professional.status,
+        professional.isVisible,
         professional.zone,
         professional.city,
         professional.address,
