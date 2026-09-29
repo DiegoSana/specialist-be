@@ -29,7 +29,9 @@ export class AdminWhatsAppController {
   @ApiResponse({
     status: 200,
     description:
-      'devMode flag and, when in dev mode, available follow-up rule names',
+      'Active WhatsApp provider (twilio/local), devMode flag, the ' +
+      'Twilio from-number when provider is twilio (never the account SID/auth ' +
+      'token), and, when in dev mode, available follow-up rule names',
   })
   async getConfig() {
     return this.adminWhatsAppService.getConfig();

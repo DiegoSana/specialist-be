@@ -20,10 +20,20 @@ import { FollowUpSchedulerJob } from '../jobs/follow-up-scheduler.job';
 import { FOLLOW_UP_RULES } from '../jobs/follow-up-scheduler.job';
 import type { IFollowUpRule } from '../../domain/follow-up';
 import { isWhatsAppDevMode } from './whatsapp-dev-mode';
+import type { WhatsAppProviderType } from '../../../shared/infrastructure/messaging/whatsapp-messaging.factory';
+
+// Mirrors the fallback in TwilioWhatsAppAdapter (twilio-whatsapp.adapter.ts),
+// which isn't exported from there. Keep the two literals in sync.
+const DEFAULT_SANDBOX_WHATSAPP_FROM = 'whatsapp:+14155238886';
 
 export interface AdminWhatsAppConfig {
+  provider: WhatsAppProviderType;
   devMode: boolean;
   availableFollowUpRules?: string[];
+  twilio?: {
+    fromNumber: string;
+    isDefaultSandboxNumber: boolean;
+  };
 }
 
 /**
@@ -53,11 +63,29 @@ export class AdminWhatsAppService {
 
   getConfig(): AdminWhatsAppConfig {
     const devMode = this.isDevMode();
+    const provider = this.config.get<WhatsAppProviderType>(
+      'WHATSAPP_PROVIDER',
+      'twilio',
+    );
+
+    let twilio: AdminWhatsAppConfig['twilio'];
+    if (provider === 'twilio') {
+      const fromNumber =
+        this.config.get<string>('TWILIO_WHATSAPP_FROM') ||
+        DEFAULT_SANDBOX_WHATSAPP_FROM;
+      twilio = {
+        fromNumber,
+        isDefaultSandboxNumber: fromNumber === DEFAULT_SANDBOX_WHATSAPP_FROM,
+      };
+    }
+
     return {
+      provider,
       devMode,
       availableFollowUpRules: devMode
         ? this.followUpRules.map((r) => r.getName())
         : undefined,
+      twilio,
     };
   }
 

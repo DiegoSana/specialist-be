@@ -74,22 +74,73 @@ describe('AdminWhatsAppService', () => {
   });
 
   describe('getConfig', () => {
-    it('includes availableFollowUpRules when in dev mode', () => {
-      setDevMode(true);
+    const configure = (values: {
+      NODE_ENV?: string;
+      WHATSAPP_PROVIDER?: string;
+      WHATSAPP_DEV_MODE_ENABLED?: string;
+      TWILIO_WHATSAPP_FROM?: string;
+    }) => {
+      process.env.NODE_ENV = values.NODE_ENV ?? 'development';
+      mockConfig.get.mockImplementation((key: string, def?: string) =>
+        key in values ? (values as any)[key] : def,
+      );
+    };
+
+    it('includes availableFollowUpRules and omits twilio when in dev mode (provider=local)', () => {
+      configure({ WHATSAPP_PROVIDER: 'local' });
 
       expect(service.getConfig()).toEqual({
+        provider: 'local',
         devMode: true,
         availableFollowUpRules: ['ACCEPTED_3_DAYS', 'DONE_1_DAY'],
+        twilio: undefined,
       });
     });
 
-    it('omits availableFollowUpRules when not in dev mode', () => {
-      setDevMode(false);
+    it('omits availableFollowUpRules and reports the default sandbox number when provider=twilio and TWILIO_WHATSAPP_FROM is unset', () => {
+      configure({ WHATSAPP_PROVIDER: 'twilio' });
 
       expect(service.getConfig()).toEqual({
+        provider: 'twilio',
         devMode: false,
         availableFollowUpRules: undefined,
+        twilio: {
+          fromNumber: 'whatsapp:+14155238886',
+          isDefaultSandboxNumber: true,
+        },
       });
+    });
+
+    it('reports isDefaultSandboxNumber=false when TWILIO_WHATSAPP_FROM overrides the default', () => {
+      configure({
+        WHATSAPP_PROVIDER: 'twilio',
+        TWILIO_WHATSAPP_FROM: 'whatsapp:+5492944000000',
+      });
+
+      expect(service.getConfig()).toEqual({
+        provider: 'twilio',
+        devMode: false,
+        availableFollowUpRules: undefined,
+        twilio: {
+          fromNumber: 'whatsapp:+5492944000000',
+          isDefaultSandboxNumber: false,
+        },
+      });
+    });
+
+    it('defaults provider to twilio when WHATSAPP_PROVIDER is unset', () => {
+      configure({});
+
+      expect(service.getConfig().provider).toBe('twilio');
+    });
+
+    it('never includes twilio config when provider=local, even outside dev mode', () => {
+      configure({ NODE_ENV: 'production', WHATSAPP_PROVIDER: 'local' });
+
+      const config = service.getConfig();
+      expect(config.provider).toBe('local');
+      expect(config.devMode).toBe(false);
+      expect(config.twilio).toBeUndefined();
     });
   });
 
