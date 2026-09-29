@@ -57,6 +57,16 @@ plantilla a la que se responde (ver "Intención -> estado" abajo).
 `RequestInteractionRepository.findMostRecentByPhone` - **nunca** matchea otro tipo de interacción,
 ni siquiera si alguna vez existiera (`RESPONSE`/`STATUS_UPDATE` son código muerto hoy).
 
+`findMostRecentByPhone` además descarta cualquier candidato que esté "superado" por una
+interacción más nueva en su **propio** `requestId` (cualquier status/tipo/dirección): si el
+request siguió avanzando, una interacción vieja que nunca se respondió (atascada en
+`PENDING`/`SENT`/`DELIVERED` por un webhook perdido o porque simplemente nadie la contestó) deja
+de ser un candidato válido, aunque su status siga técnicamente "abierto". Sin esto, una vez que el
+resto de las interacciones del request pasan a `RESPONDED` (fuera del filtro de status), esa única
+interacción vieja quedaba como el único candidato para ese teléfono y "robaba" un mensaje entrante
+nuevo y no relacionado (bug corregido en `fix/stale-interaction-inbound-matching`). Si todos los
+candidatos están superados, el método devuelve `null` igual que si no hubiera candidatos.
+
 Si nada matchea (el usuario escribe espontáneamente, o responde fuera de la ventana) y
 `SUPPORT_CONVERSATIONS_ENABLED=true`, el mensaje se enruta a
 `SupportConversationService.receiveInboundMessage` (contexto `support`, ver
