@@ -27,10 +27,14 @@ primary_region = 'lax'
   # Unmatched inbound WhatsApp messages open a support conversation (admin /admin/support)
   # instead of being dropped - see docs/decisions/ADR-005-SUPPORT-CONVERSATIONS.md.
   SUPPORT_CONVERSATIONS_ENABLED = 'true'
-  # Real WhatsApp via Twilio sandbox as of 2026-09-29 - see docs/guides/whatsapp/SETUP.md.
-  # Admin WhatsApp dev tools (simulate reply, force-trigger a follow-up) are off here now since
-  # they require WHATSAPP_PROVIDER=local (belt-and-suspenders guard in AdminWhatsAppService).
-  WHATSAPP_PROVIDER = 'twilio'
+  # WHATSAPP_PROVIDER and VERIFICATION_PROVIDER (real Twilio WhatsApp + Twilio Verify OTP, see
+  # docs/guides/whatsapp/SETUP.md) are deliberately NOT set here - managed via `fly secrets set`
+  # instead of this file, so toggling real Twilio on/off is a single command (fast machine
+  # restart) instead of a full `fly deploy`. Both default to 'twilio' when unset (production
+  # never silently goes fake), so leaving them out of [env] keeps today's real-Twilio behavior
+  # until a secret is set explicitly. Admin WhatsApp dev tools (simulate reply, force-trigger a
+  # follow-up) stay off while WHATSAPP_PROVIDER resolves to 'twilio' (belt-and-suspenders guard
+  # in AdminWhatsAppService).
   # These were never set here (predates the Twilio switch above) so WhatsAppDispatchJob and
   # MessageStatusCheckerJob were logging "disabled" every minute and never actually sending or
   # checking anything, regardless of WHATSAPP_PROVIDER.
