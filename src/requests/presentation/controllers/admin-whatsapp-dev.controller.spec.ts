@@ -11,7 +11,6 @@ describe('AdminWhatsAppDevController', () => {
   beforeEach(() => {
     mockService = {
       simulateReply: jest.fn(),
-      triggerFollowUp: jest.fn(),
     };
     controller = new AdminWhatsAppDevController(mockService);
   });
@@ -48,36 +47,6 @@ describe('AdminWhatsAppDevController', () => {
         'hola',
       );
       expect(result).toBeNull();
-    });
-  });
-
-  describe('triggerFollowUp', () => {
-    it('returns 404 (propagates NotFoundException) when the service reports dev mode is off', async () => {
-      mockService.triggerFollowUp.mockRejectedValue(
-        new NotFoundException('Not found'),
-      );
-
-      await expect(
-        controller.triggerFollowUp('request-1', {
-          ruleName: 'ACCEPTED_3_DAYS',
-        } as any),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('delegates to the service', async () => {
-      mockService.triggerFollowUp.mockResolvedValue({
-        interactionId: 'interaction-1',
-      });
-
-      const result = await controller.triggerFollowUp('request-1', {
-        ruleName: 'ACCEPTED_3_DAYS',
-      } as any);
-
-      expect(mockService.triggerFollowUp).toHaveBeenCalledWith(
-        'request-1',
-        'ACCEPTED_3_DAYS',
-      );
-      expect(result).toEqual({ interactionId: 'interaction-1' });
     });
   });
 });

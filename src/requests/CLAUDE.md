@@ -28,7 +28,7 @@ Docs: `docs/guides/PERMISSIONS_BY_ROLE.md`, `docs/guides/whatsapp/README.md`,
   `IntentDetectionPort` (LLM, with a keyword-matching fallback on timeout/error) instead of calling
   `DetectResponseIntentUseCase` directly — see "AI reply classification" below.
 - `AdminWhatsAppService`: `isDevMode`, `getConfig`, `listConversations`, `getThread`,
-  `simulateReply` (dev mode only), `triggerFollowUp` (dev mode only). Backs the admin WhatsApp
+  `triggerFollowUp` (any provider), `simulateReply` (dev mode only). Backs the admin WhatsApp
   conversations viewer; see `docs/guides/whatsapp/README.md`.
 - `AdminRequestAttentionService`: `listOpen({page, limit})`, `resolve(id, adminUserId)`. Backs the
   admin "needs attention" panel (`RequestAttentionFlag`) — see "Admin request attention" below.
@@ -42,11 +42,15 @@ Docs: `docs/guides/PERMISSIONS_BY_ROLE.md`, `docs/guides/whatsapp/README.md`,
 (`TwilioWebhookGuard` + `TwilioRateLimitGuard`, no JWT).
 
 Admin (`/admin/whatsapp`, `JwtAuthGuard` + `AdminGuard`): `GET config`, `GET conversations`,
-`GET conversations/:requestId` always registered (`AdminWhatsAppController`); `POST
-conversations/:requestId/simulate-reply` and `POST conversations/:requestId/trigger-followup`
-live in a separate `AdminWhatsAppDevController`, registered only when `NODE_ENV !== 'production'`
-OR `WHATSAPP_DEV_MODE_ENABLED=true` (pre-launch opt-in for the "production" Fly deploy, see
-below), and additionally 404 (not 403) at runtime unless `isWhatsAppDevMode()` is true.
+`GET conversations/:requestId`, `POST conversations/:requestId/trigger-followup` all live on the
+always-registered `AdminWhatsAppController` - `trigger-followup` works regardless of
+`WHATSAPP_PROVIDER` since it only schedules a `PENDING` interaction, the actual send still goes
+through the normal dispatch job/adapter. `POST conversations/:requestId/simulate-reply` is the one
+exception: it lives in a separate `AdminWhatsAppDevController`, registered only when `NODE_ENV !==
+'production'` OR `WHATSAPP_DEV_MODE_ENABLED=true` (pre-launch opt-in for the "production" Fly
+deploy, see below), and additionally 404s (not 403) at runtime unless `isWhatsAppDevMode()` is
+true - kept dev-only because against a real Twilio number, real inbound replies arrive via the
+`/api/webhooks/twilio` webhook, so faking one doesn't make sense and could desync state.
 
 Admin support flow (`AdminRequestReviewController`, `JwtAuthGuard` + `AdminGuard`): `POST
 /admin/requests/:id/resolve-review` (body `{ note? }`) -> `RequestService.resolveReview` moves an

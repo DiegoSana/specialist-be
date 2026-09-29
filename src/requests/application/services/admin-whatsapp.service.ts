@@ -29,7 +29,7 @@ const DEFAULT_SANDBOX_WHATSAPP_FROM = 'whatsapp:+14155238886';
 export interface AdminWhatsAppConfig {
   provider: WhatsAppProviderType;
   devMode: boolean;
-  availableFollowUpRules?: string[];
+  availableFollowUpRules: string[];
   twilio?: {
     fromNumber: string;
     isDefaultSandboxNumber: boolean;
@@ -37,11 +37,19 @@ export interface AdminWhatsAppConfig {
 }
 
 /**
- * Admin service for the WhatsApp conversations viewer and the local
- * (no-Twilio) test loop. `listConversations`/`getThread` are always
- * available (read-only). `simulateReply`/`triggerFollowUp` only work in dev
- * mode (see whatsapp-dev-mode.ts) - outside of it they 404, never 403, so a
- * production deployment reveals nothing about the feature's existence.
+ * Admin service for the WhatsApp conversations viewer, the "trigger a
+ * follow-up now" admin action, and the local (no-Twilio) test loop.
+ * `listConversations`/`getThread` are always available (read-only).
+ * `triggerFollowUp` is always available too, regardless of provider: it only
+ * schedules a PENDING interaction (`FollowUpSchedulerJob.forceTriggerRule`),
+ * the actual send still goes through the normal dispatch job/provider
+ * adapter, so it's a legitimate "send this now" admin action rather than a
+ * Twilio-simulation hack. `simulateReply` is the one exception and only works
+ * in dev mode (see whatsapp-dev-mode.ts) - outside of it it 404s, never 403s,
+ * so a production deployment reveals nothing about the feature's existence:
+ * against a real Twilio number, real inbound replies arrive via the
+ * `/api/webhooks/twilio` webhook, so faking one doesn't make sense and could
+ * desync state.
  */
 @Injectable()
 export class AdminWhatsAppService {
@@ -82,9 +90,7 @@ export class AdminWhatsAppService {
     return {
       provider,
       devMode,
-      availableFollowUpRules: devMode
-        ? this.followUpRules.map((r) => r.getName())
-        : undefined,
+      availableFollowUpRules: this.followUpRules.map((r) => r.getName()),
       twilio,
     };
   }
@@ -149,10 +155,6 @@ export class AdminWhatsAppService {
     requestId: string,
     ruleName: string,
   ): Promise<{ interactionId: string }> {
-    if (!this.isDevMode()) {
-      throw new NotFoundException('Not found');
-    }
-
     return this.followUpScheduler.forceTriggerRule(ruleName, requestId);
   }
 }

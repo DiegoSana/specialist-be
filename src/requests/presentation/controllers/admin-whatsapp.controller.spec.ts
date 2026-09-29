@@ -12,6 +12,7 @@ describe('AdminWhatsAppController', () => {
       getConfig: jest.fn(),
       listConversations: jest.fn(),
       getThread: jest.fn(),
+      triggerFollowUp: jest.fn(),
     };
     controller = new AdminWhatsAppController(mockService);
   });
@@ -76,6 +77,24 @@ describe('AdminWhatsAppController', () => {
 
       expect(mockService.getThread).toHaveBeenCalledWith('request-1');
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('triggerFollowUp', () => {
+    it('delegates to the service regardless of provider', async () => {
+      mockService.triggerFollowUp.mockResolvedValue({
+        interactionId: 'interaction-1',
+      });
+
+      const result = await controller.triggerFollowUp('request-1', {
+        ruleName: 'ACCEPTED_3_DAYS',
+      } as any);
+
+      expect(mockService.triggerFollowUp).toHaveBeenCalledWith(
+        'request-1',
+        'ACCEPTED_3_DAYS',
+      );
+      expect(result).toEqual({ interactionId: 'interaction-1' });
     });
   });
 });
