@@ -17,20 +17,23 @@ import { JwtAuthGuard } from '../../../identity/infrastructure/guards/jwt-auth.g
 import { AdminGuard } from '../../../shared/presentation/guards/admin.guard';
 import { AdminWhatsAppService } from '../../application/services/admin-whatsapp.service';
 import { SimulateReplyDto } from '../dto/simulate-reply.dto';
-import { TriggerFollowUpDto } from '../dto/trigger-follow-up.dto';
 import { WhatsAppInteractionResponseDto } from '../dto/whatsapp-interaction-response.dto';
 
 /**
- * Dev-only mutating endpoints for the local (no-Twilio) WhatsApp test loop:
- * simulate an inbound reply, or force-trigger a follow-up rule immediately.
+ * Dev-only mutating endpoint for the local (no-Twilio) WhatsApp test loop:
+ * simulate an inbound reply. Against a real Twilio number, real inbound
+ * replies arrive via the `/api/webhooks/twilio` webhook, so faking one here
+ * doesn't make sense and could desync state - this stays a local-provider-
+ * only test tool. (Force-triggering a follow-up rule is a different, always-
+ * safe admin action and lives in AdminWhatsAppController instead.)
  *
  * This controller is registered ONLY when NODE_ENV !== 'production' OR
  * WHATSAPP_DEV_MODE_ENABLED === 'true' (see requests.module.ts) so on a real
- * production deploy these routes 404 at Nest's routing layer, before any
- * handler runs. On top of that, every handler also calls through
+ * production deploy this route 404s at Nest's routing layer, before any
+ * handler runs. On top of that, the handler also calls through
  * AdminWhatsAppService.isDevMode() (belt-and-suspenders requiring
  * WHATSAPP_PROVIDER=local, so an environment pointed at a real/staging Twilio
- * backend never gets dev endpoints even with WHATSAPP_DEV_MODE_ENABLED set).
+ * backend never gets the dev endpoint even with WHATSAPP_DEV_MODE_ENABLED set).
  * Both cases return 404 (NotFoundException), never 403, when dev mode is off -
  * a production-like environment should reveal nothing about the feature's
  * existence.
@@ -63,23 +66,5 @@ export class AdminWhatsAppDevController {
     return interaction
       ? WhatsAppInteractionResponseDto.fromEntity(interaction)
       : null;
-  }
-
-  @Post('conversations/:requestId/trigger-followup')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary:
-      'Force-trigger a follow-up rule for a request right now (dev mode only)',
-  })
-  @ApiResponse({ status: 200, description: '{ interactionId }' })
-  @ApiResponse({
-    status: 404,
-    description: 'Not in dev mode, rule, or request not found',
-  })
-  async triggerFollowUp(
-    @Param('requestId') requestId: string,
-    @Body() dto: TriggerFollowUpDto,
-  ) {
-    return this.adminWhatsAppService.triggerFollowUp(requestId, dto.ruleName);
   }
 }

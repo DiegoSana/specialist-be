@@ -97,13 +97,13 @@ describe('AdminWhatsAppService', () => {
       });
     });
 
-    it('omits availableFollowUpRules and reports the default sandbox number when provider=twilio and TWILIO_WHATSAPP_FROM is unset', () => {
+    it('includes availableFollowUpRules and reports the default sandbox number when provider=twilio and TWILIO_WHATSAPP_FROM is unset (outside dev mode)', () => {
       configure({ WHATSAPP_PROVIDER: 'twilio' });
 
       expect(service.getConfig()).toEqual({
         provider: 'twilio',
         devMode: false,
-        availableFollowUpRules: undefined,
+        availableFollowUpRules: ['ACCEPTED_3_DAYS', 'DONE_1_DAY'],
         twilio: {
           fromNumber: 'whatsapp:+14155238886',
           isDefaultSandboxNumber: true,
@@ -120,12 +120,23 @@ describe('AdminWhatsAppService', () => {
       expect(service.getConfig()).toEqual({
         provider: 'twilio',
         devMode: false,
-        availableFollowUpRules: undefined,
+        availableFollowUpRules: ['ACCEPTED_3_DAYS', 'DONE_1_DAY'],
         twilio: {
           fromNumber: 'whatsapp:+5492944000000',
           isDefaultSandboxNumber: false,
         },
       });
+    });
+
+    it('populates availableFollowUpRules even when devMode is false', () => {
+      configure({ NODE_ENV: 'production', WHATSAPP_PROVIDER: 'twilio' });
+
+      const config = service.getConfig();
+      expect(config.devMode).toBe(false);
+      expect(config.availableFollowUpRules).toEqual([
+        'ACCEPTED_3_DAYS',
+        'DONE_1_DAY',
+      ]);
     });
 
     it('defaults provider to twilio when WHATSAPP_PROVIDER is unset', () => {
@@ -249,16 +260,6 @@ describe('AdminWhatsAppService', () => {
   });
 
   describe('triggerFollowUp', () => {
-    it('throws NotFoundException when not in dev mode', async () => {
-      setDevMode(false);
-
-      await expect(
-        service.triggerFollowUp('request-1', 'ACCEPTED_3_DAYS'),
-      ).rejects.toThrow(NotFoundException);
-
-      expect(mockFollowUpScheduler.forceTriggerRule).not.toHaveBeenCalled();
-    });
-
     it('delegates to FollowUpSchedulerJob.forceTriggerRule when in dev mode', async () => {
       setDevMode(true);
       mockFollowUpScheduler.forceTriggerRule.mockResolvedValue({
@@ -275,6 +276,24 @@ describe('AdminWhatsAppService', () => {
         'request-1',
       );
       expect(result).toEqual({ interactionId: 'interaction-1' });
+    });
+
+    it('does not throw and still delegates when WHATSAPP_PROVIDER is not local (any provider is allowed)', async () => {
+      setDevMode(false);
+      mockFollowUpScheduler.forceTriggerRule.mockResolvedValue({
+        interactionId: 'interaction-2',
+      });
+
+      const result = await service.triggerFollowUp(
+        'request-1',
+        'ACCEPTED_3_DAYS',
+      );
+
+      expect(mockFollowUpScheduler.forceTriggerRule).toHaveBeenCalledWith(
+        'ACCEPTED_3_DAYS',
+        'request-1',
+      );
+      expect(result).toEqual({ interactionId: 'interaction-2' });
     });
   });
 });

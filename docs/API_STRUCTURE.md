@@ -152,11 +152,11 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/notifications/stats` | `GET` | Estadísticas de notificaciones |
 | `/api/admin/notifications/email-status` | `GET` | Proveedor de email activo: `{ provider: 'smtp' \| 'mailgun' \| 'ethereal', ethereal?: { loginUrl, user, pass } }` (credenciales live de Ethereal, se regeneran en cada boot) |
 | `/api/admin/notifications/:id/resend` | `POST` | Reenviar notificación fallida |
-| `/api/admin/whatsapp/config` | `GET` | `{ devMode, availableFollowUpRules? }` |
+| `/api/admin/whatsapp/config` | `GET` | `{ devMode, availableFollowUpRules }` (siempre presente, cualquier proveedor) |
 | `/api/admin/whatsapp/conversations` | `GET` | Listar conversaciones de WhatsApp (paginado, `search` opcional) |
 | `/api/admin/whatsapp/conversations/:requestId` | `GET` | Hilo completo de mensajes de WhatsApp de una solicitud |
+| `/api/admin/whatsapp/conversations/:requestId/trigger-followup` | `POST` | Disparar una regla de follow-up ahora mismo (cualquier proveedor - el envío real sigue pasando por el dispatch job/adapter normal) |
 | `/api/admin/whatsapp/conversations/:requestId/simulate-reply` | `POST` | Simular una respuesta entrante de WhatsApp (solo dev mode, 404 si no) |
-| `/api/admin/whatsapp/conversations/:requestId/trigger-followup` | `POST` | Disparar una regla de follow-up ahora mismo (solo dev mode, 404 si no) |
 | `/api/admin/requests/:id/resolve-review` | `POST` | Soporte: resolver un request `UNDER_REVIEW` -> `CLOSED` (body opcional `{ note }`, guardada en `statusReason`). Listar con `GET /api/admin/requests?status=UNDER_REVIEW`. 400 si no está en revisión. MVP: solo admin |
 | `/api/admin/requests/attention` | `GET` | Listar `RequestAttentionFlag`s abiertos (paginado, `?page=&limit=`), con título/status del request. Razones: `AT_RISK` (escalera de follow-up agotada sin respuesta), `ABANDONED`/`ESCALATED` (señal del clasificador LLM) |
 | `/api/admin/requests/attention/:id/resolve` | `POST` | Marcar un flag como resuelto (204) - no toca el request en sí, el seguimiento es manual vía el visor de conversaciones |
@@ -166,10 +166,11 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/support/conversations/:id/resolve` | `POST` | Marcar la conversación como resuelta (204, idempotente) |
 | `/api/admin/support/conversations/:id/reopen` | `POST` | Reabrir una conversación resuelta (204, idempotente) |
 
-**Marcado con `@UseGuards(JwtAuthGuard, AdminGuard)`** en el controller. Las dos rutas `POST`
-viven en un controller separado (`AdminWhatsAppDevController`) que solo se registra cuando
-`NODE_ENV !== 'production'`, y además cada handler valida `isWhatsAppDevMode()` en runtime; ambas
-capas devuelven 404, nunca 403, cuando el modo dev está apagado.
+**Marcado con `@UseGuards(JwtAuthGuard, AdminGuard)`** en el controller. `trigger-followup` vive en
+`AdminWhatsAppController` (siempre registrado, cualquier proveedor). Solo `simulate-reply` vive en
+el controller separado `AdminWhatsAppDevController`, que se registra únicamente cuando
+`NODE_ENV !== 'production'`, y además valida `isWhatsAppDevMode()` en runtime; ambas capas
+devuelven 404, nunca 403, cuando el modo dev está apagado.
 
 ---
 

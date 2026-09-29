@@ -120,11 +120,14 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - Ver el visor de conversaciones de WhatsApp: listar conversaciones y ver el hilo completo de una
   solicitud (`GET /admin/whatsapp/config`, `GET /admin/whatsapp/conversations`,
   `GET /admin/whatsapp/conversations/:requestId`). Requiere solo `isAdminUser()`.
-- Simular una respuesta entrante de WhatsApp y forzar el disparo inmediato de una regla de
-  follow-up (`POST /admin/whatsapp/conversations/:requestId/simulate-reply`,
-  `POST /admin/whatsapp/conversations/:requestId/trigger-followup`). Además de `isAdminUser()`,
-  estas dos rutas requieren que el backend esté en **dev mode** (`NODE_ENV !== 'production'` **y**
-  `WHATSAPP_PROVIDER=local`); si no, responden 404 (no 403) tanto porque el controller que las
+- Forzar el disparo inmediato de una regla de follow-up para una solicitud
+  (`POST /admin/whatsapp/conversations/:requestId/trigger-followup`). Requiere solo
+  `isAdminUser()` - funciona con cualquier proveedor de WhatsApp (Twilio o local); solo programa
+  una interacción `PENDING`, el envío real sigue pasando por el dispatch job/adapter normal.
+- Simular una respuesta entrante de WhatsApp
+  (`POST /admin/whatsapp/conversations/:requestId/simulate-reply`). Además de `isAdminUser()`,
+  esta ruta requiere que el backend esté en **dev mode** (`NODE_ENV !== 'production'` **y**
+  `WHATSAPP_PROVIDER=local`); si no, responde 404 (no 403) tanto porque el controller que la
   expone no se registra en producción como porque el servicio vuelve a validar en runtime.
 - Ver reviews pendientes de moderación (`GET /reviews/admin/pending`).
 - Aprobar o rechazar reviews (`POST /reviews/:id/approve`, `POST /reviews/:id/reject`).
