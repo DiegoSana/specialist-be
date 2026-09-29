@@ -291,6 +291,14 @@ export class FollowUpSchedulerJob {
       };
     }
 
+    const staggerReason = await this.checkPhoneStaggerGuard(
+      recipientPhone,
+      now,
+    );
+    if (staggerReason) {
+      return { scheduled: false, reason: staggerReason };
+    }
+
     let payload;
     try {
       payload = await rule.buildPayload(request);
@@ -303,7 +311,10 @@ export class FollowUpSchedulerJob {
       direction,
       messageTemplate: template,
       scheduledFor: now,
-      metadata: payload.metadata,
+      // Stored at creation (not just at dispatch, ~1 min later via sendMessage) so
+      // checkPhoneStaggerGuard sees it immediately on the very next iteration of
+      // this same sequential loop - see that method's doc comment.
+      metadata: { ...payload.metadata, recipientPhone },
       templateVariables: payload.templateVariables,
     });
 
@@ -328,6 +339,51 @@ export class FollowUpSchedulerJob {
     }
 
     return { scheduled: true };
+  }
+
+  /**
+   * Spaces out follow-ups per phone number (not per request), bounded to a fixed
+   * window rather than "block while unanswered" - see
+   * `WHATSAPP_FOLLOWUP_PHONE_STAGGER_HOURS` in ENVIRONMENT_VARIABLES.md. Without
+   * this, two different requests belonging to the same phone could each run their
+   * own escalation ladder with an open follow-up at the same time, and
+   * `findMostRecentByPhone`'s "last message wins" matching rule would then
+   * permanently route the user's replies to whichever one sent the newer message,
+   * leaving the other stalled with no way to ever get a matched reply. A fixed
+   * window (default 24h) instead of an indefinite block (e.g. "while the other
+   * stays unanswered") is deliberate: a phone that never answers its first
+   * follow-up would otherwise starve every other request on that phone of follow-
+   * ups indefinitely.
+   *
+   * No race condition with the hourly cron even when two requests on the same
+   * phone become due in the same run: `scheduleFollowUps`/`processFollowUpRule`
+   * process every (rule, request) pair sequentially (`for` + `await`, never
+   * `Promise.all`), and `createFollowUp` now stores `recipientPhone` in metadata at
+   * creation time (not only later, at dispatch) - so by the time this guard runs
+   * for the second request, the first request's interaction is already visible to
+   * this query.
+   */
+  private async checkPhoneStaggerGuard(
+    recipientPhone: string,
+    now: Date,
+  ): Promise<string | null> {
+    const lastFollowUpAt =
+      await this.interactionRepository.findMostRecentFollowUpTimestampByPhone(
+        recipientPhone,
+      );
+    if (!lastFollowUpAt) {
+      return null;
+    }
+
+    const staggerHours = Number(
+      this.config.get('WHATSAPP_FOLLOWUP_PHONE_STAGGER_HOURS', 24),
+    );
+    const hoursSince =
+      (now.getTime() - lastFollowUpAt.getTime()) / (1000 * 60 * 60);
+    if (hoursSince < staggerHours) {
+      return `Phone contacted ${hoursSince.toFixed(2)}h ago (stagger window ${staggerHours}h)`;
+    }
+    return null;
   }
 
   /** Guards for rules without a ladder: one pending follow-up at a time, >= 1 day apart. */

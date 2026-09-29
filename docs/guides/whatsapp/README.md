@@ -57,15 +57,33 @@ plantilla a la que se responde (ver "Intención -> estado" abajo).
 `RequestInteractionRepository.findMostRecentByPhone` - **nunca** matchea otro tipo de interacción,
 ni siquiera si alguna vez existiera (`RESPONSE`/`STATUS_UPDATE` son código muerto hoy).
 
-`findMostRecentByPhone` además descarta cualquier candidato que esté "superado" por una
-interacción más nueva en su **propio** `requestId` (cualquier status/tipo/dirección): si el
-request siguió avanzando, una interacción vieja que nunca se respondió (atascada en
-`PENDING`/`SENT`/`DELIVERED` por un webhook perdido o porque simplemente nadie la contestó) deja
-de ser un candidato válido, aunque su status siga técnicamente "abierto". Sin esto, una vez que el
-resto de las interacciones del request pasan a `RESPONDED` (fuera del filtro de status), esa única
-interacción vieja quedaba como el único candidato para ese teléfono y "robaba" un mensaje entrante
-nuevo y no relacionado (bug corregido en `fix/stale-interaction-inbound-matching`). Si todos los
-candidatos están superados, el método devuelve `null` igual que si no hubiera candidatos.
+**Regla de matching: "gana el último mensaje mandado a ese teléfono, sin mirar hacia atrás".**
+`findMostRecentByPhone` trae la única `RequestInteraction` FOLLOW_UP más reciente para ese
+teléfono, sin importar de qué `requestId` es. Si está `PENDING`/`SENT`/`DELIVERED` (todavía espera
+respuesta), esa es la que matchea. Si ya está `RESPONDED`/`FAILED`, o no hay ninguna dentro de la
+ventana, el método devuelve `null` — **nunca** busca hacia atrás una interacción más vieja, ni
+siquiera si sigue técnicamente abierta. Esto reemplaza una versión anterior del método (bug
+corregido en `fix/stale-interaction-inbound-matching`) que sí reach-back-eaba entre interacciones
+"superadas" dentro de un mismo request; esa lógica cubría el caso de una interacción vieja sin
+responder robando un mensaje nuevo *dentro del mismo request*, pero no el caso más amplio de **dos
+requests distintos** del mismo teléfono con follow-ups abiertos a la vez — con la regla actual, ese
+caso se resuelve igual que cualquier otro: gana el mensaje mandado más recientemente, sin relación
+con de qué request es. Coincide además con cómo un humano interpretaría su propia respuesta en
+WhatsApp: no hay hilos separados, así que lo natural es que conteste sobre lo último que le
+llegó.
+
+Un request más viejo en el mismo teléfono que siga sin respuesta nunca vuelve a ser alcanzable por
+esta vía mientras el más nuevo siga abierto — lo que mantiene ese escenario poco frecuente es la
+guarda complementaria de `FollowUpSchedulerJob.checkPhoneStaggerGuard` (ver más abajo), que evita
+que dos requests del mismo teléfono lleguen a tener un follow-up abierto al mismo tiempo en primer
+lugar, salvo que pase más de `WHATSAPP_FOLLOWUP_PHONE_STAGGER_HOURS` (default 24hs) entre uno y
+otro — una ventana acotada, no un bloqueo indefinido: un teléfono que nunca contesta el primer
+follow-up no debe dejar a sus otros requests sin follow-ups por tiempo indefinido. Sin condición de
+carrera con la corrida horaria del cron: `FollowUpSchedulerJob` procesa todo secuencialmente (`for`
++ `await`, nunca `Promise.all`), y `recipientPhone` ahora se graba en `metadata` ya en el momento
+de la creación (no solo al despachar, ~1 minuto después) — así que si dos requests del mismo
+teléfono vencen en la misma corrida, la guarda del segundo ya ve la interacción recién creada del
+primero.
 
 Si nada matchea (el usuario escribe espontáneamente, o responde fuera de la ventana) y
 `SUPPORT_CONVERSATIONS_ENABLED=true`, el mensaje se enruta a
