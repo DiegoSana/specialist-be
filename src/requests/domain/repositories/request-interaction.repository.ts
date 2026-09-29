@@ -31,6 +31,23 @@ export interface RequestInteractionRepository {
    * never actually created. An inbound WhatsApp reply may only be treated as a reply
    * to something we automatically sent; a human-authored message (e.g. from the
    * support context) must never be matched here and fed to the intent classifier.
+   *
+   * Second invariant, added to fix a "stale interaction steals an unrelated later
+   * message" bug: a candidate is only eligible if it is still the most recent
+   * interaction *for its own request*. An old interaction that was sent but genuinely
+   * never answered (stuck in PENDING/SENT/DELIVERED forever, e.g. a missed webhook or
+   * a question nobody replied to) must stop being a valid match target once that
+   * request's conversation has moved on - i.e. once any newer interaction exists for
+   * the same `requestId`, regardless of that newer interaction's own status, type or
+   * direction. Without this, once every other interaction on the request flips to
+   * RESPONDED (excluded by the status filter above), that one dangling old interaction
+   * becomes the only remaining candidate for the phone number and wrongly "steals" a
+   * brand new, unrelated inbound message. Only the single most-recent interaction
+   * within a given request is ever eligible; anything older on that same request is
+   * considered closed/abandoned once something newer happened on it. Returns `null`
+   * when every status-filtered candidate is superseded this way, same as when there
+   * are no candidates at all - the caller then falls through to
+   * `forkUnmatchedInboundMessage`/support instead of misattributing the message.
    * Used when matching inbound messages where we don't know the requestId.
    */
   findMostRecentByPhone(

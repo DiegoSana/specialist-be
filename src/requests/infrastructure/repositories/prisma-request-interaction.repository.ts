@@ -95,11 +95,12 @@ export class PrismaRequestInteractionRepository
     phoneNumber: string,
     notOlderThan: Date,
   ): Promise<RequestInteractionEntity | null> {
-    // Find most recent interaction (pending or delivered) for this phone number,
-    // within the reply window, and - deliberately, see the interface doc comment -
-    // only among automated FOLLOW_UP interactions. This is used when we receive a
-    // message but don't know which request it's for.
-    const interaction = await this.prisma.requestInteraction.findFirst({
+    // Candidates: pending/sent/delivered interactions for this phone number, within
+    // the reply window, and - deliberately, see the interface doc comment - only
+    // among automated FOLLOW_UP interactions. Newest first, since we want the most
+    // recent one that is still eligible (see the supersession check below). This is
+    // used when we receive a message but don't know which request it's for.
+    const candidates = await this.prisma.requestInteraction.findMany({
       where: {
         metadata: {
           path: ['recipientPhone'],
@@ -118,9 +119,26 @@ export class PrismaRequestInteractionRepository
       orderBy: { createdAt: 'desc' },
     });
 
-    if (!interaction) return null;
+    // A candidate is superseded once a newer interaction exists for its own request
+    // (any status/type/direction) - the conversation on that request moved on, so an
+    // old never-answered interaction shouldn't keep matching new, unrelated messages.
+    // See the interface doc comment for the full rationale. Few candidates are
+    // expected per phone within the window, so a plain per-candidate check is fine.
+    for (const candidate of candidates) {
+      const supersededByNewerOnSameRequest =
+        await this.prisma.requestInteraction.count({
+          where: {
+            requestId: candidate.requestId,
+            createdAt: { gt: candidate.createdAt },
+          },
+        });
 
-    return PrismaRequestInteractionMapper.toDomain(interaction);
+      if (supersededByNewerOnSameRequest === 0) {
+        return PrismaRequestInteractionMapper.toDomain(candidate);
+      }
+    }
+
+    return null;
   }
 
   async hasPendingFollowUp(requestId: string): Promise<boolean> {

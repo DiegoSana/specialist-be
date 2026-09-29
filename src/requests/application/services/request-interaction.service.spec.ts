@@ -500,6 +500,35 @@ describe('RequestInteractionService', () => {
       expect(after - cutoff.getTime()).toBeLessThanOrEqual(fourteenDaysMs + 5);
     });
 
+    it('reproduces the stale-interaction bug fix end-to-end: a dangling old interaction that lost the "most recent for its own request" race (findMostRecentByPhone correctly returns null once superseded) never gets matched, so an unrelated new inbound message falls through to forkUnmatchedInboundMessage/support instead of being misattributed to it', async () => {
+      mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(null);
+      // Simulates the fixed findMostRecentByPhone: request A has an old dangling
+      // SENT/DELIVERED interaction, but the conversation on request A has since moved
+      // on (newer interactions exist for the same requestId), so it is superseded and
+      // no longer a valid candidate. See prisma-request-interaction.repository.spec.ts
+      // for the repository-level test of that supersession logic itself.
+      mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(null);
+      mockConfig.get.mockImplementation((key: string, def?: unknown) =>
+        key === 'SUPPORT_CONVERSATIONS_ENABLED' ? 'true' : def,
+      );
+
+      await service.processInboundMessage({
+        from: 'whatsapp:+5492944123456',
+        body: 'hola, necesito ayuda con otra cosa',
+        messageId: 'SM_NEW_UNRELATED',
+      });
+
+      expect(mockInteractionRepository.save).not.toHaveBeenCalled();
+      expect(
+        mockSupportConversationService.receiveInboundMessage,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phoneNumber: '+5492944123456',
+          twilioMessageSid: 'SM_NEW_UNRELATED',
+        }),
+      );
+    });
+
     it('when nothing matches and SUPPORT_CONVERSATIONS_ENABLED is unset (default false), only logs - does not fork to support', async () => {
       mockInteractionRepository.findByTwilioMessageSid.mockResolvedValue(null);
       mockInteractionRepository.findMostRecentByPhone.mockResolvedValue(null);
