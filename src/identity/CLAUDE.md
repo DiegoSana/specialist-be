@@ -22,7 +22,10 @@ verification. Does NOT own client/professional/company profiles (Profiles contex
   (Profiles), never through a repository.
 - `VerificationService` (application): `requestPhoneVerification`, `confirmPhoneVerification`,
   `requestEmailVerification`, `confirmEmailVerification`; uses the domain port
-  `VERIFICATION_SERVICE` implemented by `TwilioVerifyService`.
+  `VERIFICATION_SERVICE`, wired via `verification.factory.ts` (`VERIFICATION_PROVIDER=twilio|local`,
+  mirrors `whatsapp-messaging.factory.ts`) to either `TwilioVerifyService` (default) or
+  `LocalVerificationService` (no network, fixed dev code `000000`, see
+  `docs/guides/ENVIRONMENT_VARIABLES.md`).
 - `JwtStrategy`, `JwtAuthGuard` (`infrastructure/guards/jwt-auth.guard.ts`): the guard every other
   controller imports. `JwtStrategy` loads the full `UserEntity` (with profile flags) into `request.user`.
 
@@ -82,8 +85,9 @@ GET, `/identity/verification/phone|email/request|confirm` POST.
   (default `7d`) in `identity.module.ts`, with `JWT_EXPIRATION` accepted as a legacy fallback.
 - OAuth callbacks redirect to `FRONTEND_URL` with the token; callback URLs come from
   `GOOGLE_CALLBACK_URL` / `FACEBOOK_CALLBACK_URL`.
-- Verification codes go through Twilio Verify (`TWILIO_VERIFY_SERVICE_SID`); in tests mock the
-  `VERIFICATION_SERVICE` token.
+- Verification codes go through Twilio Verify (`TWILIO_VERIFY_SERVICE_SID`) by default, or the
+  local fake adapter when `VERIFICATION_PROVIDER=local`; in tests mock the `VERIFICATION_SERVICE`
+  token.
 
 ## Tests
 

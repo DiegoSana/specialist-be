@@ -57,6 +57,7 @@ fly secrets list
 | `TWILIO_ACCOUNT_SID` | Twilio account SID | |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token | |
 | `TWILIO_VERIFY_SERVICE_SID` | Twilio verify service SID | |
+| `VERIFICATION_PROVIDER` | Phone/email verification (OTP) provider: `twilio` (real Twilio Verify, SMS + email) or `local` (no-network fake adapter - `LocalVerificationService`, accepts a fixed dev code, `000000`). Defaults to `twilio` so production never silently goes fake; set to `local` for dev/testing without Twilio credentials. | `twilio` |
 | `TWILIO_STATUS_CALLBACK_URL` | Twilio webhook callback URL | |
 | `TWILIO_WHATSAPP_FROM` | Twilio WhatsApp sender number | |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (if using) | |
