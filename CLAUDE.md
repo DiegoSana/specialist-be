@@ -11,7 +11,8 @@ Detailed, path-scoped rules live in `.claude/rules/`. Module-specific context li
 ## Commands
 
 ```bash
-npm run start:dev            # dev server with watch, http://localhost:5000/api (Swagger at /api/docs)
+docker compose -f docker-compose.dev.yml up -d     # THE way to run the dev server — postgres + mailpit(:8025) + app
+                                                     # (http://localhost:5000/api, Swagger at /api/docs)
 npm test                     # unit tests + architecture fitness functions (must stay green: 291 tests)
 npm test -- --testPathPattern="request.service"   # single spec
 npx jest src/__tests__/architecture.spec.ts        # only the DDD fitness functions
@@ -21,8 +22,15 @@ npm run test:e2e             # e2e (needs a real DB, see test/test-setup.ts)
 npx prisma generate          # after ANY schema.prisma change
 npx prisma migrate dev --name <snake_case_name>    # new migration (dev only)
 npm run prisma:studio
-docker-compose -f docker-compose.dev.yml up -d     # postgres + mailpit(:8025) + app
 ```
+
+**Always start the backend via `docker compose -f docker-compose.dev.yml up -d`** (the `app`
+service), never as a bare `npm run start:dev` / `node dist/main` on the host — that's what
+`start:dev` is for (it's the container's own startup command), not something to run standalone.
+The `app` service uses `network_mode: host` and forces `DATABASE_URL` to `localhost:5432`, which a
+bare host process won't have set up the same way. Known gotcha: that service's startup chain runs
+`prisma db push`, which fails with `P1012 (DIRECT_URL not found)` unless that env var is supplied —
+see the `docker-compose.dev.yml`/`DIRECT_URL` item in the root `TODO.md`.
 
 Definition of done for any code change: `npm test` green (including `architecture.spec.ts`),
 `npm run lint` with zero errors (the whole repo is prettier/eslint clean since 2026-09-15; keep it
