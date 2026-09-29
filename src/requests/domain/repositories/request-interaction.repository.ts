@@ -22,8 +22,9 @@ export interface RequestInteractionRepository {
   ): Promise<RequestInteractionEntity | null>;
 
   /**
-   * Find the most recent pending or delivered interaction for a phone number,
-   * created no earlier than `notOlderThan`.
+   * Find the most recent (any status) automated FOLLOW_UP interaction sent to this
+   * phone number, created no earlier than `notOlderThan` - the *only* candidate ever
+   * considered, regardless of which request it belongs to.
    *
    * Deliberate invariant, not just an implementation detail: this only matches an
    * automated FOLLOW_UP interaction (`interactionType: InteractionType.FOLLOW_UP`) -
@@ -32,28 +33,43 @@ export interface RequestInteractionRepository {
    * to something we automatically sent; a human-authored message (e.g. from the
    * support context) must never be matched here and fed to the intent classifier.
    *
-   * Second invariant, added to fix a "stale interaction steals an unrelated later
-   * message" bug: a candidate is only eligible if it is still the most recent
-   * interaction *for its own request*. An old interaction that was sent but genuinely
-   * never answered (stuck in PENDING/SENT/DELIVERED forever, e.g. a missed webhook or
-   * a question nobody replied to) must stop being a valid match target once that
-   * request's conversation has moved on - i.e. once any newer interaction exists for
-   * the same `requestId`, regardless of that newer interaction's own status, type or
-   * direction. Without this, once every other interaction on the request flips to
-   * RESPONDED (excluded by the status filter above), that one dangling old interaction
-   * becomes the only remaining candidate for the phone number and wrongly "steals" a
-   * brand new, unrelated inbound message. Only the single most-recent interaction
-   * within a given request is ever eligible; anything older on that same request is
-   * considered closed/abandoned once something newer happened on it. Returns `null`
-   * when every status-filtered candidate is superseded this way, same as when there
-   * are no candidates at all - the caller then falls through to
-   * `forkUnmatchedInboundMessage`/support instead of misattributing the message.
-   * Used when matching inbound messages where we don't know the requestId.
+   * Matching rule ("last message wins, no reach-back" - replaces an earlier version
+   * of this method that walked back through older, still-open candidates on other
+   * requests): an inbound reply always matches the single most recent FOLLOW_UP
+   * interaction sent to this phone, no matter which request created it - this is
+   * also how a human reading WhatsApp would interpret their own reply, since there
+   * is no threading. If that interaction is still open
+   * (PENDING/SENT/DELIVERED), it's the match. If it's already RESPONDED/FAILED, or
+   * none exists within the window, this returns `null` - the caller then falls
+   * through to `forkUnmatchedInboundMessage`/support instead of guessing which of
+   * several requests open on the same phone the message was actually about (an
+   * older, still-unanswered request on the same phone is never reachable this way;
+   * `FollowUpSchedulerJob`'s per-phone stagger guard, see
+   * `findMostRecentFollowUpTimestampByPhone`, is what keeps that scenario rare by
+   * spacing out when two different requests on the same phone can each have an open
+   * follow-up in the first place). Used when matching inbound messages where we
+   * don't know the requestId.
    */
   findMostRecentByPhone(
     phoneNumber: string,
     notOlderThan: Date,
   ): Promise<RequestInteractionEntity | null>;
+
+  /**
+   * Timestamp of the most recent automated FOLLOW_UP interaction (any status) sent
+   * to this phone number, across every request - or `null` if none exists.
+   *
+   * Used by `FollowUpSchedulerJob` to space out follow-ups per phone number rather
+   * than per request: without this, two different requests belonging to the same
+   * phone could each run their own escalation ladder independently, and once both
+   * had an open follow-up at the same time, `findMostRecentByPhone`'s "last message
+   * wins" rule would permanently route inbound replies to whichever request sent
+   * the newer message, leaving the other stalled with no way to ever receive a
+   * matched reply until its interaction ages out of the match window.
+   */
+  findMostRecentFollowUpTimestampByPhone(
+    phoneNumber: string,
+  ): Promise<Date | null>;
 
   /**
    * Request id of the most recent interaction of any type/status/age sent to this

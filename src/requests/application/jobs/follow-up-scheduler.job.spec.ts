@@ -22,6 +22,7 @@ describe('FollowUpSchedulerJob', () => {
       hasPendingFollowUp: jest.fn().mockResolvedValue(false),
       findMostRecentByRequestId: jest.fn().mockResolvedValue(null),
       hasRespondedInteraction: jest.fn().mockResolvedValue(false),
+      findMostRecentFollowUpTimestampByPhone: jest.fn().mockResolvedValue(null),
     };
     mockRequestRepository = {
       findById: jest.fn(),
@@ -211,6 +212,103 @@ describe('FollowUpSchedulerJob', () => {
       await job.forceTriggerRule('ACCEPTED_3_DAYS', request.id);
 
       expect(mockInteractionService.sendMessage).toHaveBeenCalledWith('i-1');
+    });
+  });
+
+  describe('scheduleFollowUps (phone stagger guard)', () => {
+    const request = createMockRequest({
+      status: RequestStatus.CONTACT_RELEASED,
+      providerId: 'service-provider-123',
+    });
+
+    beforeEach(() => {
+      // Window fully open so these specs don't depend on the wall-clock hour (default is 9-20h).
+      mockConfig.get.mockImplementation((key: string, def?: string) => {
+        if (key === 'WHATSAPP_FOLLOWUP_ENABLED') return 'true';
+        if (key === 'WHATSAPP_FOLLOWUP_WINDOW_START_HOUR') return '0';
+        if (key === 'WHATSAPP_FOLLOWUP_WINDOW_END_HOUR') return '24';
+        return def;
+      });
+      mockQueryExecutor.getRequests.mockResolvedValue([request]);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue({
+        userId: 'provider-user-1',
+      });
+      mockUserService.findById.mockResolvedValue({
+        phone: '+5492944123456',
+        phoneVerified: true,
+        whatsappOptedOut: false,
+      });
+    });
+
+    it('skips scheduling when this phone (any request) already got a follow-up less than the stagger window ago', async () => {
+      const now = new Date('2026-09-29T12:00:00.000Z');
+      jest.useFakeTimers().setSystemTime(now);
+      mockInteractionRepository.findMostRecentFollowUpTimestampByPhone.mockResolvedValue(
+        new Date('2026-09-29T00:00:00.000Z'), // 12h ago, < default 24h window
+      );
+
+      await job.scheduleFollowUps();
+
+      expect(
+        mockInteractionRepository.findMostRecentFollowUpTimestampByPhone,
+      ).toHaveBeenCalledWith('+5492944123456');
+      expect(mockInteractionService.createFollowUp).not.toHaveBeenCalled();
+      jest.useRealTimers();
+    });
+
+    it('schedules normally once the stagger window has elapsed, even if that earlier follow-up was never answered', async () => {
+      const now = new Date('2026-09-29T12:00:00.000Z');
+      jest.useFakeTimers().setSystemTime(now);
+      mockInteractionRepository.findMostRecentFollowUpTimestampByPhone.mockResolvedValue(
+        new Date('2026-09-28T11:00:00.000Z'), // 25h ago, >= default 24h window
+      );
+
+      await job.scheduleFollowUps();
+
+      expect(mockInteractionService.createFollowUp).toHaveBeenCalledTimes(1);
+      jest.useRealTimers();
+    });
+
+    it('schedules normally when no prior follow-up exists for this phone at all', async () => {
+      mockInteractionRepository.findMostRecentFollowUpTimestampByPhone.mockResolvedValue(
+        null,
+      );
+
+      await job.scheduleFollowUps();
+
+      expect(mockInteractionService.createFollowUp).toHaveBeenCalledTimes(1);
+    });
+
+    it('stores recipientPhone in metadata at creation time (not only later, at dispatch), so the next iteration of the same run sees it', async () => {
+      await job.scheduleFollowUps();
+
+      expect(mockInteractionService.createFollowUp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            recipientPhone: '+5492944123456',
+          }),
+        }),
+      );
+    });
+
+    it('respects a custom WHATSAPP_FOLLOWUP_PHONE_STAGGER_HOURS window', async () => {
+      const now = new Date('2026-09-29T12:00:00.000Z');
+      jest.useFakeTimers().setSystemTime(now);
+      mockConfig.get.mockImplementation((key: string, def?: string) => {
+        if (key === 'WHATSAPP_FOLLOWUP_ENABLED') return 'true';
+        if (key === 'WHATSAPP_FOLLOWUP_WINDOW_START_HOUR') return '0';
+        if (key === 'WHATSAPP_FOLLOWUP_WINDOW_END_HOUR') return '24';
+        if (key === 'WHATSAPP_FOLLOWUP_PHONE_STAGGER_HOURS') return 2;
+        return def;
+      });
+      mockInteractionRepository.findMostRecentFollowUpTimestampByPhone.mockResolvedValue(
+        new Date('2026-09-29T10:30:00.000Z'), // 1.5h ago, < 2h custom window
+      );
+
+      await job.scheduleFollowUps();
+
+      expect(mockInteractionService.createFollowUp).not.toHaveBeenCalled();
+      jest.useRealTimers();
     });
   });
 

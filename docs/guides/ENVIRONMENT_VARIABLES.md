@@ -95,6 +95,7 @@ SMTP credentials at runtime (see below).
 | `WHATSAPP_FOLLOWUP_WINDOW_START_HOUR` | First hour (inclusive, 0-23) in which `FollowUpSchedulerJob` may schedule follow-ups (daytime only, spec 9-20h). Not secret. | `9` |
 | `WHATSAPP_FOLLOWUP_WINDOW_END_HOUR` | Hour (exclusive) after which no follow-ups are scheduled. | `20` |
 | `WHATSAPP_FOLLOWUP_TIMEZONE` | IANA timezone used to evaluate the daytime window. | `America/Argentina/Buenos_Aires` |
+| `WHATSAPP_FOLLOWUP_PHONE_STAGGER_HOURS` | Minimum hours between two follow-ups sent to the same phone number, across different requests (`FollowUpSchedulerJob.checkPhoneStaggerGuard`). Bounded window, not "block while unanswered" - keeps a phone that never replies from starving every other request on that number of follow-ups indefinitely. See `docs/guides/whatsapp/README.md`. | `24` |
 | `REQUEST_EXPIRATION_ENABLED` | Enables `RequestExpirationJob` (Sistema actor: applies request timeouts hourly at :30). Off by default so deploys don't auto-close requests until the plazos are agreed. Not secret; `fly.toml [env]`. | `false` |
 | `REQUEST_EXPIRY_DAYS_PUBLISHED` | Days a `PUBLISHED` (bolsa) request may sit without the client choosing before it becomes `EXPIRED`. | `6` |
 | `REQUEST_EXPIRY_DAYS_SENT` | Days a `SENT` (direct) request may wait for the provider before it becomes `NO_RESPONSE`. | `6` |

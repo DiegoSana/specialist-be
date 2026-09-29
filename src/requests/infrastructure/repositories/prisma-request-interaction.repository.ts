@@ -95,23 +95,17 @@ export class PrismaRequestInteractionRepository
     phoneNumber: string,
     notOlderThan: Date,
   ): Promise<RequestInteractionEntity | null> {
-    // Candidates: pending/sent/delivered interactions for this phone number, within
-    // the reply window, and - deliberately, see the interface doc comment - only
-    // among automated FOLLOW_UP interactions. Newest first, since we want the most
-    // recent one that is still eligible (see the supersession check below). This is
-    // used when we receive a message but don't know which request it's for.
-    const candidates = await this.prisma.requestInteraction.findMany({
+    // The single most recent automated FOLLOW_UP interaction sent to this phone
+    // number, across every request - see the interface doc comment for the "last
+    // message wins, no reach-back" rationale. Not status-filtered in the query: we
+    // need to know whether THIS ONE is still open (PENDING/SENT/DELIVERED) or
+    // already closed (RESPONDED/FAILED), not silently skip past it to something
+    // older just because it's closed.
+    const mostRecent = await this.prisma.requestInteraction.findFirst({
       where: {
         metadata: {
           path: ['recipientPhone'],
           equals: phoneNumber,
-        },
-        status: {
-          in: [
-            InteractionStatus.PENDING,
-            InteractionStatus.SENT,
-            InteractionStatus.DELIVERED,
-          ],
         },
         interactionType: InteractionType.FOLLOW_UP,
         createdAt: { gte: notOlderThan },
@@ -119,26 +113,34 @@ export class PrismaRequestInteractionRepository
       orderBy: { createdAt: 'desc' },
     });
 
-    // A candidate is superseded once a newer interaction exists for its own request
-    // (any status/type/direction) - the conversation on that request moved on, so an
-    // old never-answered interaction shouldn't keep matching new, unrelated messages.
-    // See the interface doc comment for the full rationale. Few candidates are
-    // expected per phone within the window, so a plain per-candidate check is fine.
-    for (const candidate of candidates) {
-      const supersededByNewerOnSameRequest =
-        await this.prisma.requestInteraction.count({
-          where: {
-            requestId: candidate.requestId,
-            createdAt: { gt: candidate.createdAt },
-          },
-        });
-
-      if (supersededByNewerOnSameRequest === 0) {
-        return PrismaRequestInteractionMapper.toDomain(candidate);
-      }
+    if (!mostRecent) {
+      return null;
     }
 
-    return null;
+    const openStatuses: InteractionStatus[] = [
+      InteractionStatus.PENDING,
+      InteractionStatus.SENT,
+      InteractionStatus.DELIVERED,
+    ];
+    if (!openStatuses.includes(mostRecent.status)) {
+      return null;
+    }
+
+    return PrismaRequestInteractionMapper.toDomain(mostRecent);
+  }
+
+  async findMostRecentFollowUpTimestampByPhone(
+    phoneNumber: string,
+  ): Promise<Date | null> {
+    const interaction = await this.prisma.requestInteraction.findFirst({
+      where: {
+        metadata: { path: ['recipientPhone'], equals: phoneNumber },
+        interactionType: InteractionType.FOLLOW_UP,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    return interaction?.createdAt ?? null;
   }
 
   async hasPendingFollowUp(requestId: string): Promise<boolean> {

@@ -62,6 +62,7 @@ describe('FollowUpSchedulerJob — ladder rules', () => {
     interactionRepository = {
       findByRequestId: jest.fn(async () => interactions),
       hasRespondedInteraction: jest.fn().mockResolvedValue(false),
+      findMostRecentFollowUpTimestampByPhone: jest.fn().mockResolvedValue(null),
     };
     interactionService = { createFollowUp: jest.fn() };
     attention = { flag: jest.fn() };
