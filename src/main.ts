@@ -1,11 +1,19 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   try {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+    // Trust the first proxy hop (Fly.io's edge terminates TLS and forwards
+    // over plain HTTP internally). Without this, Express's req.protocol
+    // always reports 'http' regardless of X-Forwarded-Proto, which breaks
+    // anything that reconstructs the original request URL (e.g. Twilio
+    // webhook signature validation in TwilioWebhookGuard).
+    app.set('trust proxy', 1);
 
     // Global prefix
     app.setGlobalPrefix('api');
