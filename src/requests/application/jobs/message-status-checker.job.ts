@@ -91,9 +91,15 @@ export class MessageStatusCheckerJob {
           // Update interaction based on Twilio status
           if (message.status === 'delivered' || message.status === 'read') {
             delivered++;
-            // Mark as delivered (this will be handled by webhook, but we check here as backup)
             this.logger.debug(
               `Message ${interaction.twilioMessageSid} is delivered`,
+            );
+
+            // Persist the status as a backup in case the webhook callback
+            // never arrived (e.g. it was rejected by signature validation).
+            await this.interactionService.markAsDelivered(
+              interaction.twilioMessageSid!,
+              message.status,
             );
           } else if (
             message.status === 'failed' ||

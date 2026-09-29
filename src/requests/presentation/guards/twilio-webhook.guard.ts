@@ -48,10 +48,19 @@ export class TwilioWebhookGuard implements CanActivate {
       // Dynamic import to avoid requiring twilio at build time if not installed
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const twilio = require('twilio');
-      const validator = new twilio.webhook.Webhook(this.webhookSecret);
 
-      // Twilio expects the full URL including protocol and host
-      const isValid = validator.validate(signature, url, params);
+      // twilio@5's package no longer exposes a `webhook.Webhook` class (that
+      // was the v3 API); `new twilio.webhook.Webhook(...)` throws
+      // "twilio.webhook.Webhook is not a constructor" here, which the catch
+      // block below turned into an unconditional 401 for every webhook call,
+      // independent of the URL mismatch. The current top-level helper is
+      // `validateRequest(authToken, signature, url, params): boolean`.
+      const isValid = twilio.validateRequest(
+        this.webhookSecret,
+        signature,
+        url,
+        params,
+      );
 
       if (!isValid) {
         this.logger.warn('Invalid Twilio webhook signature');
