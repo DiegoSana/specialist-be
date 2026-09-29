@@ -31,6 +31,11 @@ primary_region = 'lax'
   # Admin WhatsApp dev tools (simulate reply, force-trigger a follow-up) are off here now since
   # they require WHATSAPP_PROVIDER=local (belt-and-suspenders guard in AdminWhatsAppService).
   WHATSAPP_PROVIDER = 'twilio'
+  # These were never set here (predates the Twilio switch above) so WhatsAppDispatchJob and
+  # MessageStatusCheckerJob were logging "disabled" every minute and never actually sending or
+  # checking anything, regardless of WHATSAPP_PROVIDER.
+  WHATSAPP_FOLLOWUP_ENABLED = 'true'
+  WHATSAPP_STATUS_CHECK_ENABLED = 'true'
   # Pre-launch: email delivery on this "production" Fly deploy is for functional testing only
   # (no real users yet). EMAIL_PROVIDER='ethereal' dynamically provisions a throwaway Ethereal
   # (ethereal.email) test-SMTP account at boot via nodemailer.createTestAccount() - zero secrets
