@@ -6,7 +6,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 // Domain
 import { USER_REPOSITORY } from './domain/repositories/user.repository';
 import { USER_QUERY_REPOSITORY } from './domain/queries/user.query-repository';
-import { VERIFICATION_SERVICE } from './domain/ports/verification.service';
 
 // Application
 import { AuthenticationService } from './application/services/authentication.service';
@@ -21,7 +20,7 @@ import { LocalStrategy } from './infrastructure/strategies/local.strategy';
 import { GoogleStrategy } from './infrastructure/strategies/google.strategy';
 import { FacebookStrategy } from './infrastructure/strategies/facebook.strategy';
 import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard';
-import { TwilioVerifyService } from './infrastructure/verification/twilio-verify.service';
+import { verificationServiceProvider } from './infrastructure/verification/verification.factory';
 
 // Presentation
 import { AuthController } from './presentation/auth.controller';
@@ -74,10 +73,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
       provide: USER_QUERY_REPOSITORY,
       useClass: PrismaUserQueryRepository,
     },
-    {
-      provide: VERIFICATION_SERVICE,
-      useClass: TwilioVerifyService,
-    },
+    verificationServiceProvider,
   ],
   exports: [
     AuthenticationService,
