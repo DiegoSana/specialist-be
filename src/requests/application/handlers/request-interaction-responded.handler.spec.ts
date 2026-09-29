@@ -224,6 +224,117 @@ describe('RequestInteractionRespondedHandler', () => {
     });
   });
 
+  describe('confirmation message direction (bug: must mirror the replying interaction, not be hardcoded per status)', () => {
+    it.each([
+      [
+        'question_agreement to the client, CONFIRMED -> IN_PROGRESS',
+        InteractionDirection.TO_CLIENT,
+        ResponseIntent.CONFIRMED,
+        RequestStatus.IN_PROGRESS,
+        'status_update_started',
+      ],
+      [
+        'question_agreement to the provider, CONFIRMED -> IN_PROGRESS',
+        InteractionDirection.TO_PROVIDER,
+        ResponseIntent.CONFIRMED,
+        RequestStatus.IN_PROGRESS,
+        'status_update_started',
+      ],
+      [
+        'question_agreement to the client, CANCELLED -> NOT_COMPLETED',
+        InteractionDirection.TO_CLIENT,
+        ResponseIntent.CANCELLED,
+        RequestStatus.NOT_COMPLETED,
+        'status_update_not_completed',
+      ],
+      [
+        'question_agreement to the provider, CANCELLED -> NOT_COMPLETED',
+        InteractionDirection.TO_PROVIDER,
+        ResponseIntent.CANCELLED,
+        RequestStatus.NOT_COMPLETED,
+        'status_update_not_completed',
+      ],
+    ])(
+      '%s: confirmation direction matches the replying interaction',
+      async (_label, interactionDirection, intent, newStatus, template) => {
+        await run(
+          RequestStatus.CONTACT_RELEASED,
+          'question_agreement',
+          interactionDirection,
+          intent,
+          'ok',
+        );
+        expect(mockInteractionService.createFollowUp).toHaveBeenCalledWith(
+          expect.objectContaining({
+            direction: interactionDirection,
+            messageTemplate: template,
+          }),
+        );
+      },
+    );
+
+    it('question_progress can only be answered by the provider: COMPLETED -> FINISHED confirmation goes TO_PROVIDER', async () => {
+      await run(
+        RequestStatus.IN_PROGRESS,
+        'question_progress',
+        InteractionDirection.TO_PROVIDER,
+        ResponseIntent.COMPLETED,
+      );
+      expect(mockInteractionService.createFollowUp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direction: InteractionDirection.TO_PROVIDER,
+          messageTemplate: 'status_update_completed',
+        }),
+      );
+    });
+
+    it('question_progress can only be answered by the provider: stop -> INTERRUPTED confirmation goes TO_PROVIDER', async () => {
+      await run(
+        RequestStatus.IN_PROGRESS,
+        'question_progress',
+        InteractionDirection.TO_PROVIDER,
+        ResponseIntent.CANCELLED,
+        'tuve que dejarlo, se mudó',
+      );
+      expect(mockInteractionService.createFollowUp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direction: InteractionDirection.TO_PROVIDER,
+          messageTemplate: 'status_update_interrupted',
+        }),
+      );
+    });
+
+    it('question_satisfaction can only be answered by the client: CONFIRMED -> CLOSED confirmation goes TO_CLIENT', async () => {
+      await run(
+        RequestStatus.FINISHED,
+        'question_satisfaction',
+        InteractionDirection.TO_CLIENT,
+        ResponseIntent.CONFIRMED,
+      );
+      expect(mockInteractionService.createFollowUp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direction: InteractionDirection.TO_CLIENT,
+          messageTemplate: 'status_update_closed',
+        }),
+      );
+    });
+
+    it('question_satisfaction can only be answered by the client: CANCELLED -> UNDER_REVIEW confirmation goes TO_CLIENT', async () => {
+      await run(
+        RequestStatus.FINISHED,
+        'question_satisfaction',
+        InteractionDirection.TO_CLIENT,
+        ResponseIntent.CANCELLED,
+      );
+      expect(mockInteractionService.createFollowUp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direction: InteractionDirection.TO_CLIENT,
+          messageTemplate: 'status_update_under_review',
+        }),
+      );
+    });
+  });
+
   it('does not throw when confidence/viability/optOut/escalate are present on the payload', async () => {
     const request = createMockRequest({
       id: 'request-123',

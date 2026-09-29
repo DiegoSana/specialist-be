@@ -206,6 +206,7 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
         requestId,
         newStatus,
         event.payload.responseIntent,
+        interaction.direction,
       );
     } catch (error) {
       this.logger.error(
@@ -377,16 +378,26 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
 
   /**
    * Send a confirmation message via WhatsApp when status is updated.
+   *
+   * The confirmation is a direct reply to whoever just texted in (e.g. "Perfecto!
+   * Marcamos el pedido como en curso" reads as a response to the person who confirmed
+   * the agreement), so its direction is always the direction of the interaction being
+   * replied to — never derived from `newStatus`. Some ladders (question_progress,
+   * question_satisfaction) can only ever be answered by one side, so `direction` looks
+   * "hardcoded" in practice for those statuses, but that's incidental to which ladder
+   * allows which replier, not a rule to encode here (see CONTACT_RELEASED_QUESTION in
+   * follow-up-ladders.ts, which either party can answer, and where deriving it from
+   * `newStatus` alone previously sent the confirmation to the wrong party).
    */
   private async sendConfirmationMessage(
     requestId: string,
     newStatus: RequestStatus,
     intent: ResponseIntent,
+    direction: 'TO_CLIENT' | 'TO_PROVIDER',
   ): Promise<void> {
     try {
       // Determine template based on status
       let template: string | null = null;
-      let direction: 'TO_CLIENT' | 'TO_PROVIDER' = 'TO_PROVIDER';
 
       switch (newStatus) {
         case RequestStatus.IN_PROGRESS:
@@ -394,22 +405,18 @@ export class RequestInteractionRespondedHandler implements OnModuleInit {
           break;
         case RequestStatus.FINISHED:
           template = 'status_update_completed';
-          direction = 'TO_PROVIDER';
           break;
         case RequestStatus.NOT_COMPLETED:
           template = 'status_update_not_completed';
           break;
         case RequestStatus.INTERRUPTED:
           template = 'status_update_interrupted';
-          direction = 'TO_PROVIDER';
           break;
         case RequestStatus.CLOSED:
           template = 'status_update_closed';
-          direction = 'TO_CLIENT';
           break;
         case RequestStatus.UNDER_REVIEW:
           template = 'status_update_under_review';
-          direction = 'TO_CLIENT';
           break;
       }
 
