@@ -38,6 +38,34 @@ View current secrets:
 fly secrets list
 ```
 
+### 3. Fast-toggle variables → Fly.io Secrets, but not for secrecy
+
+`WHATSAPP_PROVIDER` and `VERIFICATION_PROVIDER` (`twilio` real API vs `local` no-network fake
+adapter - see their rows below) aren't sensitive, but on the `specialist-api` deploy they're
+deliberately managed as Fly secrets instead of `fly.toml [env]`, purely so toggling real Twilio on
+and off is a single command with a fast machine restart, instead of editing `fly.toml` and running
+a full `fly deploy`. Both default to `twilio` when unset, so production never silently goes fake.
+
+**Local dev** (`.env`, then restart the app container):
+```bash
+WHATSAPP_PROVIDER=local
+VERIFICATION_PROVIDER=local
+```
+
+**Fly.io (`specialist-api`)** — turn real Twilio off (WhatsApp + phone/email OTP):
+```bash
+fly secrets set WHATSAPP_PROVIDER=local VERIFICATION_PROVIDER=local -a specialist-api
+```
+
+Turn it back on (or just unset either one - `twilio` is the default anyway):
+```bash
+fly secrets unset WHATSAPP_PROVIDER VERIFICATION_PROVIDER -a specialist-api
+```
+
+`fly secrets list -a specialist-api` only shows secret *names*, not values, so it won't confirm
+which value is active. To check the active provider, use the app itself: `admin > settings` in
+`specialist-admin` shows both live (`GET /admin/whatsapp/config`, `GET /admin/verification/config`).
+
 ## Required Variables
 
 ### ⚠️ Sensitive (Set as Fly.io Secrets)
