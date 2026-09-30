@@ -418,6 +418,15 @@ export class ReviewService {
     return this.reviewRepository.findByStatus(ReviewStatus.PENDING);
   }
 
+  /**
+   * Admin moderation listing by status (defaults to PENDING via the controller). Added so an
+   * already-APPROVED review (which `findPending` never returns) is still reachable from the
+   * admin UI — needed to toggle `isFeatured`, which only accepts APPROVED reviews.
+   */
+  async findByStatus(status: ReviewStatus): Promise<ReviewEntity[]> {
+    return this.reviewRepository.findByStatus(status);
+  }
+
   async update(
     id: string,
     userId: string,

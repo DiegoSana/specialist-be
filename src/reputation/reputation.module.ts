@@ -8,6 +8,7 @@ import { PrismaReviewRepository } from './infrastructure/repositories/prisma-rev
 import {
   ReviewsController,
   ProfessionalReviewsController,
+  ServiceProviderReviewsController,
 } from './presentation/reviews.controller';
 // Import new bounded context modules
 import { ProfilesModule } from '../profiles/profiles.module';
@@ -23,7 +24,11 @@ import { IdentityModule } from '../identity/identity.module';
     forwardRef(() => RequestsModule),
     IdentityModule,
   ],
-  controllers: [ReviewsController, ProfessionalReviewsController],
+  controllers: [
+    ReviewsController,
+    ProfessionalReviewsController,
+    ServiceProviderReviewsController,
+  ],
   providers: [
     ReviewService,
     RequestPublishedAgainHandler,

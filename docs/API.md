@@ -39,6 +39,7 @@ Authorization: Bearer <token>
 - `GET /companies/:id`
 - `GET /trades`
 - `GET /professionals/:id/reviews`
+- `GET /providers/:serviceProviderId/reviews`
 
 ---
 
@@ -148,8 +149,9 @@ Reviews are bidirectional since 2026-09-30: `direction` (`CLIENT_TO_PROVIDER` | 
 | `GET` | `/reviews/:id` | Get review by ID | ✅ |
 | `PATCH` | `/reviews/:id` | Update review (author, while PENDING) | ✅ |
 | `DELETE` | `/reviews/:id` | Delete review (author, while PENDING) | ✅ |
-| `GET` | `/professionals/:id/reviews` | Get professional's approved reviews | ❌ |
-| `GET` | `/reviews/admin/pending` | Get pending reviews, both directions (Admin) | ✅ Admin |
+| `GET` | `/professionals/:id/reviews` | Get a Professional's approved reviews by **Professional id** (404s if given a Company id — legacy route, kept for back-compat) | ❌ |
+| `GET` | `/providers/:serviceProviderId/reviews` | Get a service provider's approved reviews by **ServiceProvider id**, works for both `PROFESSIONAL` and `COMPANY` (added 2026-09-30 so the provider-detail modal's Company reviews section doesn't 404 — see ADR-004; pass `provider.serviceProviderId`, not `provider.id`) | ❌ |
+| `GET` | `/reviews/admin/pending?status=xxx` | Get reviews for moderation, both directions. `status` optional (`PENDING`\|`APPROVED`\|`REJECTED`), defaults to `PENDING` for back-compat — pass `status=APPROVED` to reach an already-approved review and toggle `isFeatured` on it via `POST /reviews/:id/feature`, since it no longer shows up here by default once approved (Admin) | ✅ Admin |
 | `POST` | `/reviews/:id/approve` | Approve review (Admin). For `CLIENT_TO_PROVIDER` recomputes `ServiceProvider.averageRating/totalReviews`; for `PROVIDER_TO_CLIENT` recomputes `User.clientAverageRating/clientTotalReviews`. Also reveals both of the request's reviews immediately if the other direction is already APPROVED (doble-ciego con timeout, immediate-reveal branch) | ✅ Admin |
 | `POST` | `/reviews/:id/reject` | Reject review (Admin) | ✅ Admin |
 | `POST` | `/reviews/:id/feature` | Toggle `isFeatured` on an APPROVED review — curated highlight, not algorithmic (Admin). Body: `{ isFeatured: boolean }` | ✅ Admin |

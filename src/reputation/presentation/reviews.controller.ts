@@ -19,6 +19,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ReviewDirection } from '@prisma/client';
+import { ReviewStatus } from '../domain/value-objects/review-status';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
@@ -147,14 +148,30 @@ export class ReviewsController {
   @Get('admin/pending')
   @UseGuards(JwtAuthGuard, AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get pending reviews for moderation (admin only)' })
+  @ApiOperation({
+    summary:
+      'Get reviews for moderation (admin only). Despite the path (kept for backward compat), ' +
+      'accepts an optional ?status= to list APPROVED/REJECTED reviews too — needed to reach an ' +
+      'already-approved review and toggle isFeatured on it, since it no longer appears here once ' +
+      'approved without this filter.',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ReviewStatus,
+    description: 'Defaults to PENDING for backward compatibility',
+  })
   @ApiResponse({
     status: 200,
-    description: 'List of pending reviews',
+    description: 'List of reviews with the given status',
     type: [ReviewResponseDto],
   })
-  async findPending(): Promise<ReviewResponseDto[]> {
-    const entities = await this.reviewService.findPending();
+  async findPending(
+    @Query('status') status?: ReviewStatus,
+  ): Promise<ReviewResponseDto[]> {
+    const entities = await this.reviewService.findByStatus(
+      status ?? ReviewStatus.PENDING,
+    );
     return ReviewResponseDto.fromEntities(entities);
   }
 
@@ -243,6 +260,37 @@ export class ProfessionalReviewsController {
   ): Promise<PublicReviewDto[]> {
     const entities =
       await this.reviewService.findByProfessionalId(professionalId);
+    return PublicReviewDto.fromEntities(entities);
+  }
+}
+
+// Sub-resource controller for any ServiceProvider's reviews (public access). Unlike
+// ProfessionalReviewsController above (which takes a Professional's own id and 404s for a
+// Company via ProfessionalService.getByIdOrFail), this takes a ServiceProvider id directly and
+// works for both Professional and Company providers — see ADR-004 (ServiceProvider abstraction).
+// Kept as a separate route (not a rewire of /professionals/:id/reviews) to avoid changing what
+// that existing path's :id means for any caller still relying on it.
+@ApiTags('Reviews')
+@Controller('providers')
+export class ServiceProviderReviewsController {
+  constructor(private readonly reviewService: ReviewService) {}
+
+  @Public()
+  @Get(':serviceProviderId/reviews')
+  @ApiOperation({
+    summary:
+      'Get approved reviews for a service provider, Professional or Company (public)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of reviews',
+    type: [PublicReviewDto],
+  })
+  async findByServiceProviderId(
+    @Param('serviceProviderId') serviceProviderId: string,
+  ): Promise<PublicReviewDto[]> {
+    const entities =
+      await this.reviewService.findByServiceProviderId(serviceProviderId);
     return PublicReviewDto.fromEntities(entities);
   }
 }
