@@ -35,6 +35,7 @@ import { ProfessionalService } from '../../../profiles/application/services/prof
 import { CompanyService } from '../../../profiles/application/services/company.service';
 import { UserService } from '../../../identity/application/services/user.service';
 import { ProfileActivationService } from '../../../profiles/application/services/profile-activation.service';
+import { ReviewService } from '../../../reputation/application/services/review.service';
 
 @Injectable()
 export class RequestService {
@@ -54,6 +55,8 @@ export class RequestService {
     private readonly userService: UserService,
     @Inject(forwardRef(() => ProfileActivationService))
     private readonly profileActivationService: ProfileActivationService,
+    @Inject(forwardRef(() => ReviewService))
+    private readonly reviewService: ReviewService,
   ) {}
 
   async create(
@@ -487,7 +490,12 @@ export class RequestService {
 
   /**
    * Rate the client on a completed request.
-   * Only the assigned professional can rate, and only after work is done.
+   * Only the assigned professional can rate, and only after work is done. Since the bidirectional
+   * reviews redesign, this creates a PENDING `Review(direction: PROVIDER_TO_CLIENT)` (reputation
+   * context) instead of writing Request.clientRating/clientRatingComment directly — same
+   * moderation flow as the client-to-provider direction. The "already rated" invariant is now
+   * enforced by ReviewService.createProviderToClientReview (ConflictException), not here — see
+   * RequestEntity.canRateClientBy's doc comment.
    */
   async rateClient(
     requestId: string,
@@ -503,11 +511,6 @@ export class RequestService {
           'Can only rate client after work is completed',
         );
       }
-      if (request.clientRating !== null) {
-        throw new BadRequestException(
-          'Client has already been rated for this request',
-        );
-      }
       throw new ForbiddenException(
         'Only the assigned professional can rate the client',
       );
@@ -518,12 +521,13 @@ export class RequestService {
       throw new BadRequestException('Rating must be between 1 and 5');
     }
 
-    return this.requestRepository.save(
-      request.withChanges({
-        clientRating: rating,
-        clientRatingComment: comment || null,
-      }),
-    );
+    await this.reviewService.createProviderToClientReview(ctx.userId, {
+      requestId,
+      rating,
+      comment,
+    });
+
+    return request;
   }
 
   // ─────────────────────────────────────────────────────────────

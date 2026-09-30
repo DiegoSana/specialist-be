@@ -16,6 +16,7 @@ describe('FollowUpSchedulerJob', () => {
   let mockRule: any;
   let mockAttentionService: any;
   let mockSupportConversationService: any;
+  let mockReviewService: any;
 
   beforeEach(() => {
     mockInteractionRepository = {
@@ -39,6 +40,9 @@ describe('FollowUpSchedulerJob', () => {
     mockAttentionService = { flag: jest.fn() };
     mockSupportConversationService = {
       hasOpenConversation: jest.fn().mockResolvedValue(false),
+    };
+    mockReviewService = {
+      hasReviewForRequestAndDirection: jest.fn().mockResolvedValue(false),
     };
 
     mockRule = {
@@ -68,6 +72,7 @@ describe('FollowUpSchedulerJob', () => {
       mockCompanyService,
       mockAttentionService,
       mockSupportConversationService,
+      mockReviewService,
     );
   });
 
@@ -385,6 +390,7 @@ describe('FollowUpSchedulerJob', () => {
         mockCompanyService,
         mockAttentionService,
         mockSupportConversationService,
+        mockReviewService,
       );
       // Only the non-last rule (days=3) gets a candidate; the last rung (days=7)
       // gets none, so this isolates "is mockRule's own scheduling flagging?"

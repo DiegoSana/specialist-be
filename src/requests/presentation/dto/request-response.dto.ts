@@ -4,6 +4,53 @@ import {
   RequestAuthContext,
   RequestEntity,
 } from '../../domain/entities/request.entity';
+// Cross-context: importing a domain entity TYPE from another context is allowed (see
+// src/requests/CLAUDE.md / architecture rules — "Import from another context ONLY:
+// application/services/*, domain/entities/* types, domain/events/*, shared/**").
+import { ReviewEntity } from '../../../reputation/domain/entities/review.entity';
+import { ReviewStatus } from '../../../reputation/domain/value-objects/review-status';
+
+/**
+ * Nested DTO for a review's own content — either myReview, or counterpartReview once revealed.
+ */
+export class RequestReviewSummaryDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty({ minimum: 1, maximum: 5 })
+  rating: number;
+
+  @ApiPropertyOptional()
+  comment: string | null;
+
+  @ApiProperty({ enum: ReviewStatus })
+  status: ReviewStatus;
+
+  @ApiPropertyOptional({
+    description: 'null until both parties rated or the reveal timeout elapsed',
+  })
+  revealedAt: Date | null;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  static fromEntity(entity: ReviewEntity): RequestReviewSummaryDto {
+    const dto = new RequestReviewSummaryDto();
+    dto.id = entity.id;
+    dto.rating = entity.rating;
+    dto.comment = entity.comment;
+    dto.status = entity.status;
+    dto.revealedAt = entity.revealedAt;
+    dto.createdAt = entity.createdAt;
+    return dto;
+  }
+}
+
+/** counterpartReview before it's revealed: content hidden, only existence + own-submission state shown. */
+export class PendingCounterpartReviewDto {
+  @ApiProperty({ example: true })
+  pending: true;
+}
 
 /**
  * Nested DTO for trade information in request response
@@ -40,6 +87,27 @@ export class RequestUserDto {
       'Contact phone. Only present once contact was released and the viewer is the client or the assigned provider (or admin).',
   })
   phone?: string | null;
+}
+
+/**
+ * The request's client, as seen by the provider "in context" (no dedicated client profile page —
+ * REVIEWS_REDESIGN.md section 2): adds the client's aggregate rating and curated highlights on
+ * top of RequestUserDto.
+ */
+export class RequestClientDto extends RequestUserDto {
+  @ApiPropertyOptional({
+    description: 'Client aggregate rating from PROVIDER_TO_CLIENT reviews',
+  })
+  averageRating?: number;
+
+  @ApiPropertyOptional()
+  totalReviews?: number;
+
+  @ApiPropertyOptional({
+    type: [RequestReviewSummaryDto],
+    description: 'Admin-curated (isFeatured) approved reviews of this client',
+  })
+  featuredReviews?: RequestReviewSummaryDto[];
 }
 
 /**
@@ -167,11 +235,32 @@ export class RequestResponseDto {
   @ApiProperty({ enum: RequestStatus })
   status: RequestStatus;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Deprecated: legacy flat field, read-only compat for requests closed before the bidirectional reviews redesign. New code should read counterpartReview/myReview instead.',
+  })
   clientRating: number | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Deprecated, see clientRating.',
+  })
   clientRatingComment: string | null;
+
+  @ApiPropertyOptional({
+    type: RequestReviewSummaryDto,
+    description:
+      "The viewer's own review for this request (client's review of the provider, or provider's review of the client, depending on who is asking). Always visible to its author regardless of reveal state. Only populated on single-request detail responses.",
+  })
+  myReview?: RequestReviewSummaryDto | null;
+
+  @ApiPropertyOptional({
+    description:
+      "The counterpart's review. Hidden behind `{ pending: true }` until both parties rated or the reveal timeout elapsed (doble-ciego con timeout). Only populated on single-request detail responses.",
+  })
+  counterpartReview?:
+    | RequestReviewSummaryDto
+    | PendingCounterpartReviewDto
+    | null;
 
   @ApiPropertyOptional({
     description:
@@ -192,8 +281,8 @@ export class RequestResponseDto {
   updatedAt: Date;
 
   // Related data (populated when available)
-  @ApiPropertyOptional({ type: RequestUserDto })
-  client?: RequestUserDto;
+  @ApiPropertyOptional({ type: RequestClientDto })
+  client?: RequestClientDto;
 
   @ApiPropertyOptional({ type: RequestProfessionalDto })
   professional?: RequestProfessionalDto;
@@ -214,6 +303,14 @@ export class RequestResponseDto {
   static fromEntity(
     entity: RequestEntity,
     viewer?: RequestAuthContext,
+    extra?: {
+      /** Viewer's own review for this request. Omit to leave myReview undefined. */
+      myReview?: ReviewEntity | null;
+      /** The other party's review for this request. Omit to leave counterpartReview undefined. */
+      counterpartReview?: ReviewEntity | null;
+      /** Admin-curated featured reviews of the client, for the provider-facing "in context" view. */
+      clientFeaturedReviews?: ReviewEntity[];
+    },
   ): RequestResponseDto {
     const dto = new RequestResponseDto();
     // Safe default: without a viewer context no contact data is exposed.
@@ -236,6 +333,29 @@ export class RequestResponseDto {
     dto.status = entity.status;
     dto.clientRating = entity.clientRating;
     dto.clientRatingComment = entity.clientRatingComment;
+
+    if (extra) {
+      dto.myReview = extra.myReview
+        ? RequestReviewSummaryDto.fromEntity(extra.myReview)
+        : (extra.myReview ?? null);
+
+      if (extra.counterpartReview === undefined) {
+        dto.counterpartReview = undefined;
+      } else if (extra.counterpartReview === null) {
+        dto.counterpartReview = null;
+      } else if (
+        extra.counterpartReview.isVisibleTo(
+          viewer?.userId ?? '',
+          !!viewer?.isAdmin,
+        )
+      ) {
+        dto.counterpartReview = RequestReviewSummaryDto.fromEntity(
+          extra.counterpartReview,
+        );
+      } else {
+        dto.counterpartReview = { pending: true };
+      }
+    }
     dto.statusReason = entity.statusReason;
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;
@@ -254,6 +374,15 @@ export class RequestResponseDto {
         lastName: entityAny.client.lastName,
         profilePictureUrl: entityAny.client.profilePictureUrl ?? null,
         ...(showContact ? { phone: entityAny.client.phone ?? null } : {}),
+        averageRating: entityAny.client.clientAverageRating ?? 0,
+        totalReviews: entityAny.client.clientTotalReviews ?? 0,
+        ...(extra?.clientFeaturedReviews
+          ? {
+              featuredReviews: extra.clientFeaturedReviews.map((r) =>
+                RequestReviewSummaryDto.fromEntity(r),
+              ),
+            }
+          : {}),
       };
     }
 

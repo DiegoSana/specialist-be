@@ -16,7 +16,12 @@ import {
   createMockProfessional,
   createMockRequest,
 } from '../../__mocks__/test-utils';
-import { UserStatus, ProfessionalStatus, RequestStatus } from '@prisma/client';
+import {
+  UserStatus,
+  ProfessionalStatus,
+  RequestStatus,
+  ReviewDirection,
+} from '@prisma/client';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -68,7 +73,9 @@ describe('AdminService', () => {
     };
 
     mockReviewService = {
-      findByRequestId: jest.fn().mockResolvedValue(null),
+      getRequestReviewsForViewer: jest
+        .fn()
+        .mockResolvedValue({ myReview: null, counterpartReview: null }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -605,7 +612,9 @@ describe('AdminService', () => {
       });
       const review = ReviewEntity.create({
         id: 'review-1',
+        direction: ReviewDirection.CLIENT_TO_PROVIDER,
         reviewerId: 'client-1',
+        revieweeUserId: 'provider-user-1',
         serviceProviderId: 'provider-1',
         requestId: 'request-123',
         rating: 5,
@@ -615,15 +624,19 @@ describe('AdminService', () => {
 
       mockRequestService.findById.mockResolvedValue(request);
       mockRequestInterestService.getInterestedProviders.mockResolvedValue([]);
-      mockReviewService.findByRequestId.mockResolvedValue(review);
+      mockReviewService.getRequestReviewsForViewer.mockResolvedValue({
+        myReview: review,
+        counterpartReview: null,
+      });
 
       const result = await service.getRequestByIdForAdmin(
         'request-123',
         adminUser,
       );
 
-      expect(mockReviewService.findByRequestId).toHaveBeenCalledWith(
+      expect(mockReviewService.getRequestReviewsForViewer).toHaveBeenCalledWith(
         'request-123',
+        request.clientId,
       );
       expect(result.review).toEqual({
         id: 'review-1',
@@ -641,7 +654,10 @@ describe('AdminService', () => {
 
       mockRequestService.findById.mockResolvedValue(request);
       mockRequestInterestService.getInterestedProviders.mockResolvedValue([]);
-      mockReviewService.findByRequestId.mockResolvedValue(null);
+      mockReviewService.getRequestReviewsForViewer.mockResolvedValue({
+        myReview: null,
+        counterpartReview: null,
+      });
 
       const result = await service.getRequestByIdForAdmin(
         'request-123',

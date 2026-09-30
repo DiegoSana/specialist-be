@@ -365,11 +365,15 @@ export class RequestEntity {
    * Rules:
    * - Only the assigned provider can rate
    * - Only after the request is closed (reputation only builds on CLOSED)
-   * - Only once (clientRating must be null)
+   *
+   * "Only once" is no longer checked here: since the bidirectional reviews redesign, rating the
+   * client creates a Review row (reputation context) instead of writing Request.clientRating, and
+   * this entity has no visibility into whether that Review already exists (cross-aggregate).
+   * RequestService.rateClient delegates to ReviewService.createProviderToClientReview, which
+   * enforces the one-review-per-(requestId, direction) invariant and throws ConflictException.
    */
   canRateClientBy(ctx: RequestAuthContext): boolean {
     if (!this.isClosed()) return false;
-    if (this.clientRating !== null) return false; // Already rated
     return this.isAssignedProvider(ctx);
   }
 

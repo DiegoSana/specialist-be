@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ReviewDirection } from '@prisma/client';
 import { ReviewEntity } from '../../domain/entities/review.entity';
 import { ReviewStatus } from '../../domain/value-objects/review-status';
 
@@ -52,11 +53,26 @@ export class ReviewResponseDto {
   @ApiProperty()
   id: string;
 
+  @ApiProperty({
+    enum: ReviewDirection,
+    description:
+      'CLIENT_TO_PROVIDER: client rating the specialist. PROVIDER_TO_CLIENT: specialist rating the client.',
+  })
+  direction: ReviewDirection;
+
   @ApiProperty()
   reviewerId: string;
 
-  @ApiProperty()
-  professionalId: string;
+  @ApiProperty({
+    description:
+      'User being reviewed (provider owner for CLIENT_TO_PROVIDER, client for PROVIDER_TO_CLIENT)',
+  })
+  revieweeUserId: string;
+
+  @ApiPropertyOptional({
+    description: 'ServiceProvider being reviewed (CLIENT_TO_PROVIDER only)',
+  })
+  professionalId: string | null;
 
   @ApiPropertyOptional()
   requestId: string | null;
@@ -75,6 +91,15 @@ export class ReviewResponseDto {
 
   @ApiPropertyOptional()
   moderatedBy: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Doble-ciego con timeout: null until both parties rated (or the reveal timeout elapsed)',
+  })
+  revealedAt: Date | null;
+
+  @ApiProperty({ description: 'Curated by admin moderation, not algorithmic' })
+  isFeatured: boolean;
 
   @ApiProperty()
   createdAt: Date;
@@ -98,7 +123,9 @@ export class ReviewResponseDto {
 
     // Core fields
     dto.id = entity.id;
+    dto.direction = entity.direction;
     dto.reviewerId = entity.reviewerId;
+    dto.revieweeUserId = entity.revieweeUserId;
     dto.professionalId = entity.professionalId;
     dto.requestId = entity.requestId;
     dto.rating = entity.rating;
@@ -106,6 +133,8 @@ export class ReviewResponseDto {
     dto.status = entity.status;
     dto.moderatedAt = entity.moderatedAt;
     dto.moderatedBy = entity.moderatedBy;
+    dto.revealedAt = entity.revealedAt;
+    dto.isFeatured = entity.isFeatured;
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;
 

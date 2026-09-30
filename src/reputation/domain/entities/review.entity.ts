@@ -1,4 +1,5 @@
 import { ReviewStatus } from '../value-objects/review-status';
+import { ReviewDirection } from '@prisma/client';
 
 /**
  * Authorization context for review operations
@@ -7,13 +8,17 @@ export interface ReviewAuthContext {
   userId: string;
   isAdmin: boolean;
   isReviewer: boolean; // Is the user the one who created this review?
+  /** Is the user the one being reviewed (the other party in the request)? */
+  isReviewee?: boolean;
 }
 
 export class ReviewEntity {
   static create(params: {
     id: string;
+    direction: ReviewDirection;
     reviewerId: string;
-    serviceProviderId: string;
+    revieweeUserId: string;
+    serviceProviderId: string | null;
     requestId: string; // Reviews are always tied to a request
     rating: number;
     comment: string | null;
@@ -23,7 +28,9 @@ export class ReviewEntity {
     const now = params.now ?? new Date();
     return new ReviewEntity(
       params.id,
+      params.direction,
       params.reviewerId,
+      params.revieweeUserId,
       params.serviceProviderId,
       params.requestId,
       params.rating,
@@ -31,6 +38,8 @@ export class ReviewEntity {
       params.status ?? ReviewStatus.PENDING,
       null, // moderatedAt
       null, // moderatedBy
+      null, // revealedAt
+      false, // isFeatured
       now,
       now,
     );
@@ -38,14 +47,19 @@ export class ReviewEntity {
 
   constructor(
     public readonly id: string,
+    public readonly direction: ReviewDirection,
     public readonly reviewerId: string,
-    public readonly serviceProviderId: string, // ServiceProvider being reviewed
+    public readonly revieweeUserId: string,
+    // ServiceProvider being reviewed. Only set for CLIENT_TO_PROVIDER reviews.
+    public readonly serviceProviderId: string | null,
     public readonly requestId: string, // Reviews are always tied to a request
     public readonly rating: number,
     public readonly comment: string | null,
     public readonly status: ReviewStatus,
     public readonly moderatedAt: Date | null,
     public readonly moderatedBy: string | null,
+    public readonly revealedAt: Date | null,
+    public readonly isFeatured: boolean,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
   ) {}
@@ -53,8 +67,16 @@ export class ReviewEntity {
   /**
    * @deprecated Use serviceProviderId instead. This getter is for backward compatibility.
    */
-  get professionalId(): string {
+  get professionalId(): string | null {
     return this.serviceProviderId;
+  }
+
+  isClientToProvider(): boolean {
+    return this.direction === ReviewDirection.CLIENT_TO_PROVIDER;
+  }
+
+  isProviderToClient(): boolean {
+    return this.direction === ReviewDirection.PROVIDER_TO_CLIENT;
   }
 
   isValidRating(): boolean {
@@ -73,6 +95,10 @@ export class ReviewEntity {
     return this.status === ReviewStatus.REJECTED;
   }
 
+  isRevealed(): boolean {
+    return this.revealedAt !== null;
+  }
+
   withChanges(changes: {
     rating?: number;
     comment?: string | null;
@@ -81,7 +107,9 @@ export class ReviewEntity {
     const now = changes.now ?? new Date();
     return new ReviewEntity(
       this.id,
+      this.direction,
       this.reviewerId,
+      this.revieweeUserId,
       this.serviceProviderId,
       this.requestId,
       changes.rating !== undefined ? changes.rating : this.rating,
@@ -89,6 +117,8 @@ export class ReviewEntity {
       this.status,
       this.moderatedAt,
       this.moderatedBy,
+      this.revealedAt,
+      this.isFeatured,
       this.createdAt,
       now,
     );
@@ -98,7 +128,9 @@ export class ReviewEntity {
     const moderatedAt = now ?? new Date();
     return new ReviewEntity(
       this.id,
+      this.direction,
       this.reviewerId,
+      this.revieweeUserId,
       this.serviceProviderId,
       this.requestId,
       this.rating,
@@ -106,6 +138,8 @@ export class ReviewEntity {
       ReviewStatus.APPROVED,
       moderatedAt,
       moderatorId,
+      this.revealedAt,
+      this.isFeatured,
       this.createdAt,
       moderatedAt,
     );
@@ -115,7 +149,9 @@ export class ReviewEntity {
     const moderatedAt = now ?? new Date();
     return new ReviewEntity(
       this.id,
+      this.direction,
       this.reviewerId,
+      this.revieweeUserId,
       this.serviceProviderId,
       this.requestId,
       this.rating,
@@ -123,8 +159,52 @@ export class ReviewEntity {
       ReviewStatus.REJECTED,
       moderatedAt,
       moderatorId,
+      this.revealedAt,
+      this.isFeatured,
       this.createdAt,
       moderatedAt,
+    );
+  }
+
+  /** Doble-ciego reveal: sets revealedAt once both parties rated (or the timeout elapsed). */
+  reveal(now?: Date): ReviewEntity {
+    const revealedAt = now ?? new Date();
+    return new ReviewEntity(
+      this.id,
+      this.direction,
+      this.reviewerId,
+      this.revieweeUserId,
+      this.serviceProviderId,
+      this.requestId,
+      this.rating,
+      this.comment,
+      this.status,
+      this.moderatedAt,
+      this.moderatedBy,
+      revealedAt,
+      this.isFeatured,
+      this.createdAt,
+      now ?? new Date(),
+    );
+  }
+
+  withFeatured(isFeatured: boolean, now?: Date): ReviewEntity {
+    return new ReviewEntity(
+      this.id,
+      this.direction,
+      this.reviewerId,
+      this.revieweeUserId,
+      this.serviceProviderId,
+      this.requestId,
+      this.rating,
+      this.comment,
+      this.status,
+      this.moderatedAt,
+      this.moderatedBy,
+      this.revealedAt,
+      isFeatured,
+      this.createdAt,
+      now ?? new Date(),
     );
   }
 
@@ -138,12 +218,15 @@ export class ReviewEntity {
       userId,
       isAdmin,
       isReviewer: this.reviewerId === userId,
+      isReviewee: this.revieweeUserId === userId,
     };
   }
 
   /**
    * Who can view this review?
-   * - APPROVED reviews: anyone (public)
+   * - APPROVED reviews: anyone (public) — but see canRevealContentBy for the doble-ciego gate on
+   *   the counterpart's content specifically; this rule is about the review row in general
+   *   (moderation, own-authored review, admin).
    * - PENDING reviews: reviewer + admins
    * - REJECTED reviews: reviewer + admins
    */
@@ -155,6 +238,30 @@ export class ReviewEntity {
 
     // Pending or rejected: only reviewer or admin
     return ctx.isReviewer || ctx.isAdmin;
+  }
+
+  /**
+   * Whether the full content (rating/comment) of this review can be shown to ctx right now.
+   * - Admins and the review's own author always see it.
+   * - The reviewee (counterpart) only sees it once revealed (doble-ciego con timeout) — even
+   *   though they know their own review was submitted, they can't see what was written about them
+   *   until both parties rated or the reveal timeout elapsed.
+   * - Anyone else: only if approved and revealed (public display, e.g. featured comments).
+   */
+  canRevealContentBy(ctx: ReviewAuthContext): boolean {
+    if (ctx.isAdmin || ctx.isReviewer) return true;
+    return this.isApproved() && this.isRevealed();
+  }
+
+  /**
+   * Convenience wrapper around canRevealContentBy for callers outside this context (e.g. the
+   * requests presentation layer building myReview/counterpartReview) that only have a userId and
+   * an isAdmin flag, not a full ReviewAuthContext.
+   */
+  isVisibleTo(viewerUserId: string, isAdmin: boolean): boolean {
+    return this.canRevealContentBy(
+      this.buildAuthContext(viewerUserId, isAdmin),
+    );
   }
 
   /**
@@ -183,5 +290,13 @@ export class ReviewEntity {
     }
 
     return this.isPending();
+  }
+
+  /**
+   * Who can toggle the isFeatured flag (admin-curated highlight)?
+   * - Only admins, and only on an APPROVED review (nothing else is ever shown publicly).
+   */
+  canBeFeaturedBy(ctx: ReviewAuthContext): boolean {
+    return ctx.isAdmin && this.isApproved();
   }
 }

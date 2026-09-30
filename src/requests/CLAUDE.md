@@ -11,7 +11,11 @@ Docs: `docs/guides/PERMISSIONS_BY_ROLE.md`, `docs/guides/whatsapp/README.md`,
   `findByIdForInterestedProvider` (limited view), `buildAuthContext`, `findByClientId`,
   `findByProviderId`, `findPublicRequests`, `findAvailableForProfessional(tradeIds, city, zone)`
   (legacy name, serves any provider), `updateStatus`, `addRequestPhoto`, `removeRequestPhoto`,
-  `rateClient`, `getRequestStats`, `getAllRequestsForAdmin`.
+  `rateClient` (since the 2026-09-30 bidirectional reviews redesign, creates a
+  `Review(direction: PROVIDER_TO_CLIENT)` via `ReviewService.createProviderToClientReview`
+  cross-context instead of writing `Request.clientRating`/`clientRatingComment` — those flat
+  fields are now read-only legacy compat, see `src/reputation/CLAUDE.md`), `getRequestStats`,
+  `getAllRequestsForAdmin`.
 - `RequestInterestService`: `buildAuthContext`, `expressInterest`, `removeInterest`,
   `getInterestedProviders`, `hasExpressedInterest`, `getMyInterestedRequests`, `assignProvider`,
   `unassignProvider`.
@@ -140,6 +144,19 @@ PUBLISHED->EXPIRED, SENT->NO_RESPONSE, CONTACT_RELEASED->ABANDONED, FINISHED->CL
 stays enabled). Plazos: `REQUEST_EXPIRY_DAYS_*`. `IN_PROGRESS -> ABANDONED` is intentionally NOT applied (open
 question). `RequestStatusChangedEvent` now carries `changedByActorKind`; for `SYSTEM` the notification copy is
 neutral ("... pasó a ...") instead of "X movió ...".
+
+**Review nudge on CLOSED**: the existing `CLOSED_NOTICE_PROVIDER`/`CLOSED_NOTICE_CLIENT` ladder
+rungs (`notice_request_closed` template, days `[0, 3]`) already carry the "leave your rating"
+copy, so the 2026-09-30 bidirectional reviews redesign didn't add new templates/ladders for the
+review nudge — it added a gate: `IFollowUpRule.getReviewDirectionGate?()` (set on those two ladder
+defs in `follow-up-ladders.ts`, opposite direction each:
+`CLOSED_NOTICE_PROVIDER` gates on `PROVIDER_TO_CLIENT`, `CLOSED_NOTICE_CLIENT` gates on
+`CLIENT_TO_PROVIDER`). `FollowUpSchedulerJob.buildAndScheduleFollowUp` checks it via
+`ReviewService.hasReviewForRequestAndDirection` (cross-context, injected with
+`@Inject(forwardRef(() => ReviewService))` - see `src/reputation/CLAUDE.md`'s circular-dependency
+note) right after the `appliesTo` check, and skips scheduling once that party already rated -
+so the notice keeps firing at CLOSED like before, but stops nagging someone who already submitted
+their review.
 
 **AI reply classification**: `INTENT_DETECTION_PORT` (`domain/ports/intent-detection.port.ts`) is
 provided by `intent-detection.factory.ts` (mirrors `whatsapp-messaging.factory.ts`), switching on

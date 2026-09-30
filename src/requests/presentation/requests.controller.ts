@@ -37,6 +37,7 @@ import { RateClientDto } from '../application/dto/rate-client.dto';
 import { RequestResponseDto } from './dto/request-response.dto';
 import { InterestedProfessionalResponseDto } from './dto/interested-professional-response.dto';
 import { InterestedRequestDto } from './dto/interested-request-response.dto';
+import { ReviewService } from '../../reputation/application/services/review.service';
 
 @ApiTags('Requests')
 @ApiBearerAuth()
@@ -48,7 +49,36 @@ export class RequestsController {
     private readonly requestInterestService: RequestInterestService,
     private readonly professionalService: ProfessionalService,
     private readonly companyService: CompanyService,
+    private readonly reviewService: ReviewService,
   ) {}
+
+  /**
+   * Compose the myReview/counterpartReview + client.featuredReviews "extra" data for a single
+   * request's detail response (see RequestResponseDto.fromEntity). Only called for single-entity
+   * detail endpoints (GET/:id, PATCH/:id, POST/:id/rate-client), not list endpoints, to avoid an
+   * extra cross-context query per row.
+   */
+  private async buildReviewExtra(
+    entity: { id: string; clientId: string },
+    viewerUserId: string,
+  ): Promise<{
+    myReview: Awaited<
+      ReturnType<ReviewService['getRequestReviewsForViewer']>
+    >['myReview'];
+    counterpartReview: Awaited<
+      ReturnType<ReviewService['getRequestReviewsForViewer']>
+    >['counterpartReview'];
+    clientFeaturedReviews: Awaited<
+      ReturnType<ReviewService['findFeaturedClientReviews']>
+    >;
+  }> {
+    const [{ myReview, counterpartReview }, clientFeaturedReviews] =
+      await Promise.all([
+        this.reviewService.getRequestReviewsForViewer(entity.id, viewerUserId),
+        this.reviewService.findFeaturedClientReviews(entity.clientId),
+      ]);
+    return { myReview, counterpartReview, clientFeaturedReviews };
+  }
 
   /**
    * Resolve current user's provider profile (Professional or Company) and return
@@ -226,7 +256,8 @@ export class RequestsController {
 
     try {
       const entity = await this.requestService.findByIdForUser(id, ctx);
-      return RequestResponseDto.fromEntity(entity, ctx);
+      const extra = await this.buildReviewExtra(entity, user.id);
+      return RequestResponseDto.fromEntity(entity, ctx, extra);
     } catch (error: any) {
       if (error instanceof ForbiddenException && ctx.serviceProviderId) {
         try {
@@ -263,7 +294,8 @@ export class RequestsController {
       user.isAdminUser(),
     );
     const entity = await this.requestService.updateStatus(id, ctx, updateDto);
-    return RequestResponseDto.fromEntity(entity, ctx);
+    const extra = await this.buildReviewExtra(entity, user.id);
+    return RequestResponseDto.fromEntity(entity, ctx, extra);
   }
 
   // ==================== PHOTOS ====================
@@ -482,6 +514,7 @@ export class RequestsController {
       body.rating,
       body.comment,
     );
-    return RequestResponseDto.fromEntity(entity, ctx);
+    const extra = await this.buildReviewExtra(entity, user.id);
+    return RequestResponseDto.fromEntity(entity, ctx, extra);
   }
 }

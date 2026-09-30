@@ -53,6 +53,23 @@ export class UserService {
   }
 
   /**
+   * Recompute-and-store the cached client rating. Called by ReviewService
+   * (reputation context) after a PROVIDER_TO_CLIENT review is approved/removed — mirrors
+   * ProfessionalService.updateRating for the client side.
+   */
+  async updateClientRating(
+    userId: string,
+    averageRating: number,
+    totalReviews: number,
+  ): Promise<void> {
+    await this.userRepository.updateClientRating(
+      userId,
+      averageRating,
+      totalReviews,
+    );
+  }
+
+  /**
    * Find user by ID or throw NotFoundException
    * @param userId - User ID
    * @param includeProfiles - Whether to include client/professional profile info

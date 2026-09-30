@@ -1,4 +1,8 @@
-import { InteractionDirection, RequestStatus } from '@prisma/client';
+import {
+  InteractionDirection,
+  RequestStatus,
+  ReviewDirection,
+} from '@prisma/client';
 import { AUTO_CLOSED_STATUS_REASON } from '../../domain/entities/request-status.metadata';
 import type { RequestEntity } from '../../domain/entities/request.entity';
 import type { IFollowUpRule } from '../../domain/follow-up';
@@ -17,6 +21,8 @@ interface LadderDef {
   days: number[];
   escalatesWhenUnanswered?: boolean;
   appliesTo?: (request: RequestEntity) => boolean;
+  /** See IFollowUpRule.getReviewDirectionGate: skip once that direction's review already exists. */
+  reviewDirectionGate?: ReviewDirection;
 }
 
 const TO_CLIENT = InteractionDirection.TO_CLIENT;
@@ -77,19 +83,26 @@ export const FOLLOW_UP_LADDERS: LadderDef[] = [
     escalatesWhenUnanswered: true,
   },
   {
+    // "Dejale tu calificación a {contraparte}" — doubles as the post-CLOSED review nudge
+    // (REVIEWS_REDESIGN.md 4.2/5.1 item 7). Gated so it stops once the provider already rated the
+    // client (PROVIDER_TO_CLIENT review exists for this request), instead of nagging regardless.
     id: 'CLOSED_NOTICE_PROVIDER',
     status: RequestStatus.CLOSED,
     directions: [TO_PROVIDER],
     template: 'notice_request_closed',
     days: [0, 3],
+    reviewDirectionGate: ReviewDirection.PROVIDER_TO_CLIENT,
   },
   {
+    // Same nudge, other direction: stops once the client already rated the provider
+    // (CLIENT_TO_PROVIDER review exists for this request).
     id: 'CLOSED_NOTICE_CLIENT',
     status: RequestStatus.CLOSED,
     directions: [TO_CLIENT],
     template: 'notice_request_closed',
     days: [0, 3],
     appliesTo: (r) => !isAutoClosed(r),
+    reviewDirectionGate: ReviewDirection.CLIENT_TO_PROVIDER,
   },
   {
     id: 'AUTO_CLOSED_NOTICE',
@@ -162,6 +175,7 @@ export function buildFollowUpRules(
             escalatesWhenUnanswered:
               def.escalatesWhenUnanswered && step === def.days.length - 1,
             appliesTo: def.appliesTo,
+            reviewDirectionGate: def.reviewDirectionGate,
             interestRepository: def.withInterests
               ? interestRepository
               : undefined,

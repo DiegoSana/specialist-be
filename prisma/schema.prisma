@@ -38,7 +38,14 @@ model User {
   company                 Company?
   requests                Request[]                @relation("Client")
   reviewsGiven            Review[]                 @relation("Reviewer")
+  reviewsReceived         Review[]                 @relation("Reviewee")
   reviewsModerated        Review[]                 @relation("Moderator")
+  // Aggregate rating as a client (PROVIDER_TO_CLIENT reviews). Mirrors
+  // ServiceProvider.averageRating/totalReviews but lives on User since there is no Client
+  // aggregate root distinct from User for rating purposes (see REVIEWS_REDESIGN.md section 2:
+  // no client profile page). Only write path: ReviewService.updateClientRating.
+  clientAverageRating     Float                    @default(0)
+  clientTotalReviews      Int                      @default(0)
   inAppNotifications      InAppNotification[]
   notificationPreferences NotificationPreferences?
   notifications           Notification[]
@@ -215,7 +222,7 @@ model Request {
   client         User                   @relation("Client", fields: [clientId], references: [id], onDelete: Cascade)
   provider       ServiceProvider?       @relation("Provider", fields: [providerId], references: [id], onDelete: Cascade)
   trade          Trade?                 @relation(fields: [tradeId], references: [id])
-  review         Review?
+  reviews        Review[]
   interests      RequestInterest[]
   interactions   RequestInteraction[]
   attentionFlags RequestAttentionFlag[]
@@ -244,24 +251,47 @@ enum RequestInterestStatus {
   WITHDRAWN // Provider withdrew their interest
 }
 
+// Direction of a review: who is rating whom. CLIENT_TO_PROVIDER is the original review (client
+// rates the specialist after a CLOSED request); PROVIDER_TO_CLIENT is the specialist rating the
+// client, generalized from the old Request.clientRating/clientRatingComment flat fields (kept on
+// Request for read compat of legacy data, no longer written by new code — see REVIEWS_REDESIGN.md).
+enum ReviewDirection {
+  CLIENT_TO_PROVIDER
+  PROVIDER_TO_CLIENT
+}
+
 model Review {
-  id                String       @id @default(uuid())
+  id                String          @id @default(uuid())
+  direction         ReviewDirection @default(CLIENT_TO_PROVIDER)
   reviewerId        String
-  serviceProviderId String // ServiceProvider being reviewed
-  requestId         String       @unique // Review is always tied to a request
+  // User being reviewed — the provider's own user for CLIENT_TO_PROVIDER, the client for
+  // PROVIDER_TO_CLIENT. Always set, unlike serviceProviderId, so both directions share one
+  // "who is this about" field (used for the client rating aggregate and moderation display).
+  revieweeUserId    String
+  // ServiceProvider being reviewed. Only set for CLIENT_TO_PROVIDER (there is no ServiceProvider
+  // on the other side of a PROVIDER_TO_CLIENT review); nullable per REVIEWS_REDESIGN.md 4.1.
+  serviceProviderId String?
+  requestId         String // Review is always tied to a request; up to one per (requestId, direction)
   rating            Int
   comment           String?
-  status            ReviewStatus @default(PENDING)
+  status            ReviewStatus    @default(PENDING)
   moderatedAt       DateTime?
   moderatedBy       String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  // Doble-ciego con timeout: null until both directions' reviews are APPROVED, or the reveal
+  // timeout elapses since the first review on the request was created. See RevealReviewsJob.
+  revealedAt        DateTime?
+  // Curated by admin moderation UI (not algorithmic) — surfaced in the "client in context" view.
+  isFeatured        Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  serviceProvider ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
-  request         Request         @relation(fields: [requestId], references: [id])
-  reviewer        User            @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
-  moderator       User?           @relation("Moderator", fields: [moderatedBy], references: [id])
+  serviceProvider ServiceProvider? @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+  request         Request          @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  reviewer        User             @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewee        User             @relation("Reviewee", fields: [revieweeUserId], references: [id], onDelete: Cascade)
+  moderator       User?            @relation("Moderator", fields: [moderatedBy], references: [id])
 
+  @@unique([requestId, direction])
   @@map("reviews")
 }
 

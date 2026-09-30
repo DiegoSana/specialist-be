@@ -81,7 +81,7 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 - Expresar interés en solicitudes públicas (`POST /requests/:id/interest`).
 - Ver y retirar su interés (`GET/DELETE /requests/:id/interest`).
 - Ver solicitudes en las que está asignado (avanzar el estado: aceptar/rechazar `SENT`, `IN_PROGRESS`, marcar `FINISHED`/`INTERRUPTED`, agregar fotos).
-- Calificar al cliente al finalizar el trabajo (`POST /requests/:id/rate-client`) **solo en solicitudes donde está asignado** (el backend valida con `canRateClientBy`; solo el proveedor asignado puede calificar).
+- Calificar al cliente al finalizar el trabajo (`POST /requests/:id/rate-client`) **solo en solicitudes donde está asignado** (el backend valida con `canRateClientBy`; solo el proveedor asignado puede calificar). Desde el rediseño de reviews bidireccional (2026-09-30) esto crea un `Review(direction: PROVIDER_TO_CLIENT, status: PENDING)` — pasa por la misma moderación de admin que la reseña cliente→proveedor, y solo puede hacerse una vez por solicitud (`ConflictException` en el segundo intento).
 - Gestionar galería de su perfil (agregar/eliminar fotos).
 
 ### No puede
@@ -129,8 +129,13 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
   esta ruta requiere que el backend esté en **dev mode** (`NODE_ENV !== 'production'` **y**
   `WHATSAPP_PROVIDER=local`); si no, responde 404 (no 403) tanto porque el controller que la
   expone no se registra en producción como porque el servicio vuelve a validar en runtime.
-- Ver reviews pendientes de moderación (`GET /reviews/admin/pending`).
-- Aprobar o rechazar reviews (`POST /reviews/:id/approve`, `POST /reviews/:id/reject`).
+- Ver reviews pendientes de moderación, ambas direcciones (`GET /reviews/admin/pending`).
+- Aprobar o rechazar reviews (`POST /reviews/:id/approve`, `POST /reviews/:id/reject`). Aprobar una
+  `CLIENT_TO_PROVIDER` recalcula `ServiceProvider.averageRating/totalReviews`; aprobar una
+  `PROVIDER_TO_CLIENT` recalcula `User.clientAverageRating/clientTotalReviews` del cliente.
+- Destacar/quitar destaque de una reseña aprobada (`POST /reviews/:id/feature`, body
+  `{ isFeatured: boolean }`) — curaduría manual para los "featuredReviews" que ve el proveedor en
+  el detalle de una solicitud/interés, no hay algoritmo automático.
 - Ver y responder el canal de soporte por WhatsApp: listar conversaciones, ver el hilo completo,
   responder, resolver y reabrir (`GET /admin/support/conversations`,
   `GET /admin/support/conversations/:id`, `POST /admin/support/conversations/:id/reply`,
@@ -154,9 +159,11 @@ Un perfil **opera** (aparece en catálogo, puede recibir asignaciones) cuando:
 | **Request** (propia) | Ver, editar, fotos, estado, asignar, ver interesados | — | — | Ver, listar |
 | **Request** (pública sin asignar) | — | Ver, expresar interés | Ver, expresar interés | Ver |
 | **Request** (asignada a otro) | — | — | No ver | Ver |
-| **Review** (propia PENDING) | — | — | — | Moderar |
-| **Review** (propia) | Crear, editar, eliminar (si PENDING) | — | — | Ver, moderar |
+| **Review** (propia PENDING, cualquier dirección) | — | — | — | Moderar, destacar |
+| **Review** (propia) | Crear, editar, eliminar (si PENDING) | Crear (`rate-client`, si PENDING) | — | Ver, moderar |
 | **Review** (aprobada pública) | Ver | Ver | Ver | Ver |
+| **Review** (contenido de la contraparte, no revelada) | Oculto hasta reveal (doble-ciego) | Oculto hasta reveal | — | Ver siempre |
+| **Rating de cliente** (`User.clientAverageRating/totalReviews`) | — (visible al proveedor "en contexto", sin perfil propio) | Ver en detalle de solicitud/interés | Ver en detalle de solicitud/interés | Ver |
 | **Perfil profesional/empresa** | — | Editar el propio | Ver público | Ver, cambiar estado |
 | **Notificaciones** | Propias | Propias | Propias | Listar todas, reenviar |
 | **Usuarios** | Ver/editar el propio | Idem | Idem | Listar, ver, cambiar estado |

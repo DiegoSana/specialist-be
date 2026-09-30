@@ -1,3 +1,4 @@
+import { ReviewDirection } from '@prisma/client';
 import { ReviewEntity } from '../../domain/entities/review.entity';
 import { ReviewStatus } from '../../domain/value-objects/review-status';
 
@@ -5,7 +6,9 @@ export class PrismaReviewMapper {
   static toDomain(review: any): ReviewEntity {
     const entity = new ReviewEntity(
       review.id,
+      review.direction as ReviewDirection,
       review.reviewerId,
+      review.revieweeUserId,
       review.serviceProviderId,
       review.requestId,
       review.rating,
@@ -13,6 +16,8 @@ export class PrismaReviewMapper {
       review.status as ReviewStatus,
       review.moderatedAt,
       review.moderatedBy,
+      review.revealedAt,
+      review.isFeatured ?? false,
       review.createdAt,
       review.updatedAt,
     );
@@ -26,7 +31,16 @@ export class PrismaReviewMapper {
       };
     }
 
-    // Map ServiceProvider with professional or company data
+    if (review.reviewee) {
+      (entity as any).reviewee = {
+        id: review.reviewee.id,
+        firstName: review.reviewee.firstName,
+        lastName: review.reviewee.lastName,
+        email: review.reviewee.email,
+      };
+    }
+
+    // Map ServiceProvider with professional or company data (CLIENT_TO_PROVIDER only)
     if (review.serviceProvider) {
       (entity as any).serviceProvider = {
         id: review.serviceProvider.id,
@@ -69,15 +83,19 @@ export class PrismaReviewMapper {
   }
 
   static toPersistenceCreate(input: {
+    direction: ReviewDirection;
     reviewerId: string;
-    serviceProviderId: string;
+    revieweeUserId: string;
+    serviceProviderId: string | null;
     rating: number;
     comment: string | null;
     requestId: string;
     status?: ReviewStatus;
   }): Record<string, unknown> {
     return {
+      direction: input.direction,
       reviewerId: input.reviewerId,
+      revieweeUserId: input.revieweeUserId,
       serviceProviderId: input.serviceProviderId,
       requestId: input.requestId,
       rating: input.rating,
@@ -92,6 +110,8 @@ export class PrismaReviewMapper {
     status?: ReviewStatus;
     moderatedAt?: Date;
     moderatedBy?: string;
+    revealedAt?: Date | null;
+    isFeatured?: boolean;
   }): Record<string, unknown> {
     return {
       ...(input.rating !== undefined && { rating: input.rating }),
@@ -103,6 +123,8 @@ export class PrismaReviewMapper {
       ...(input.moderatedBy !== undefined && {
         moderatedBy: input.moderatedBy,
       }),
+      ...(input.revealedAt !== undefined && { revealedAt: input.revealedAt }),
+      ...(input.isFeatured !== undefined && { isFeatured: input.isFeatured }),
     };
   }
 }

@@ -22,6 +22,17 @@ export interface UserRepository {
    * La implementación se encarga de create vs update.
    */
   save(user: UserEntity): Promise<UserEntity>;
+
+  /**
+   * Narrow update of the cached client rating (mirrors ProfessionalRepository.updateRating).
+   * Called by ReviewService after a PROVIDER_TO_CLIENT review is approved/removed, not through
+   * the generic save() path so an unrelated profile save can never accidentally reset it.
+   */
+  updateClientRating(
+    userId: string,
+    averageRating: number,
+    totalReviews: number,
+  ): Promise<void>;
 }
 
 // Token for dependency injection

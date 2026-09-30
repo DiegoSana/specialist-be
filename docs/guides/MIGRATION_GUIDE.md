@@ -295,3 +295,44 @@ Main models:
 ### Recent migration: schema/migration drift fix (2026-09)
 
 `20260921180000_fix_schema_migration_drift` adds objects that existed in `schema.prisma` (and in databases built with `db push`) but were never created by any migration: `ReviewStatus` enum, `requests.clientRating`/`clientRatingComment`, `reviews.status`/`moderatedAt`/`moderatedBy`, the `reviews_requestId_fkey`/`reviews_moderatedBy_fkey` constraints, and the removal of `request_interests_serviceProviderId_idx`. Every statement is idempotent (`IF NOT EXISTS` / guarded), so it is a no-op on databases that already have them (Fly/Supabase, existing local DBs) and completes a fresh database built only from migrations. Verified with `prisma migrate diff --from-migrations ... --to-schema-datamodel` against a scratch shadow DB (empty diff afterwards). Rollback: none needed (additive/idempotent); to undo on a scratch DB, drop the added columns manually.
+
+### Recent migration: bidirectional reviews (2026-09-30)
+
+`20260930191429_add_bidirectional_reviews` generalizes `Review` to support both directions
+(`ReviewDirection` enum `CLIENT_TO_PROVIDER`/`PROVIDER_TO_CLIENT`), per
+`/var/www/specialist/REVIEWS_REDESIGN.md`:
+
+- Schema: new `direction` column (default `CLIENT_TO_PROVIDER` for existing rows), new
+  `revieweeUserId` (NOT NULL — the provider's own user for `CLIENT_TO_PROVIDER`, the client for
+  `PROVIDER_TO_CLIENT`), `serviceProviderId` becomes nullable (only set for
+  `CLIENT_TO_PROVIDER`), new `revealedAt`/`isFeatured`, unique constraint moves from `requestId`
+  alone to `(requestId, direction)`, `onDelete: Cascade` added from `Review` to `Request`. New
+  `User.clientAverageRating`/`clientTotalReviews` columns.
+- **Data migration** (hand-written SQL in the same migration file, since
+  `revieweeUserId NOT NULL` can't be added blind against existing rows — see "Never" above):
+  1. Backfills `revieweeUserId` for every pre-existing review (all implicitly
+     `CLIENT_TO_PROVIDER`) by resolving the reviewed `ServiceProvider`'s `Professional`/`Company`
+     owner.
+  2. Backfills `Request.clientRating`/`clientRatingComment` into
+     `Review(direction: PROVIDER_TO_CLIENT, status: APPROVED, revealedAt: Request.updatedAt)` for
+     every request that has a legacy rating (per the product decision: backfill legacy as already
+     `APPROVED`/revealed, so the client aggregate doesn't start at zero). Idempotent (`NOT
+     EXISTS` guard) in case of a retried partial deploy.
+  3. Recomputes `User.clientAverageRating`/`clientTotalReviews` from the reviews backfilled in
+     step 2.
+  `Request.clientRating`/`clientRatingComment` columns are **kept** for read compat; no code path
+  writes them after this migration (`RequestService.rateClient` now creates a `Review` via
+  `ReviewService.createProviderToClientReview` instead).
+- Verified locally: ran via `prisma migrate deploy` against the dev DB (`especialistas`, the db
+  the `app` compose service actually uses — see the `DATABASE_URL`/`POSTGRES_DB` note in
+  `docker-compose.dev.yml`, not the stale `specialistas` name in some local `.env` files), backfill
+  produced the expected `PROVIDER_TO_CLIENT`/`APPROVED` row(s) and recomputed
+  `clientAverageRating`/`clientTotalReviews`, checked with `psql`.
+- Rollback: not additive — a manual rollback would need to drop `direction`/`revieweeUserId`/
+  `revealedAt`/`isFeatured` from `reviews`, drop `clientAverageRating`/`clientTotalReviews` from
+  `users`, delete the backfilled `PROVIDER_TO_CLIENT` rows (`WHERE direction =
+  'PROVIDER_TO_CLIENT' AND "moderatedBy" IS NULL AND status = 'APPROVED'` is a reasonable filter
+  for the backfilled-not-real-moderation ones, though not watertight if a real admin also
+  approved a `PROVIDER_TO_CLIENT` review without moderating — i.e. never, since approval always
+  sets `moderatedBy`), and restore the old `requestId`-only unique constraint. Not implemented as
+  a down-migration; redo from a pre-migration backup if ever needed in production.
