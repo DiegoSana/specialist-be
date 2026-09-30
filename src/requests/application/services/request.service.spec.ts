@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { RequestService } from './request.service';
 import { REQUEST_REPOSITORY } from '../../domain/repositories/request.repository';
@@ -12,6 +13,7 @@ import { ProfessionalService } from '../../../profiles/application/services/prof
 import { CompanyService } from '../../../profiles/application/services/company.service';
 import { UserService } from '../../../identity/application/services/user.service';
 import { ProfileActivationService } from '../../../profiles/application/services/profile-activation.service';
+import { ReviewService } from '../../../reputation/application/services/review.service';
 import {
   createMockUser,
   createMockProfessional,
@@ -31,6 +33,7 @@ describe('RequestService', () => {
   let mockProfileActivationService: any;
   let mockRequestInterestRepository: any;
   let mockEventBus: any;
+  let mockReviewService: any;
 
   // Helper to create auth context
   const createAuthContext = (
@@ -95,6 +98,10 @@ describe('RequestService', () => {
       publish: jest.fn(),
     };
 
+    mockReviewService = {
+      createProviderToClientReview: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RequestService,
@@ -115,6 +122,7 @@ describe('RequestService', () => {
           provide: ProfileActivationService,
           useValue: mockProfileActivationService,
         },
+        { provide: ReviewService, useValue: mockReviewService },
       ],
     }).compile();
 
@@ -810,20 +818,19 @@ describe('RequestService', () => {
   });
 
   describe('rateClient', () => {
-    it('should allow assigned professional to rate client after completion', async () => {
+    it('should allow assigned professional to rate client after completion, delegating to ReviewService', async () => {
       const request = createMockRequest({
+        id: 'req-123',
         clientId: 'client-123',
         providerId: 'service-provider-123',
         status: RequestStatus.CLOSED,
         clientRating: null,
       });
-      const ratedRequest = createMockRequest({
-        clientRating: 5,
-        clientRatingComment: 'Great client!',
-      });
 
       mockRequestRepository.findById.mockResolvedValue(request);
-      mockRequestRepository.save.mockResolvedValue(ratedRequest);
+      mockReviewService.createProviderToClientReview.mockResolvedValue({
+        id: 'review-1',
+      });
 
       const ctx = createAuthContext('prof-user', 'service-provider-123');
       const result = await service.rateClient(
@@ -833,7 +840,16 @@ describe('RequestService', () => {
         'Great client!',
       );
 
-      expect(result.clientRating).toBe(5);
+      expect(
+        mockReviewService.createProviderToClientReview,
+      ).toHaveBeenCalledWith('prof-user', {
+        requestId: 'req-123',
+        rating: 5,
+        comment: 'Great client!',
+      });
+      // Request itself is unchanged: clientRating/clientRatingComment are legacy-only now.
+      expect(result).toBe(request);
+      expect(mockRequestRepository.save).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if request is not done', async () => {
@@ -851,19 +867,21 @@ describe('RequestService', () => {
       );
     });
 
-    it('should throw BadRequestException if already rated', async () => {
+    it('should propagate ConflictException from ReviewService if client was already rated for this request', async () => {
       const request = createMockRequest({
         clientId: 'client-123',
         providerId: 'service-provider-123',
         status: RequestStatus.CLOSED,
-        clientRating: 4,
       });
 
       mockRequestRepository.findById.mockResolvedValue(request);
+      mockReviewService.createProviderToClientReview.mockRejectedValue(
+        new ConflictException('Client has already been rated for this request'),
+      );
 
       const ctx = createAuthContext('prof-user', 'service-provider-123');
       await expect(service.rateClient('req-123', ctx, 5)).rejects.toThrow(
-        BadRequestException,
+        ConflictException,
       );
     });
 

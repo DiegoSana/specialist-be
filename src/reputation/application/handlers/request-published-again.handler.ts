@@ -1,10 +1,6 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RequestStatus } from '@prisma/client';
 import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
-import {
-  ReviewRepository,
-  REVIEW_REPOSITORY,
-} from '../../domain/repositories/review.repository';
 import { RequestStatusChangedEvent } from '../../../requests/domain/events/request-status-changed.event';
 import { ReviewService } from '../services/review.service';
 
@@ -15,22 +11,20 @@ import { ReviewService } from '../services/review.service';
  * meaning the request is restarting its engagement from scratch (a client can unassign and later
  * reassign a different provider to the same request).
  *
- * `Review.requestId` is unique — a request can have at most one review ever — so a leftover
- * review from the previous provider would otherwise permanently block the client from reviewing
- * whoever gets assigned next. This handler deletes that stale review, if one exists, so a
- * freshly-reassigned request starts with a clean slate for reviews too (clientRating/
- * clientRatingComment are reset by the two call sites themselves, not here).
+ * `Review(requestId, direction)` is unique per direction — a request can have at most one review
+ * per direction, ever — so leftover reviews from the previous engagement (either direction) would
+ * otherwise permanently block reviewing whoever gets assigned next, or (for the client-rating
+ * direction) survive into a relationship with a different provider. This handler deletes both, if
+ * present, so a freshly-reassigned request starts with a clean slate for reviews too
+ * (clientRating/clientRatingComment, the pre-redesign flat fields, are reset by the two `requests`
+ * call sites themselves, not here — see src/requests/CLAUDE.md).
  *
- * Lives in `reputation` (not `requests`) to avoid a circular module dependency —
- * `ReputationModule` already imports `RequestsModule`, not the other way around — mirroring
- * `RequestAttentionFlaggedHandler`'s cross-context pattern in `notifications`.
+ * Lives in `reputation` (not `requests`) to avoid a circular module dependency at the wrong
+ * layer — mirroring `RequestAttentionFlaggedHandler`'s cross-context pattern in `notifications`.
  *
- * Deletes via `REVIEW_REPOSITORY` directly rather than `ReviewService.delete`, since that method
- * enforces reviewer-only authorization and refuses to delete an already-moderated review — the
- * wrong shape for this system cleanup, which must remove a stale review regardless of its status.
- * It does, however, call `ReviewService.updateServiceProviderRating` afterward (the same
- * recalculation `delete`/`approve` already trigger) so a deleted APPROVED review doesn't leave the
- * provider's cached averageRating/totalReviews stale.
+ * Delegates to `ReviewService.deleteAllForRequest`, which bypasses reviewer-only authorization
+ * (the wrong shape for this system cleanup, which must remove reviews regardless of status) and
+ * recomputes whichever rating (ServiceProvider or User.clientAverageRating) was affected.
  */
 @Injectable()
 export class RequestPublishedAgainHandler implements OnModuleInit {
@@ -38,8 +32,6 @@ export class RequestPublishedAgainHandler implements OnModuleInit {
 
   constructor(
     @Inject(EVENT_BUS) private readonly eventBus: any,
-    @Inject(REVIEW_REPOSITORY)
-    private readonly reviewRepository: ReviewRepository,
     private readonly reviewService: ReviewService,
   ) {}
 
@@ -65,16 +57,7 @@ export class RequestPublishedAgainHandler implements OnModuleInit {
     }
 
     try {
-      const { requestId } = event.payload;
-      const existingReview =
-        await this.reviewRepository.findByRequestId(requestId);
-      if (!existingReview) {
-        return;
-      }
-      await this.reviewRepository.delete(existingReview.id);
-      await this.reviewService.updateServiceProviderRating(
-        existingReview.serviceProviderId,
-      );
+      await this.reviewService.deleteAllForRequest(event.payload.requestId);
     } catch (err) {
       this.logger.error(
         `Failed handling ${event.name} (requestId=${event.payload.requestId})`,

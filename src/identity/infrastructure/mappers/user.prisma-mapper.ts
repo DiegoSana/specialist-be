@@ -31,6 +31,8 @@ export class PrismaUserMapper {
     emailVerified?: boolean | null;
     whatsappOptedOut?: boolean | null;
     whatsappOptedOutAt?: Date | null;
+    clientAverageRating?: number | null;
+    clientTotalReviews?: number | null;
   }): UserEntity {
     return new UserEntity(
       user.id,
@@ -54,6 +56,8 @@ export class PrismaUserMapper {
       user.emailVerified ?? false,
       user.whatsappOptedOut ?? false,
       user.whatsappOptedOutAt ?? null,
+      user.clientAverageRating ?? 0,
+      user.clientTotalReviews ?? 0,
     );
   }
 

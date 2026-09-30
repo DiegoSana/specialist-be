@@ -58,6 +58,7 @@ import { MessagingModule } from '../shared/infrastructure/messaging/messaging.mo
 import { IdentityModule } from '../identity/identity.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { SupportModule } from '../support/support.module';
+import { ReputationModule } from '../reputation/reputation.module';
 
 @Module({
   imports: [
@@ -66,6 +67,10 @@ import { SupportModule } from '../support/support.module';
     forwardRef(() => IdentityModule),
     forwardRef(() => ProfilesModule),
     SupportModule,
+    // Circular: RequestService.rateClient delegates to ReviewService (Review creation), and
+    // ReputationModule already imports RequestsModule (forwardRef on both sides) — see
+    // ReputationModule's doc comment.
+    forwardRef(() => ReputationModule),
   ],
   controllers: [
     RequestsController,

@@ -1,4 +1,4 @@
-import { InteractionDirection } from '@prisma/client';
+import { InteractionDirection, ReviewDirection } from '@prisma/client';
 import { RequestEntity } from '../../../domain/entities/request.entity';
 import { REQUEST_STATUS_LABELS_ES } from '../../../domain/entities/request-status.metadata';
 import type { FollowUpPayload, FollowUpQuery } from '../../../domain/follow-up';
@@ -16,6 +16,8 @@ export interface LadderRuleConfig {
   step: number;
   escalatesWhenUnanswered?: boolean;
   appliesTo?: (request: RequestEntity) => boolean;
+  /** See IFollowUpRule.getReviewDirectionGate. */
+  reviewDirectionGate?: ReviewDirection;
   /** Needed only by the PENDING_WITH_INTERESTS query (lists interested providers). */
   interestRepository?: RequestInterestRepository;
 }
@@ -44,6 +46,10 @@ export class LadderFollowUpRule extends AbstractFollowUpRule {
 
   escalatesWhenUnanswered(): boolean {
     return !!this.config.escalatesWhenUnanswered;
+  }
+
+  getReviewDirectionGate(): ReviewDirection | undefined {
+    return this.config.reviewDirectionGate;
   }
 
   async buildPayload(request: RequestEntity): Promise<FollowUpPayload> {

@@ -131,24 +131,34 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 | `GET` | `/requests/:id/interest` | Check my interest status | ✅ Provider |
 | `GET` | `/requests/:id/interests` | List interested providers (`WITHDRAWN` ones are excluded; no `phone`/`whatsapp` — contact only releases once the client chooses one, see `canViewCounterpartContactBy`) | ✅ |
 | `POST` | `/requests/:id/assign` | Assign provider (client) | ✅ |
+| `POST` | `/requests/:id/rate-client` | Provider rates the client after CLOSED. Since the bidirectional reviews redesign (2026-09-30) this creates a `Review(direction: PROVIDER_TO_CLIENT, status: PENDING)` — same moderation flow as `POST /reviews` — instead of writing `Request.clientRating`/`clientRatingComment` directly. Body: `{ rating: 1-5, comment?: string }` | ✅ Assigned provider |
 
 > **Note**: "Provider" = Professional or Company. Both can view available requests, express interest, and be assigned to jobs.
+>
+> **`GET`/`PATCH /requests/:id` and `POST /requests/:id/rate-client` responses** now include `myReview`/`counterpartReview` (see the Reputation section below) instead of relying on the deprecated flat `clientRating`/`clientRatingComment` fields, and `client: { averageRating, totalReviews, featuredReviews: [...] }` on the nested client object (populated on these single-request detail responses, not on list endpoints, to avoid a query per row) — the "client in context" view a provider sees on a request/interest, per the product decision not to ship a dedicated client profile page.
 
 ### ⭐ Reputation (`/reviews`)
 
+Reviews are bidirectional since 2026-09-30: `direction` (`CLIENT_TO_PROVIDER` | `PROVIDER_TO_CLIENT`) is always inferred server-side from the caller's role — it is never accepted in a request body, to prevent spoofing. At most one review per `(requestId, direction)`.
+
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/reviews` | Create review (status: PENDING) | ✅ |
-| `GET` | `/reviews?requestId=xxx` | Get review by request | ✅ |
+| `POST` | `/reviews` | Create a CLIENT_TO_PROVIDER review (status: PENDING) | ✅ Client |
+| `GET` | `/reviews?requestId=xxx&direction=xxx` | Get review by request + direction (`direction` optional, defaults to `CLIENT_TO_PROVIDER` for backward compat) | ✅ |
 | `GET` | `/reviews/:id` | Get review by ID | ✅ |
-| `PATCH` | `/reviews/:id` | Update review | ✅ |
-| `DELETE` | `/reviews/:id` | Delete review | ✅ |
+| `PATCH` | `/reviews/:id` | Update review (author, while PENDING) | ✅ |
+| `DELETE` | `/reviews/:id` | Delete review (author, while PENDING) | ✅ |
 | `GET` | `/professionals/:id/reviews` | Get professional's approved reviews | ❌ |
-| `GET` | `/reviews/admin/pending` | Get pending reviews (Admin) | ✅ Admin |
-| `POST` | `/reviews/:id/approve` | Approve review (Admin) | ✅ Admin |
+| `GET` | `/reviews/admin/pending` | Get pending reviews, both directions (Admin) | ✅ Admin |
+| `POST` | `/reviews/:id/approve` | Approve review (Admin). For `CLIENT_TO_PROVIDER` recomputes `ServiceProvider.averageRating/totalReviews`; for `PROVIDER_TO_CLIENT` recomputes `User.clientAverageRating/clientTotalReviews`. Also reveals both of the request's reviews immediately if the other direction is already APPROVED (doble-ciego con timeout, immediate-reveal branch) | ✅ Admin |
 | `POST` | `/reviews/:id/reject` | Reject review (Admin) | ✅ Admin |
+| `POST` | `/reviews/:id/feature` | Toggle `isFeatured` on an APPROVED review — curated highlight, not algorithmic (Admin). Body: `{ isFeatured: boolean }` | ✅ Admin |
 
-> **Note**: Reviews are moderated. New reviews have `PENDING` status and only `APPROVED` reviews are visible publicly and count towards the professional's rating. See [Review Moderation Guide](./guides/REVIEW_MODERATION.md).
+> **Note**: Reviews are moderated. New reviews have `PENDING` status and only `APPROVED` reviews are visible publicly and count towards the reviewee's rating. See [Review Moderation Guide](./guides/REVIEW_MODERATION.md) (pending a follow-up refresh for the bidirectional shape).
+>
+> **Doble-ciego con timeout**: neither party can see the *content* of the other's review (`ReviewResponseDto`/`myReview`/`counterpartReview`) until both directions are `APPROVED`, or the reveal timeout elapses since the first review on the request was submitted (`REVIEW_REVEAL_TIMEOUT_DAYS`, default 14 days) — whichever comes first. Gated by `ReviewEntity.isVisibleTo(viewerUserId, isAdmin)`; the review's own author can always see their own submission (just not the counterpart's). Revealing on timeout is a background job (`RevealReviewsJob`, off by default — see `REVIEW_REVEAL_ENABLED` in `docs/guides/ENVIRONMENT_VARIABLES.md`); revealing on both-approved is immediate (synchronous, in `ReviewService.approve`).
+>
+> **Legacy data**: requests closed before 2026-09-30 had `Request.clientRating`/`clientRatingComment` written directly; these were backfilled into `Review(direction: PROVIDER_TO_CLIENT, status: APPROVED, revealedAt: Request.updatedAt)` rows by the `add_bidirectional_reviews` migration. The flat columns remain on `Request` for read compat but are no longer written by any code path.
 
 ### 🔔 Notifications (`/notifications`)
 
@@ -176,7 +186,7 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 | `GET` | `/admin/professionals` | List all professionals (paginated) |
 | `PUT` | `/admin/professionals/:id/status` | Update professional status |
 | `GET` | `/admin/requests` | List all requests (paginated; optional filters `?status=`, `?title=`, `?client=` (name/email), `?provider=` (professional or company name) - text filters are case-insensitive, every word must match). Each item's `provider` is `{ id, type: 'PROFESSIONAL' \| 'COMPANY', name } \| null` |
-| `GET` | `/admin/requests/:id` | Full request detail: `client`, `trade`, a unified `provider` (with `trades` for Professional/Company), `interestedProviders` (`InterestedProfessionalResponseDto[]`), `isPublic: boolean`, `review: { id, rating, comment, status } \| null` (the request's single review via `ReviewService.findByRequestId`, `null` if none yet), and `clientRating: number \| null` / `clientRatingComment: string \| null` (the provider's rating of the client, plain scalars copied straight from the entity - independent of `review` above and has no moderation status). No participant-only ownership check - any admin can view any request |
+| `GET` | `/admin/requests/:id` | Full request detail: `client`, `trade`, a unified `provider` (with `trades` for Professional/Company), `interestedProviders` (`InterestedProfessionalResponseDto[]`), `isPublic: boolean`, `review: { id, rating, comment, status } \| null` (the client's own CLIENT_TO_PROVIDER review via `ReviewService.getRequestReviewsForViewer(requestId, request.clientId).myReview`, `null` if none yet — unmoderated visibility, admin sees it regardless of `revealedAt`), and `clientRating: number \| null` / `clientRatingComment: string \| null` (deprecated flat fields, read-only compat for pre-redesign requests — independent of `review` above). No participant-only ownership check - any admin can view any request |
 | `PUT` | `/admin/requests/:id/status` | Update request status. Body: `{ status: RequestStatus, statusReason?: string }` (`RequestStatus` is one of the 15 states, `statusReason` max 500 chars). Admins bypass the normal transition table (`RequestEntity.canChangeStatusBy` grants an unconditional admin bypass), so this can move a request to any status **except** one of the 11 provider-required statuses (`SENT, CONTACT_RELEASED, IN_PROGRESS, FINISHED, CLOSED, UNDER_REVIEW, NOT_COMPLETED, INTERRUPTED, ABANDONED, REJECTED, NO_RESPONSE`) while `providerId` is `null` — 400 `Cannot set status to <status>: no provider is assigned to this request` (same guard applies to `PATCH /requests/:id`; see `PROVIDER_REQUIRED_STATUSES` in `request.entity.ts`). Response: full `RequestResponseDto` (same shape as `PATCH /requests/:id`), built with an admin viewer context so contact fields are shown |
 | `GET` | `/admin/whatsapp/config` | Get `{ devMode, availableFollowUpRules }` (always present, any provider) |
 | `GET` | `/admin/whatsapp/conversations` | List WhatsApp conversations (paginated, optional `search`) |

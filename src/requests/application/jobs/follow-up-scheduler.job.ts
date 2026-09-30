@@ -32,6 +32,7 @@ import { FollowUpQueryExecutor } from '../follow-up/follow-up-query-executor';
 import { RequestEntity } from '../../domain/entities/request.entity';
 import { RequestAttentionService } from '../services/request-attention.service';
 import { SupportConversationService } from '../../../support/application/services/support-conversation.service';
+import { ReviewService } from '../../../reputation/application/services/review.service';
 
 export const FOLLOW_UP_RULES = Symbol('FOLLOW_UP_RULES');
 
@@ -60,6 +61,8 @@ export class FollowUpSchedulerJob {
     private readonly companyService: CompanyService,
     private readonly attentionService: RequestAttentionService,
     private readonly supportConversationService: SupportConversationService,
+    @Inject(forwardRef(() => ReviewService))
+    private readonly reviewService: ReviewService,
   ) {}
 
   /**
@@ -260,6 +263,17 @@ export class FollowUpSchedulerJob {
         scheduled: false,
         reason: 'Rule does not apply to this request',
       };
+    }
+
+    const reviewGate = rule.getReviewDirectionGate?.();
+    if (
+      reviewGate &&
+      (await this.reviewService.hasReviewForRequestAndDirection(
+        request.id,
+        reviewGate,
+      ))
+    ) {
+      return { scheduled: false, reason: 'Already rated' };
     }
 
     const ladder = rule.getLadder?.();

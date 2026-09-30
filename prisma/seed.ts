@@ -1,4 +1,4 @@
-import { PrismaClient, UserStatus, ProfessionalStatus, CompanyStatus, RequestStatus, RequestInterestStatus, AuthProvider, ReviewStatus } from '@prisma/client';
+import { PrismaClient, UserStatus, ProfessionalStatus, CompanyStatus, RequestStatus, RequestInterestStatus, AuthProvider, ReviewStatus, ReviewDirection } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -870,7 +870,9 @@ async function main() {
   console.log('⭐ Creating reviews...');
   await prisma.review.create({
     data: {
+      direction: ReviewDirection.CLIENT_TO_PROVIDER,
       reviewerId: cliente4.id,
+      revieweeUserId: electricista.id,
       serviceProviderId: electricista.professional!.serviceProviderId,
       requestId: request5.id,
       rating: 5,
@@ -881,7 +883,9 @@ async function main() {
 
   await prisma.review.create({
     data: {
+      direction: ReviewDirection.CLIENT_TO_PROVIDER,
       reviewerId: cliente3.id,
+      revieweeUserId: carpintero.id,
       serviceProviderId: carpintero.professional!.serviceProviderId,
       requestId: request4.id,
       rating: 5,
@@ -906,7 +910,9 @@ async function main() {
 
   await prisma.review.create({
     data: {
+      direction: ReviewDirection.CLIENT_TO_PROVIDER,
       reviewerId: cliente2.id,
+      revieweeUserId: serviciostecnicos.id,
       serviceProviderId: serviciostecnicos.company!.serviceProviderId,
       requestId: requestCompanyDone.id,
       rating: 5,
@@ -918,7 +924,9 @@ async function main() {
   // Review for constructora
   await prisma.review.create({
     data: {
+      direction: ReviewDirection.CLIENT_TO_PROVIDER,
       reviewerId: cliente3.id,
+      revieweeUserId: constructora.id,
       serviceProviderId: constructora.company!.serviceProviderId,
       requestId: requestToCompany.id,
       rating: 4,
@@ -943,7 +951,9 @@ async function main() {
 
   await prisma.review.create({
     data: {
+      direction: ReviewDirection.CLIENT_TO_PROVIDER,
       reviewerId: cliente1.id,
+      revieweeUserId: multioficio.id,
       serviceProviderId: multioficio.professional!.serviceProviderId,
       requestId: requestMultioficioDone.id,
       rating: 5,

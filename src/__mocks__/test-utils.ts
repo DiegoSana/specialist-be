@@ -7,6 +7,7 @@ import {
   AuthProvider,
   ProfessionalStatus,
   RequestStatus,
+  ReviewDirection,
 } from '@prisma/client';
 import { UserEntity } from '../identity/domain/entities/user.entity';
 import {
@@ -14,6 +15,8 @@ import {
   TradeInfo,
 } from '../profiles/domain/entities/professional.entity';
 import { RequestEntity } from '../requests/domain/entities/request.entity';
+import { ReviewEntity } from '../reputation/domain/entities/review.entity';
+import { ReviewStatus } from '../reputation/domain/value-objects/review-status';
 
 // Factory for creating test users
 export const createMockUser = (
@@ -39,6 +42,8 @@ export const createMockUser = (
     emailVerified: boolean;
     whatsappOptedOut: boolean;
     whatsappOptedOutAt: Date | null;
+    clientAverageRating: number;
+    clientTotalReviews: number;
   }> = {},
 ): UserEntity => {
   const defaults = {
@@ -63,6 +68,8 @@ export const createMockUser = (
     emailVerified: false,
     whatsappOptedOut: false,
     whatsappOptedOutAt: null,
+    clientAverageRating: 0,
+    clientTotalReviews: 0,
     ...overrides,
   };
 
@@ -88,6 +95,8 @@ export const createMockUser = (
     defaults.emailVerified,
     defaults.whatsappOptedOut,
     defaults.whatsappOptedOutAt,
+    defaults.clientAverageRating,
+    defaults.clientTotalReviews,
   );
 };
 
@@ -224,6 +233,64 @@ export const createMockRequest = (
     defaults.clientRating,
     defaults.clientRatingComment,
     defaults.statusReason,
+    defaults.createdAt,
+    defaults.updatedAt,
+  );
+};
+
+// Factory for creating test reviews
+export const createMockReview = (
+  overrides: Partial<{
+    id: string;
+    direction: ReviewDirection;
+    reviewerId: string;
+    revieweeUserId: string;
+    serviceProviderId: string | null;
+    requestId: string;
+    rating: number;
+    comment: string | null;
+    status: ReviewStatus;
+    moderatedAt: Date | null;
+    moderatedBy: string | null;
+    revealedAt: Date | null;
+    isFeatured: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = {},
+): ReviewEntity => {
+  const defaults = {
+    id: 'review-123',
+    direction: ReviewDirection.CLIENT_TO_PROVIDER,
+    reviewerId: 'user-123',
+    revieweeUserId: 'provider-user-123',
+    serviceProviderId: 'service-provider-123',
+    requestId: 'request-123',
+    rating: 5,
+    comment: 'Great work!',
+    status: ReviewStatus.PENDING,
+    moderatedAt: null,
+    moderatedBy: null,
+    revealedAt: null,
+    isFeatured: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+
+  return new ReviewEntity(
+    defaults.id,
+    defaults.direction,
+    defaults.reviewerId,
+    defaults.revieweeUserId,
+    defaults.serviceProviderId,
+    defaults.requestId,
+    defaults.rating,
+    defaults.comment,
+    defaults.status,
+    defaults.moderatedAt,
+    defaults.moderatedBy,
+    defaults.revealedAt,
+    defaults.isFeatured,
     defaults.createdAt,
     defaults.updatedAt,
   );

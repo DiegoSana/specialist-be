@@ -18,6 +18,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { ReviewDirection } from '@prisma/client';
 import { JwtAuthGuard } from '../../identity/infrastructure/guards/jwt-auth.guard';
 import { AdminGuard } from '../../shared/presentation/guards/admin.guard';
 import { CurrentUser } from '../../shared/presentation/decorators/current-user.decorator';
@@ -25,6 +26,7 @@ import { UserEntity } from '../../identity/domain/entities/user.entity';
 import { ReviewService } from '../application/services/review.service';
 import { CreateReviewDto } from '../application/dto/create-review.dto';
 import { UpdateReviewDto } from '../application/dto/update-review.dto';
+import { FeatureReviewDto } from '../application/dto/feature-review.dto';
 import { Public } from '../../shared/presentation/decorators/public.decorator';
 import { ReviewResponseDto, PublicReviewDto } from './dto/review-response.dto';
 
@@ -75,6 +77,12 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get review by request ID' })
   @ApiQuery({ name: 'requestId', required: true })
+  @ApiQuery({
+    name: 'direction',
+    required: false,
+    enum: ReviewDirection,
+    description: 'Defaults to CLIENT_TO_PROVIDER for backward compatibility',
+  })
   @ApiResponse({
     status: 200,
     description: 'Review details',
@@ -89,10 +97,12 @@ export class ReviewsController {
   async findByRequestId(
     @Query('requestId') requestId: string,
     @CurrentUser() user: UserEntity,
+    @Query('direction') direction?: ReviewDirection,
   ): Promise<ReviewResponseDto | null> {
     const entity = await this.reviewService.findByRequestIdForUser(
       requestId,
       user.id,
+      direction,
     );
     if (!entity) {
       return null;
@@ -183,6 +193,33 @@ export class ReviewsController {
     @CurrentUser() user: UserEntity,
   ): Promise<ReviewResponseDto> {
     const entity = await this.reviewService.reject(id, user.id);
+    return ReviewResponseDto.fromEntity(entity);
+  }
+
+  @Post(':id/feature')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Toggle whether an approved review is curated as a featured comment (admin only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured flag updated successfully',
+    type: ReviewResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Review is not approved' })
+  async setFeatured(
+    @Param('id') id: string,
+    @CurrentUser() user: UserEntity,
+    @Body() dto: FeatureReviewDto,
+  ): Promise<ReviewResponseDto> {
+    const entity = await this.reviewService.setFeatured(
+      id,
+      user.id,
+      dto.isFeatured,
+    );
     return ReviewResponseDto.fromEntity(entity);
   }
 }

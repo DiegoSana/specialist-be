@@ -15,27 +15,11 @@ import {
   createMockUser,
   createMockProfessional,
   createMockRequest,
+  createMockReview,
 } from '../../../__mocks__/test-utils';
-import { ReviewEntity } from '../../domain/entities/review.entity';
 import { ReviewStatus } from '../../domain/value-objects/review-status';
-import { RequestStatus } from '@prisma/client';
+import { RequestStatus, ReviewDirection } from '@prisma/client';
 import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
-
-const createMockReview = (overrides?: Partial<ReviewEntity>): ReviewEntity => {
-  return new ReviewEntity(
-    overrides?.id || 'review-123',
-    overrides?.reviewerId || 'user-123',
-    overrides?.serviceProviderId || 'service-provider-123',
-    overrides?.requestId || 'request-123',
-    overrides?.rating || 5,
-    overrides?.comment || 'Great service!',
-    overrides?.status || ReviewStatus.PENDING,
-    overrides?.moderatedAt || null,
-    overrides?.moderatedBy || null,
-    overrides?.createdAt || new Date(),
-    overrides?.updatedAt || new Date(),
-  );
-};
 
 describe('ReviewService', () => {
   let service: ReviewService;
@@ -49,12 +33,15 @@ describe('ReviewService', () => {
   beforeEach(async () => {
     mockReviewRepository = {
       findByProfessionalId: jest.fn(),
-      findApprovedByProfessionalId: jest.fn(),
       findByServiceProviderId: jest.fn(),
       findApprovedByServiceProviderId: jest.fn(),
+      findApprovedByRevieweeUserId: jest.fn().mockResolvedValue([]),
+      findFeaturedByRevieweeUserId: jest.fn().mockResolvedValue([]),
       findById: jest.fn(),
-      findByRequestId: jest.fn(),
+      findByRequestIdAndDirection: jest.fn(),
+      findAllByRequestId: jest.fn().mockResolvedValue([]),
       findByStatus: jest.fn(),
+      findRequestIdsPendingReveal: jest.fn().mockResolvedValue([]),
       save: jest.fn(),
       delete: jest.fn(),
     };
@@ -75,6 +62,7 @@ describe('ReviewService', () => {
 
     mockUserService = {
       findById: jest.fn(),
+      updateClientRating: jest.fn(),
     };
 
     mockEventBus = {
@@ -157,26 +145,87 @@ describe('ReviewService', () => {
     });
   });
 
-  describe('findByRequestId', () => {
-    it('should return review when found', async () => {
-      const review = createMockReview();
-      mockReviewRepository.findByRequestId.mockResolvedValue(review);
+  describe('findByRequestIdForUser', () => {
+    it('defaults to CLIENT_TO_PROVIDER and returns the review when found', async () => {
+      const review = createMockReview({ status: ReviewStatus.APPROVED });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(
+        review,
+      );
+      mockUserService.findById.mockResolvedValue(user);
 
-      const result = await service.findByRequestId('request-123');
+      const result = await service.findByRequestIdForUser(
+        'request-123',
+        'user-123',
+      );
 
       expect(result).toEqual(review);
+      expect(
+        mockReviewRepository.findByRequestIdAndDirection,
+      ).toHaveBeenCalledWith('request-123', ReviewDirection.CLIENT_TO_PROVIDER);
     });
 
-    it('should return null when no review for request', async () => {
-      mockReviewRepository.findByRequestId.mockResolvedValue(null);
+    it('uses the given direction when provided', async () => {
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(null);
 
-      const result = await service.findByRequestId('request-123');
+      const result = await service.findByRequestIdForUser(
+        'request-123',
+        'user-123',
+        ReviewDirection.PROVIDER_TO_CLIENT,
+      );
+
+      expect(result).toBeNull();
+      expect(
+        mockReviewRepository.findByRequestIdAndDirection,
+      ).toHaveBeenCalledWith('request-123', ReviewDirection.PROVIDER_TO_CLIENT);
+    });
+
+    it('returns null when no review for request', async () => {
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(null);
+
+      const result = await service.findByRequestIdForUser(
+        'request-123',
+        'user-123',
+      );
 
       expect(result).toBeNull();
     });
   });
 
-  describe('create', () => {
+  describe('getRequestReviewsForViewer', () => {
+    it('splits the two reviews into myReview / counterpartReview from the viewer perspective', async () => {
+      const mine = createMockReview({
+        id: 'review-mine',
+        reviewerId: 'viewer-1',
+      });
+      const theirs = createMockReview({
+        id: 'review-theirs',
+        reviewerId: 'other-1',
+      });
+      mockReviewRepository.findAllByRequestId.mockResolvedValue([mine, theirs]);
+
+      const result = await service.getRequestReviewsForViewer(
+        'request-123',
+        'viewer-1',
+      );
+
+      expect(result.myReview).toEqual(mine);
+      expect(result.counterpartReview).toEqual(theirs);
+    });
+
+    it('returns nulls when no reviews exist yet', async () => {
+      mockReviewRepository.findAllByRequestId.mockResolvedValue([]);
+
+      const result = await service.getRequestReviewsForViewer(
+        'request-123',
+        'viewer-1',
+      );
+
+      expect(result).toEqual({ myReview: null, counterpartReview: null });
+    });
+  });
+
+  describe('create (CLIENT_TO_PROVIDER)', () => {
     const createDto = {
       professionalId: 'prof-123',
       requestId: 'request-123',
@@ -184,9 +233,14 @@ describe('ReviewService', () => {
       comment: 'Great service!',
     };
 
+    beforeEach(() => {
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue({
+        userId: 'provider-user-1',
+      });
+    });
+
     it('should create review with PENDING status (not update rating until approved)', async () => {
       const user = createMockUser({ hasClientProfile: true });
-      const professional = createMockProfessional();
       const request = createMockRequest({
         clientId: 'user-123',
         status: RequestStatus.CLOSED,
@@ -194,14 +248,19 @@ describe('ReviewService', () => {
       const review = createMockReview({ status: ReviewStatus.PENDING });
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
-      mockReviewRepository.findByRequestId.mockResolvedValue(null);
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(null);
       mockReviewRepository.save.mockResolvedValue(review);
 
       const result = await service.create('user-123', createDto);
 
       expect(result).toEqual(review);
+      expect(mockReviewRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direction: ReviewDirection.CLIENT_TO_PROVIDER,
+          revieweeUserId: 'provider-user-1',
+        }),
+      );
       // Rating is NOT updated on create - only when approved
       expect(mockProfessionalService.updateRating).not.toHaveBeenCalled();
     });
@@ -223,15 +282,9 @@ describe('ReviewService', () => {
       );
     });
 
-    // Note: "professional not found" test removed as the service no longer validates
-    // professional existence in create - it uses request.providerId directly
-
     it('should throw BadRequestException if requestId is not provided', async () => {
       const user = createMockUser({ hasClientProfile: true });
-      const professional = createMockProfessional();
-
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
 
       const dtoWithoutRequest = { ...createDto, requestId: undefined };
 
@@ -242,10 +295,7 @@ describe('ReviewService', () => {
 
     it('should throw NotFoundException if request not found', async () => {
       const user = createMockUser({ hasClientProfile: true });
-      const professional = createMockProfessional();
-
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockRejectedValue(
         new NotFoundException('Request not found'),
       );
@@ -257,11 +307,9 @@ describe('ReviewService', () => {
 
     it('should throw ForbiddenException if user is not request owner', async () => {
       const user = createMockUser({ hasClientProfile: true });
-      const professional = createMockProfessional();
       const request = createMockRequest({ clientId: 'other-user' });
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
@@ -271,14 +319,12 @@ describe('ReviewService', () => {
 
     it('should throw BadRequestException if request is not completed', async () => {
       const user = createMockUser({ hasClientProfile: true });
-      const professional = createMockProfessional();
       const request = createMockRequest({
         clientId: 'user-123',
         status: RequestStatus.PUBLISHED,
       });
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
@@ -286,9 +332,8 @@ describe('ReviewService', () => {
       );
     });
 
-    it('should throw ConflictException if request already has a review', async () => {
+    it('should throw ConflictException if request already has a CLIENT_TO_PROVIDER review', async () => {
       const user = createMockUser({ hasClientProfile: true });
-      const professional = createMockProfessional();
       const request = createMockRequest({
         clientId: 'user-123',
         status: RequestStatus.CLOSED,
@@ -296,9 +341,10 @@ describe('ReviewService', () => {
       const existingReview = createMockReview();
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
-      mockReviewRepository.findByRequestId.mockResolvedValue(existingReview);
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(
+        existingReview,
+      );
 
       await expect(service.create('user-123', createDto)).rejects.toThrow(
         ConflictException,
@@ -307,22 +353,71 @@ describe('ReviewService', () => {
 
     it('should throw Error for invalid rating (value object validation)', async () => {
       const user = createMockUser({ hasClientProfile: true });
-      const professional = createMockProfessional();
       const request = createMockRequest({
         clientId: 'user-123',
         status: RequestStatus.CLOSED,
       });
 
       mockUserService.findById.mockResolvedValue(user);
-      mockProfessionalService.getByIdOrFail.mockResolvedValue(professional);
       mockRequestService.findById.mockResolvedValue(request);
-      mockReviewRepository.findByRequestId.mockResolvedValue(null);
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(null);
 
       const invalidDto = { ...createDto, rating: 6 };
 
       await expect(service.create('user-123', invalidDto)).rejects.toThrow(
         'Rating must be between 1 and 5',
       );
+    });
+  });
+
+  describe('createProviderToClientReview (PROVIDER_TO_CLIENT)', () => {
+    it('creates a PENDING review for the client', async () => {
+      const request = createMockRequest({
+        id: 'request-123',
+        clientId: 'client-1',
+        status: RequestStatus.CLOSED,
+      });
+      const review = createMockReview({
+        direction: ReviewDirection.PROVIDER_TO_CLIENT,
+        reviewerId: 'provider-user-1',
+        revieweeUserId: 'client-1',
+        serviceProviderId: null,
+      });
+
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(null);
+      mockRequestService.findById.mockResolvedValue(request);
+      mockReviewRepository.save.mockResolvedValue(review);
+
+      const result = await service.createProviderToClientReview(
+        'provider-user-1',
+        { requestId: 'request-123', rating: 5, comment: 'Great client' },
+      );
+
+      expect(result).toEqual(review);
+      expect(mockReviewRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direction: ReviewDirection.PROVIDER_TO_CLIENT,
+          reviewerId: 'provider-user-1',
+          revieweeUserId: 'client-1',
+          serviceProviderId: null,
+        }),
+      );
+    });
+
+    it('throws ConflictException if the client was already rated for this request', async () => {
+      const existing = createMockReview({
+        direction: ReviewDirection.PROVIDER_TO_CLIENT,
+      });
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(
+        existing,
+      );
+
+      await expect(
+        service.createProviderToClientReview('provider-user-1', {
+          requestId: 'request-123',
+          rating: 5,
+        }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -400,7 +495,8 @@ describe('ReviewService', () => {
         status: ReviewStatus.PENDING,
       });
       const updatedReview = createMockReview({
-        ...review,
+        reviewerId: 'user-123',
+        status: ReviewStatus.PENDING,
         rating: 4,
         comment: 'Updated comment',
       });
@@ -459,7 +555,11 @@ describe('ReviewService', () => {
         reviewerId: 'user-123',
         status: ReviewStatus.PENDING,
       });
-      const updatedReview = createMockReview({ ...review, rating: 3 });
+      const updatedReview = createMockReview({
+        reviewerId: 'user-123',
+        status: ReviewStatus.PENDING,
+        rating: 3,
+      });
       const user = createMockUser({ id: 'user-123', isAdmin: false });
 
       mockReviewRepository.findById.mockResolvedValue(review);
@@ -477,7 +577,8 @@ describe('ReviewService', () => {
         status: ReviewStatus.PENDING,
       });
       const updatedReview = createMockReview({
-        ...review,
+        reviewerId: 'user-123',
+        status: ReviewStatus.PENDING,
         comment: 'New comment',
       });
       const user = createMockUser({ id: 'user-123', isAdmin: false });
@@ -495,7 +596,7 @@ describe('ReviewService', () => {
   });
 
   describe('delete', () => {
-    it('should delete pending review by owner', async () => {
+    it('should delete pending CLIENT_TO_PROVIDER review by owner and recompute provider rating', async () => {
       const review = createMockReview({
         reviewerId: 'user-123',
         status: ReviewStatus.PENDING,
@@ -522,6 +623,31 @@ describe('ReviewService', () => {
         0,
         0,
       );
+    });
+
+    it('should delete a PROVIDER_TO_CLIENT review and recompute the client rating', async () => {
+      const review = createMockReview({
+        direction: ReviewDirection.PROVIDER_TO_CLIENT,
+        reviewerId: 'provider-user-1',
+        revieweeUserId: 'client-1',
+        serviceProviderId: null,
+        status: ReviewStatus.PENDING,
+      });
+      const user = createMockUser({ id: 'provider-user-1', isAdmin: false });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
+      mockReviewRepository.delete.mockResolvedValue(undefined);
+      mockReviewRepository.findApprovedByRevieweeUserId.mockResolvedValue([]);
+
+      await service.delete('review-123', 'provider-user-1');
+
+      expect(mockUserService.updateClientRating).toHaveBeenCalledWith(
+        'client-1',
+        0,
+        0,
+      );
+      expect(mockProfessionalService.updateRating).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if review not found', async () => {
@@ -596,7 +722,7 @@ describe('ReviewService', () => {
   });
 
   describe('approve', () => {
-    it('should approve pending review by admin', async () => {
+    it('should approve a pending CLIENT_TO_PROVIDER review by admin and recompute the provider rating', async () => {
       const review = createMockReview({ status: ReviewStatus.PENDING });
       const admin = createMockUser({ id: 'admin-123', isAdmin: true });
       const professional = createMockProfessional();
@@ -608,6 +734,9 @@ describe('ReviewService', () => {
       mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue([
         approvedReview,
       ]);
+      mockReviewRepository.findAllByRequestId.mockResolvedValue([
+        approvedReview,
+      ]);
       mockProfessionalService.findByServiceProviderId.mockResolvedValue(
         professional,
       );
@@ -615,7 +744,83 @@ describe('ReviewService', () => {
       const result = await service.approve('review-123', 'admin-123');
 
       expect(result.status).toBe(ReviewStatus.APPROVED);
+      expect(mockProfessionalService.updateRating).toHaveBeenCalled();
       expect(mockEventBus.publish).toHaveBeenCalled();
+    });
+
+    it('should approve a pending PROVIDER_TO_CLIENT review and recompute the client rating (no event)', async () => {
+      const review = createMockReview({
+        direction: ReviewDirection.PROVIDER_TO_CLIENT,
+        reviewerId: 'provider-user-1',
+        revieweeUserId: 'client-1',
+        serviceProviderId: null,
+        status: ReviewStatus.PENDING,
+      });
+      const admin = createMockUser({ id: 'admin-123', isAdmin: true });
+      const approvedReview = review.approve('admin-123');
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(admin);
+      mockReviewRepository.save.mockResolvedValue(approvedReview);
+      mockReviewRepository.findApprovedByRevieweeUserId.mockResolvedValue([
+        approvedReview,
+      ]);
+      mockReviewRepository.findAllByRequestId.mockResolvedValue([
+        approvedReview,
+      ]);
+
+      const result = await service.approve('review-123', 'admin-123');
+
+      expect(result.status).toBe(ReviewStatus.APPROVED);
+      expect(mockUserService.updateClientRating).toHaveBeenCalledWith(
+        'client-1',
+        approvedReview.rating,
+        1,
+      );
+      expect(mockEventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it('reveals both reviews once the second one is approved (doble-ciego, immediate path)', async () => {
+      const clientReview = createMockReview({
+        id: 'review-1',
+        direction: ReviewDirection.CLIENT_TO_PROVIDER,
+        requestId: 'request-1',
+        status: ReviewStatus.PENDING,
+      });
+      const providerReview = createMockReview({
+        id: 'review-2',
+        direction: ReviewDirection.PROVIDER_TO_CLIENT,
+        requestId: 'request-1',
+        reviewerId: 'provider-user-1',
+        revieweeUserId: 'client-1',
+        serviceProviderId: null,
+        status: ReviewStatus.APPROVED, // already approved (the first one)
+      });
+      const admin = createMockUser({ id: 'admin-123', isAdmin: true });
+      const approvedClientReview = clientReview.approve('admin-123');
+
+      mockReviewRepository.findById.mockResolvedValue(clientReview);
+      mockUserService.findById.mockResolvedValue(admin);
+      mockReviewRepository.save.mockResolvedValue(approvedClientReview);
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue([
+        approvedClientReview,
+      ]);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(
+        createMockProfessional(),
+      );
+      // Both directions now APPROVED, neither revealed yet
+      mockReviewRepository.findAllByRequestId.mockResolvedValue([
+        approvedClientReview,
+        providerReview,
+      ]);
+
+      await service.approve('review-1', 'admin-123');
+
+      // save() is called once for the approve itself, plus once per unrevealed review
+      const revealCalls = mockReviewRepository.save.mock.calls.filter(
+        ([entity]: any[]) => entity.revealedAt !== null,
+      );
+      expect(revealCalls.length).toBe(2);
     });
 
     it('should throw ForbiddenException if user is not admin', async () => {
@@ -680,6 +885,111 @@ describe('ReviewService', () => {
       await expect(service.reject('review-123', 'admin-123')).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('setFeatured', () => {
+    it('allows an admin to feature an approved review', async () => {
+      const review = createMockReview({ status: ReviewStatus.APPROVED });
+      const admin = createMockUser({ id: 'admin-123', isAdmin: true });
+      const featured = review.withFeatured(true);
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(admin);
+      mockReviewRepository.save.mockResolvedValue(featured);
+
+      const result = await service.setFeatured('review-123', 'admin-123', true);
+
+      expect(result.isFeatured).toBe(true);
+    });
+
+    it('throws BadRequestException when the review is not approved', async () => {
+      const review = createMockReview({ status: ReviewStatus.PENDING });
+      const admin = createMockUser({ id: 'admin-123', isAdmin: true });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(admin);
+
+      await expect(
+        service.setFeatured('review-123', 'admin-123', true),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws ForbiddenException for a non-admin', async () => {
+      const review = createMockReview({ status: ReviewStatus.APPROVED });
+      const user = createMockUser({ id: 'user-123', isAdmin: false });
+
+      mockReviewRepository.findById.mockResolvedValue(review);
+      mockUserService.findById.mockResolvedValue(user);
+
+      await expect(
+        service.setFeatured('review-123', 'user-123', true),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('deleteAllForRequest', () => {
+    it('deletes every review for a request and recomputes both affected ratings', async () => {
+      const clientReview = createMockReview({
+        id: 'review-1',
+        direction: ReviewDirection.CLIENT_TO_PROVIDER,
+        serviceProviderId: 'service-provider-123',
+      });
+      const providerReview = createMockReview({
+        id: 'review-2',
+        direction: ReviewDirection.PROVIDER_TO_CLIENT,
+        revieweeUserId: 'client-1',
+        serviceProviderId: null,
+      });
+
+      mockReviewRepository.findAllByRequestId.mockResolvedValue([
+        clientReview,
+        providerReview,
+      ]);
+      mockReviewRepository.findApprovedByServiceProviderId.mockResolvedValue(
+        [],
+      );
+      mockReviewRepository.findApprovedByRevieweeUserId.mockResolvedValue([]);
+      mockProfessionalService.findByServiceProviderId.mockResolvedValue(
+        createMockProfessional(),
+      );
+
+      await service.deleteAllForRequest('request-123');
+
+      expect(mockReviewRepository.delete).toHaveBeenCalledWith('review-1');
+      expect(mockReviewRepository.delete).toHaveBeenCalledWith('review-2');
+      expect(mockProfessionalService.updateRating).toHaveBeenCalled();
+      expect(mockUserService.updateClientRating).toHaveBeenCalledWith(
+        'client-1',
+        0,
+        0,
+      );
+    });
+  });
+
+  describe('hasReviewForRequestAndDirection', () => {
+    it('returns true when a review exists for that direction', async () => {
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(
+        createMockReview(),
+      );
+
+      const result = await service.hasReviewForRequestAndDirection(
+        'request-123',
+        ReviewDirection.CLIENT_TO_PROVIDER,
+      );
+
+      expect(result).toBe(true);
+    });
+
+    it('returns false when no review exists for that direction', async () => {
+      mockReviewRepository.findByRequestIdAndDirection.mockResolvedValue(null);
+
+      const result = await service.hasReviewForRequestAndDirection(
+        'request-123',
+        ReviewDirection.PROVIDER_TO_CLIENT,
+      );
+
+      expect(result).toBe(false);
     });
   });
 });

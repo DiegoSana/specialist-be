@@ -106,6 +106,9 @@ export class UserEntity {
     public readonly emailVerified: boolean = false,
     public readonly whatsappOptedOut: boolean = false,
     public readonly whatsappOptedOutAt: Date | null = null,
+    // Aggregate rating as a client (PROVIDER_TO_CLIENT reviews) — see ReviewService.updateClientRating.
+    public readonly clientAverageRating: number = 0,
+    public readonly clientTotalReviews: number = 0,
   ) {}
 
   getFullName(): string {
@@ -228,6 +231,8 @@ export class UserEntity {
       emailVerified,
       this.whatsappOptedOut,
       this.whatsappOptedOutAt,
+      this.clientAverageRating,
+      this.clientTotalReviews,
     );
   }
 
@@ -254,6 +259,8 @@ export class UserEntity {
       this.emailVerified,
       this.whatsappOptedOut,
       this.whatsappOptedOutAt,
+      this.clientAverageRating,
+      this.clientTotalReviews,
     );
   }
 
@@ -288,6 +295,8 @@ export class UserEntity {
       true, // Google has verified this email
       this.whatsappOptedOut,
       this.whatsappOptedOutAt,
+      this.clientAverageRating,
+      this.clientTotalReviews,
     );
   }
 
@@ -322,6 +331,8 @@ export class UserEntity {
       true, // Facebook has verified this email
       this.whatsappOptedOut,
       this.whatsappOptedOutAt,
+      this.clientAverageRating,
+      this.clientTotalReviews,
     );
   }
 
@@ -405,6 +416,8 @@ export class UserEntity {
       this.emailVerified,
       this.whatsappOptedOut,
       this.whatsappOptedOutAt,
+      this.clientAverageRating,
+      this.clientTotalReviews,
     );
   }
 
@@ -434,6 +447,8 @@ export class UserEntity {
       true,
       this.whatsappOptedOut,
       this.whatsappOptedOutAt,
+      this.clientAverageRating,
+      this.clientTotalReviews,
     );
   }
 
@@ -474,6 +489,8 @@ export class UserEntity {
       emailVerified,
       this.whatsappOptedOut,
       this.whatsappOptedOutAt,
+      this.clientAverageRating,
+      this.clientTotalReviews,
     );
   }
 
@@ -505,6 +522,8 @@ export class UserEntity {
       this.emailVerified,
       optedOut,
       optedOut ? now : null,
+      this.clientAverageRating,
+      this.clientTotalReviews,
     );
   }
 

@@ -152,12 +152,17 @@ export class AdminService {
     actingUser: UserEntity,
   ): Promise<AdminRequestDetailResponseDto> {
     const request = await this.requestService.findById(requestId);
-    const [interestedProviders, review] = await Promise.all([
+    const [interestedProviders, { myReview: review }] = await Promise.all([
       this.requestInterestService.getInterestedProviders(requestId, {
         userId: actingUser.id,
         isAdmin: true,
       }),
-      this.reviewService.findByRequestId(requestId),
+      // The client's own (CLIENT_TO_PROVIDER) review — viewer = the request's client, so
+      // getRequestReviewsForViewer's "myReview" is exactly that direction.
+      this.reviewService.getRequestReviewsForViewer(
+        requestId,
+        request.clientId,
+      ),
     ]);
 
     return AdminRequestDetailResponseDto.fromEntity(

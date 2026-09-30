@@ -1,4 +1,4 @@
-import { InteractionDirection } from '@prisma/client';
+import { InteractionDirection, ReviewDirection } from '@prisma/client';
 import { RequestEntity } from '../entities/request.entity';
 import { FollowUpQuery } from './follow-up-query';
 
@@ -32,6 +32,12 @@ export interface IFollowUpRule {
   appliesTo?(request: RequestEntity): boolean;
   /** True on the last rung of a question ladder: flag AT_RISK if nobody ever replied. */
   escalatesWhenUnanswered?(): boolean;
+  /**
+   * When set, the scheduler skips this rule for a request once a Review already exists for
+   * (requestId, this direction) — e.g. don't keep nudging someone to rate once they already did.
+   * Used by the CLOSED-state "leave your rating" notices (see follow-up-ladders.ts).
+   */
+  getReviewDirectionGate?(): ReviewDirection | undefined;
 
   /**
    * Build metadata and template variables for a single request.

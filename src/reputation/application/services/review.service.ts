@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   ConflictException,
   Inject,
+  forwardRef,
 } from '@nestjs/common';
 import {
   ReviewRepository,
@@ -26,7 +27,12 @@ import { RequestService } from '../../../requests/application/services/request.s
 import { UserService } from '../../../identity/application/services/user.service';
 import { EVENT_BUS, EventBus } from '../../../shared/domain/events/event-bus';
 import { ReviewApprovedEvent } from '../../domain/events/review-approved.event';
-import { ProviderType } from '@prisma/client';
+import { ProviderType, ReviewDirection } from '@prisma/client';
+
+export interface RequestReviewsForViewer {
+  myReview: ReviewEntity | null;
+  counterpartReview: ReviewEntity | null;
+}
 
 @Injectable()
 export class ReviewService {
@@ -35,6 +41,7 @@ export class ReviewService {
     private readonly reviewRepository: ReviewRepository,
     private readonly professionalService: ProfessionalService,
     private readonly companyService: CompanyService,
+    @Inject(forwardRef(() => RequestService))
     private readonly requestService: RequestService,
     private readonly userService: UserService,
     @Inject(EVENT_BUS) private readonly eventBus: EventBus,
@@ -103,18 +110,19 @@ export class ReviewService {
     return review;
   }
 
-  async findByRequestId(requestId: string): Promise<ReviewEntity | null> {
-    return this.reviewRepository.findByRequestId(requestId);
-  }
-
   /**
-   * Find review by request ID with permission validation
+   * Find review by request ID + direction with permission validation. `direction` defaults to
+   * CLIENT_TO_PROVIDER for backward compat with the original single-direction endpoint.
    */
   async findByRequestIdForUser(
     requestId: string,
     userId: string,
+    direction: ReviewDirection = ReviewDirection.CLIENT_TO_PROVIDER,
   ): Promise<ReviewEntity | null> {
-    const review = await this.findByRequestId(requestId);
+    const review = await this.reviewRepository.findByRequestIdAndDirection(
+      requestId,
+      direction,
+    );
     if (!review) {
       return null;
     }
@@ -127,6 +135,56 @@ export class ReviewService {
     }
 
     return review;
+  }
+
+  /**
+   * Both directions' reviews for a request, split into "mine" and "the counterpart's" from the
+   * viewer's point of view. Used by RequestResponseDto to build myReview/counterpartReview —
+   * the DTO is responsible for gating counterpartReview's content via
+   * ReviewEntity.isVisibleTo(viewerUserId, isAdmin) (doble-ciego con timeout).
+   */
+  async getRequestReviewsForViewer(
+    requestId: string,
+    viewerUserId: string,
+  ): Promise<RequestReviewsForViewer> {
+    const reviews = await this.reviewRepository.findAllByRequestId(requestId);
+    return {
+      myReview: reviews.find((r) => r.reviewerId === viewerUserId) ?? null,
+      counterpartReview:
+        reviews.find((r) => r.reviewerId !== viewerUserId) ?? null,
+    };
+  }
+
+  /**
+   * Whether a review already exists for (requestId, direction), regardless of status — used by
+   * the follow-up scheduler to stop nudging a party who already submitted their rating (see
+   * follow-up-ladders.ts's reviewDirectionGate on the CLOSED notices).
+   */
+  async hasReviewForRequestAndDirection(
+    requestId: string,
+    direction: ReviewDirection,
+  ): Promise<boolean> {
+    const review = await this.reviewRepository.findByRequestIdAndDirection(
+      requestId,
+      direction,
+    );
+    return review !== null;
+  }
+
+  /**
+   * Approved + featured PROVIDER_TO_CLIENT reviews for a client — "client in context" view
+   * (REVIEWS_REDESIGN.md section 2: no client profile page, shown where a provider already sees
+   * the request/interest).
+   */
+  async findFeaturedClientReviews(
+    clientUserId: string,
+    limit = 5,
+  ): Promise<ReviewEntity[]> {
+    return this.reviewRepository.findFeaturedByRevieweeUserId(
+      clientUserId,
+      ReviewDirection.PROVIDER_TO_CLIENT,
+      limit,
+    );
   }
 
   async create(
@@ -162,12 +220,21 @@ export class ReviewService {
       throw new BadRequestException('Request has no provider assigned');
     }
 
-    // Check if this request already has a review (one review per request)
-    const existingReview = await this.reviewRepository.findByRequestId(
-      createDto.requestId,
-    );
+    // Check if this request already has a CLIENT_TO_PROVIDER review (at most one per direction)
+    const existingReview =
+      await this.reviewRepository.findByRequestIdAndDirection(
+        createDto.requestId,
+        ReviewDirection.CLIENT_TO_PROVIDER,
+      );
     if (existingReview) {
       throw new ConflictException('This request already has a review');
+    }
+
+    const revieweeUserId = await this.resolveProviderUserId(request.providerId);
+    if (!revieweeUserId) {
+      throw new BadRequestException(
+        'Could not resolve the provider being reviewed',
+      );
     }
 
     // Validate rating
@@ -176,7 +243,9 @@ export class ReviewService {
     const review = await this.reviewRepository.save(
       ReviewEntity.create({
         id: randomUUID(),
+        direction: ReviewDirection.CLIENT_TO_PROVIDER,
         reviewerId,
+        revieweeUserId,
         serviceProviderId: request.providerId, // Use provider from request
         requestId: createDto.requestId,
         rating: rating.getValue(),
@@ -191,8 +260,49 @@ export class ReviewService {
   }
 
   /**
+   * PROVIDER_TO_CLIENT review, created from RequestService.rateClient (POST
+   * /requests/:id/rate-client). Authorization (assigned provider, request CLOSED) is already
+   * validated by RequestEntity.canRateClientBy in RequestService — this method only enforces the
+   * review-specific invariant (one PROVIDER_TO_CLIENT review per request) and persists it as
+   * PENDING, same moderation flow as the other direction.
+   */
+  async createProviderToClientReview(
+    reviewerId: string,
+    params: { requestId: string; rating: number; comment?: string | null },
+  ): Promise<ReviewEntity> {
+    const existingReview =
+      await this.reviewRepository.findByRequestIdAndDirection(
+        params.requestId,
+        ReviewDirection.PROVIDER_TO_CLIENT,
+      );
+    if (existingReview) {
+      throw new ConflictException(
+        'Client has already been rated for this request',
+      );
+    }
+
+    const request = await this.requestService.findById(params.requestId);
+    const rating = new Rating(params.rating);
+
+    const review = await this.reviewRepository.save(
+      ReviewEntity.create({
+        id: randomUUID(),
+        direction: ReviewDirection.PROVIDER_TO_CLIENT,
+        reviewerId,
+        revieweeUserId: request.clientId,
+        serviceProviderId: null,
+        requestId: params.requestId,
+        rating: rating.getValue(),
+        comment: params.comment || null,
+      }),
+    );
+
+    return review;
+  }
+
+  /**
    * Approve a pending review. Only admins can approve.
-   * This triggers a notification to the professional.
+   * This triggers a notification to the professional (CLIENT_TO_PROVIDER only).
    */
   async approve(reviewId: string, moderatorId: string): Promise<ReviewEntity> {
     const review = await this.findById(reviewId);
@@ -208,48 +318,55 @@ export class ReviewService {
     const approvedReview = review.approve(moderatorId);
     const saved = await this.reviewRepository.save(approvedReview);
 
-    // Now update provider rating (only for approved reviews)
-    await this.updateServiceProviderRating(review.serviceProviderId);
-
-    // Try to find the provider (Professional or Company) to get userId for notifications
-    let providerUserId: string | null = null;
-    let providerType: ProviderType = ProviderType.PROFESSIONAL;
-
-    // Try Professional first
-    const professional = await this.professionalService.findByServiceProviderId(
-      review.serviceProviderId,
-    );
-    if (professional) {
-      providerUserId = professional.userId;
-      providerType = ProviderType.PROFESSIONAL;
-    } else {
-      // Try Company
-      const company = await this.companyService.findByServiceProviderId(
-        review.serviceProviderId,
-      );
-      if (company) {
-        providerUserId = company.userId;
-        providerType = ProviderType.COMPANY;
-      }
+    if (saved.isClientToProvider() && saved.serviceProviderId) {
+      // Now update provider rating (only for approved reviews)
+      await this.updateServiceProviderRating(saved.serviceProviderId);
+    } else if (saved.isProviderToClient()) {
+      await this.updateClientRating(saved.revieweeUserId);
     }
 
-    // Emit event for notifications (if provider found)
-    if (providerUserId) {
-      await this.eventBus.publish(
-        new ReviewApprovedEvent({
-          reviewId: saved.id,
-          reviewerId: saved.reviewerId,
-          // New fields (preferred)
-          serviceProviderId: saved.serviceProviderId,
-          providerUserId,
-          providerType,
-          // Backward compatibility
-          professionalId: saved.serviceProviderId,
-          rating: saved.rating,
-          comment: saved.comment,
-          moderatorId,
-        }),
-      );
+    // Doble-ciego con timeout: if both directions are now APPROVED, reveal immediately instead of
+    // waiting for RevealReviewsJob's timeout path.
+    await this.revealBothIfBothApproved(saved.requestId);
+
+    // Emit event for notifications (CLIENT_TO_PROVIDER only — PROVIDER_TO_CLIENT has no
+    // ServiceProvider to notify through this event's shape).
+    if (saved.isClientToProvider() && saved.serviceProviderId) {
+      let providerUserId: string | null = null;
+      let providerType: ProviderType = ProviderType.PROFESSIONAL;
+
+      const professional =
+        await this.professionalService.findByServiceProviderId(
+          saved.serviceProviderId,
+        );
+      if (professional) {
+        providerUserId = professional.userId;
+        providerType = ProviderType.PROFESSIONAL;
+      } else {
+        const company = await this.companyService.findByServiceProviderId(
+          saved.serviceProviderId,
+        );
+        if (company) {
+          providerUserId = company.userId;
+          providerType = ProviderType.COMPANY;
+        }
+      }
+
+      if (providerUserId) {
+        await this.eventBus.publish(
+          new ReviewApprovedEvent({
+            reviewId: saved.id,
+            reviewerId: saved.reviewerId,
+            serviceProviderId: saved.serviceProviderId,
+            providerUserId,
+            providerType,
+            professionalId: saved.serviceProviderId,
+            rating: saved.rating,
+            comment: saved.comment,
+            moderatorId,
+          }),
+        );
+      }
     }
 
     return saved;
@@ -271,6 +388,27 @@ export class ReviewService {
 
     const rejectedReview = review.reject(moderatorId);
     return this.reviewRepository.save(rejectedReview);
+  }
+
+  /**
+   * Toggle the admin-curated isFeatured flag. Only APPROVED reviews can be featured.
+   */
+  async setFeatured(
+    reviewId: string,
+    adminId: string,
+    isFeatured: boolean,
+  ): Promise<ReviewEntity> {
+    const review = await this.findById(reviewId);
+    const ctx = await this.buildAuthContext(review, adminId);
+
+    if (!review.canBeFeaturedBy(ctx)) {
+      if (!ctx.isAdmin) {
+        throw new ForbiddenException('Only admins can feature reviews');
+      }
+      throw new BadRequestException('Only approved reviews can be featured');
+    }
+
+    return this.reviewRepository.save(review.withFeatured(isFeatured));
   }
 
   /**
@@ -331,12 +469,36 @@ export class ReviewService {
       );
     }
 
+    const wasClientToProvider = review.isClientToProvider();
     const serviceProviderId = review.serviceProviderId;
+    const revieweeUserId = review.revieweeUserId;
 
     await this.reviewRepository.delete(id);
 
-    // Update provider rating (in case it was approved and we're allowing admin delete)
-    await this.updateServiceProviderRating(serviceProviderId);
+    // Update the affected rating (in case it was approved and we're allowing admin delete)
+    if (wasClientToProvider && serviceProviderId) {
+      await this.updateServiceProviderRating(serviceProviderId);
+    } else {
+      await this.updateClientRating(revieweeUserId);
+    }
+  }
+
+  /**
+   * Delete every review for a request regardless of status/direction, bypassing reviewer-only
+   * authorization — used by RequestPublishedAgainHandler when a request restarts its engagement
+   * with a new provider (unassign-then-reassign). Recomputes whichever ratings were affected.
+   * Not authorization-checked: only a system/handler caller should use this.
+   */
+  async deleteAllForRequest(requestId: string): Promise<void> {
+    const reviews = await this.reviewRepository.findAllByRequestId(requestId);
+    for (const review of reviews) {
+      await this.reviewRepository.delete(review.id);
+      if (review.isClientToProvider() && review.serviceProviderId) {
+        await this.updateServiceProviderRating(review.serviceProviderId);
+      } else if (review.isProviderToClient()) {
+        await this.updateClientRating(review.revieweeUserId);
+      }
+    }
   }
 
   /**
@@ -379,5 +541,64 @@ export class ReviewService {
       averageRating,
       totalReviews,
     );
+  }
+
+  /**
+   * Recalculates User.clientAverageRating/clientTotalReviews from a client's currently APPROVED
+   * PROVIDER_TO_CLIENT reviews. Mirrors updateServiceProviderRating for the other direction.
+   */
+  async updateClientRating(clientUserId: string): Promise<void> {
+    const reviews = await this.reviewRepository.findApprovedByRevieweeUserId(
+      clientUserId,
+      ReviewDirection.PROVIDER_TO_CLIENT,
+    );
+
+    if (reviews.length === 0) {
+      await this.userService.updateClientRating(clientUserId, 0, 0);
+      return;
+    }
+
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = totalRating / reviews.length;
+
+    await this.userService.updateClientRating(
+      clientUserId,
+      averageRating,
+      reviews.length,
+    );
+  }
+
+  /**
+   * Doble-ciego con timeout, immediate-reveal branch (4.2.a): if both directions' reviews for a
+   * request are APPROVED, reveal both right away instead of waiting for the timeout. Safe to call
+   * unconditionally after any approve — it's a no-op unless both sides are now approved and
+   * unrevealed. The timeout branch (4.2.b) is handled separately by RevealReviewsJob.
+   */
+  private async revealBothIfBothApproved(requestId: string): Promise<void> {
+    const reviews = await this.reviewRepository.findAllByRequestId(requestId);
+    if (reviews.length !== 2) return;
+    if (!reviews.every((r) => r.isApproved())) return;
+
+    const now = new Date();
+    for (const review of reviews) {
+      if (!review.isRevealed()) {
+        await this.reviewRepository.save(review.reveal(now));
+      }
+    }
+  }
+
+  /**
+   * Resolves the User id of the ServiceProvider being reviewed (Professional or Company owner).
+   */
+  private async resolveProviderUserId(
+    serviceProviderId: string,
+  ): Promise<string | null> {
+    const professional =
+      await this.professionalService.findByServiceProviderId(serviceProviderId);
+    if (professional) return professional.userId;
+
+    const company =
+      await this.companyService.findByServiceProviderId(serviceProviderId);
+    return company?.userId ?? null;
   }
 }

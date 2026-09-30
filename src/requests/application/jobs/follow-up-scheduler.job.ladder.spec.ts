@@ -53,6 +53,9 @@ describe('FollowUpSchedulerJob — ladder rules', () => {
       { findByServiceProviderId: jest.fn() } as any,
       attention,
       { hasOpenConversation: jest.fn().mockResolvedValue(false) } as any,
+      {
+        hasReviewForRequestAndDirection: jest.fn().mockResolvedValue(false),
+      } as any,
     );
 
   beforeEach(() => {

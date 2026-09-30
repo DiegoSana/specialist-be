@@ -109,4 +109,18 @@ export class PrismaUserRepository implements UserRepository {
 
     return PrismaUserMapper.toDomain(saved);
   }
+
+  async updateClientRating(
+    userId: string,
+    averageRating: number,
+    totalReviews: number,
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        clientAverageRating: averageRating,
+        clientTotalReviews: totalReviews,
+      },
+    });
+  }
 }

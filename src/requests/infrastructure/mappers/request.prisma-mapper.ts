@@ -116,6 +116,8 @@ export class PrismaRequestMapper {
         email: request.client.email,
         phone: request.client.phone,
         profilePictureUrl: request.client.profilePictureUrl,
+        clientAverageRating: request.client.clientAverageRating,
+        clientTotalReviews: request.client.clientTotalReviews,
       };
     }
 
