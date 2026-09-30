@@ -11,6 +11,7 @@ import { USER_QUERY_REPOSITORY } from './domain/queries/user.query-repository';
 import { AuthenticationService } from './application/services/authentication.service';
 import { UserService } from './application/services/user.service';
 import { VerificationService } from './application/services/verification.service';
+import { AdminVerificationService } from './application/services/admin-verification.service';
 
 // Infrastructure
 import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
@@ -26,6 +27,7 @@ import { verificationServiceProvider } from './infrastructure/verification/verif
 import { AuthController } from './presentation/auth.controller';
 import { UsersController } from './presentation/users.controller';
 import { VerificationController } from './presentation/verification.controller';
+import { AdminVerificationController } from './presentation/admin-verification.controller';
 
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
@@ -55,11 +57,17 @@ import { ProfilesModule } from '../profiles/profiles.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, UsersController, VerificationController],
+  controllers: [
+    AuthController,
+    UsersController,
+    VerificationController,
+    AdminVerificationController,
+  ],
   providers: [
     AuthenticationService,
     UserService,
     VerificationService,
+    AdminVerificationService,
     JwtStrategy,
     LocalStrategy,
     GoogleStrategy,
