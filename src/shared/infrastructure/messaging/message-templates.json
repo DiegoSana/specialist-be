@@ -8,8 +8,8 @@
     "en": "{reminder}Hi {nombre}, {cantidad} specialists are interested in your request {pedido}. Choose who to continue with here: {link}"
   },
   "notice_contact_released": {
-    "es": "Ya podés hablar con {contraparte} por WhatsApp sobre {pedido}. Sus datos de contacto están acá: {link}",
-    "en": "You can now talk to {contraparte} on WhatsApp about {pedido}. Their contact details are here: {link}"
+    "es": "Ya podés hablar con {contraparte} por WhatsApp sobre {pedido}: {whatsapp_link}. También podés ver los detalles acá: {link}",
+    "en": "You can now talk to {contraparte} on WhatsApp about {pedido}: {whatsapp_link}. You can also see the details here: {link}"
   },
   "notice_request_rejected": {
     "es": "Hola {nombre}, {especialista} no puede tomar tu solicitud de {pedido}. Podés enviarla a otro especialista o publicarla en la bolsa: {link}",
