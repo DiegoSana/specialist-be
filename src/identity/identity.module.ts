@@ -2,20 +2,24 @@ import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 // Domain
 import { USER_REPOSITORY } from './domain/repositories/user.repository';
 import { USER_QUERY_REPOSITORY } from './domain/queries/user.query-repository';
+import { PASSWORD_RESET_TOKEN_REPOSITORY } from './domain/repositories/password-reset-token.repository';
 
 // Application
 import { AuthenticationService } from './application/services/authentication.service';
 import { UserService } from './application/services/user.service';
 import { VerificationService } from './application/services/verification.service';
 import { AdminVerificationService } from './application/services/admin-verification.service';
+import { PasswordResetService } from './application/services/password-reset.service';
 
 // Infrastructure
 import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
 import { PrismaUserQueryRepository } from './infrastructure/queries/prisma-user.query-repository';
+import { PrismaPasswordResetTokenRepository } from './infrastructure/repositories/prisma-password-reset-token.repository';
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
 import { LocalStrategy } from './infrastructure/strategies/local.strategy';
 import { GoogleStrategy } from './infrastructure/strategies/google.strategy';
@@ -56,6 +60,9 @@ import { ProfilesModule } from '../profiles/profiles.module';
       }),
       inject: [ConfigService],
     }),
+    // Scoped only to the forgot/reset-password routes (@UseGuards(ThrottlerGuard) there) —
+    // deliberately NOT bound as a global APP_GUARD here.
+    ThrottlerModule.forRoot([{ ttl: 60 * 1000, limit: 20 }]),
   ],
   controllers: [
     AuthController,
@@ -68,6 +75,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     UserService,
     VerificationService,
     AdminVerificationService,
+    PasswordResetService,
     JwtStrategy,
     LocalStrategy,
     GoogleStrategy,
@@ -80,6 +88,10 @@ import { ProfilesModule } from '../profiles/profiles.module';
     {
       provide: USER_QUERY_REPOSITORY,
       useClass: PrismaUserQueryRepository,
+    },
+    {
+      provide: PASSWORD_RESET_TOKEN_REPOSITORY,
+      useClass: PrismaPasswordResetTokenRepository,
     },
     verificationServiceProvider,
   ],

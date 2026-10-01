@@ -527,6 +527,38 @@ export class UserEntity {
     );
   }
 
+  /**
+   * Set a new hashed password (local password reset / change). Does not touch
+   * phone/email verification, status or any other flag.
+   */
+  withPassword(hashedPassword: string, now: Date = new Date()): UserEntity {
+    return new UserEntity(
+      this.id,
+      this.email,
+      hashedPassword,
+      this.firstName,
+      this.lastName,
+      this.phone,
+      this.profilePictureUrl,
+      this.isAdmin,
+      this.status,
+      this.createdAt,
+      now,
+      this.hasClientProfile,
+      this.hasProfessionalProfile,
+      this.hasCompanyProfile,
+      this.googleId,
+      this.facebookId,
+      this.authProvider,
+      this.phoneVerified,
+      this.emailVerified,
+      this.whatsappOptedOut,
+      this.whatsappOptedOutAt,
+      this.clientAverageRating,
+      this.clientTotalReviews,
+    );
+  }
+
   static buildAuthContext(userId: string, isAdmin: boolean): UserAuthContext {
     return { userId, isAdmin };
   }

@@ -10,10 +10,14 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Response } from 'express';
 import { AuthenticationService } from '../application/services/authentication.service';
+import { PasswordResetService } from '../application/services/password-reset.service';
 import { RegisterDto } from '../application/dto/register.dto';
 import { LoginDto } from '../application/dto/login.dto';
+import { ForgotPasswordDto } from '../application/dto/forgot-password.dto';
+import { ResetPasswordDto } from '../application/dto/reset-password.dto';
 import { AuthResponseDto } from '../application/dto/auth-response.dto';
 import { Public } from '../../shared/presentation/decorators/public.decorator';
 import { GoogleAuthGuard } from '../infrastructure/guards/google-auth.guard';
@@ -22,7 +26,10 @@ import { FacebookAuthGuard } from '../infrastructure/guards/facebook-auth.guard'
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authenticationService: AuthenticationService) {}
+  constructor(
+    private readonly authenticationService: AuthenticationService,
+    private readonly passwordResetService: PasswordResetService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -50,6 +57,44 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
     return this.authenticationService.login(loginDto);
+  }
+
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 15 * 60 * 1000 } })
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request a password reset link by email' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Always returns a generic confirmation message, regardless of whether the email exists',
+  })
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
+    await this.passwordResetService.requestReset(forgotPasswordDto.email);
+    return {
+      message: 'Si el email existe, te enviamos un link de recuperación.',
+    };
+  }
+
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 15 * 60 * 1000 } })
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set a new password using a reset token' })
+  @ApiResponse({ status: 200, description: 'Password updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
+    await this.passwordResetService.resetPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.newPassword,
+    );
+    return { message: 'Contraseña actualizada correctamente.' };
   }
 
   @Public()

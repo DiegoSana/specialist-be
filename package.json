@@ -44,6 +44,7 @@
     "@nestjs/platform-express": "^10.3.0",
     "@nestjs/schedule": "^6.1.0",
     "@nestjs/swagger": "^7.1.17",
+    "@nestjs/throttler": "^6.7.1",
     "@prisma/client": "^5.7.1",
     "@types/bcryptjs": "^3.0.0",
     "@types/multer": "^2.0.0",

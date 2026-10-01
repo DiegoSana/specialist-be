@@ -32,6 +32,8 @@ Authorization: Bearer <token>
 ### Public Endpoints (no auth required)
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
 - `GET /auth/google`, `GET /auth/facebook` (OAuth)
 - `GET /professionals` (search)
 - `GET /professionals/:id`
@@ -51,6 +53,8 @@ Authorization: Bearer <token>
 |--------|----------|-------------|------|
 | `POST` | `/auth/register` | Register new user | ❌ |
 | `POST` | `/auth/login` | Login with email/password | ❌ |
+| `POST` | `/auth/forgot-password` | Request a password reset link by email. Always returns a generic `{ message }`, regardless of whether the email exists or is OAuth-only (anti-enumeration). Throttled: 5 req / 15 min per IP | ❌ |
+| `POST` | `/auth/reset-password` | Set a new password using the one-time token from the reset link (`{ token, newPassword }`). `400` if the token is invalid, expired or already used. Throttled: 10 req / 15 min per IP | ❌ |
 | `GET` | `/auth/google` | Initiate Google OAuth | ❌ |
 | `GET` | `/auth/facebook` | Initiate Facebook OAuth | ❌ |
 | `GET` | `/users/me` | Get current user profile (includes `whatsappOptedOut`, `whatsappOptedOutAt`) | ✅ |
