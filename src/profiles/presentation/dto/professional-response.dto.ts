@@ -53,6 +53,9 @@ export class ProfessionalResponseDto {
   @ApiProperty()
   userId: string;
 
+  @ApiProperty()
+  serviceProviderId: string;
+
   @ApiProperty({ type: [ProfessionalTradeDto] })
   trades: ProfessionalTradeDto[];
 
@@ -125,6 +128,7 @@ export class ProfessionalResponseDto {
     // Core fields
     dto.id = entity.id;
     dto.userId = entity.userId;
+    dto.serviceProviderId = entity.serviceProviderId;
     dto.trades = entity.trades.map((trade) => ({
       id: trade.id,
       name: trade.name,
