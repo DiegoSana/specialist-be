@@ -53,7 +53,7 @@ export class PrismaRequestInterestRepository
         const user = prof.user;
         const phone = user?.phone ?? null;
         providerInfo = {
-          id: sp.id,
+          id: prof.id,
           type: 'PROFESSIONAL',
           displayName: user
             ? `${user.firstName} ${user.lastName}`
@@ -68,7 +68,7 @@ export class PrismaRequestInterestRepository
         const company = sp.company as { user?: { phone?: string | null } };
         const phone = company.user?.phone ?? null;
         providerInfo = {
-          id: sp.id,
+          id: sp.company.id,
           type: 'COMPANY',
           displayName: sp.company.companyName,
           profileImage: sp.company.profileImage || null,

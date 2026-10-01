@@ -16,7 +16,9 @@ import {
   createMockProfessional,
   createMockRequest,
 } from '../../../__mocks__/test-utils';
-import { RequestStatus, UserStatus } from '@prisma/client';
+import { RequestStatus, UserStatus, ProfessionalStatus } from '@prisma/client';
+import { ProfessionalEntity } from '../../domain/entities/professional.entity';
+import { ProfessionalResponseDto } from '../../presentation/dto/professional-response.dto';
 
 describe('ProfessionalService', () => {
   let service: ProfessionalService;
@@ -107,10 +109,12 @@ describe('ProfessionalService', () => {
       const result = await service.search({ search: 'electricista' });
 
       expect(result).toHaveLength(2);
-      // Should NOT include contact info
+      // Should NOT leak contact info (present as null, not the real value — see
+      // ProfessionalEntity-vs-plain-object note on sanitizeForPublic for why this is `null`
+      // rather than an absent key).
       expect(result[0]).not.toHaveProperty('whatsapp');
-      expect(result[0]).not.toHaveProperty('website');
-      expect(result[0]).not.toHaveProperty('address');
+      expect((result[0] as any).website).toBeNull();
+      expect((result[0] as any).address).toBeNull();
       // Should include public info
       expect(result[0]).toHaveProperty('id', 'prof-1');
       expect(result[0]).toHaveProperty('zone');
@@ -149,11 +153,50 @@ describe('ProfessionalService', () => {
       const result = await service.findById('prof-123');
 
       expect(result).not.toHaveProperty('whatsapp');
-      expect(result).not.toHaveProperty('website');
-      expect(result).not.toHaveProperty('address');
+      expect((result as any).website).toBeNull();
+      expect((result as any).address).toBeNull();
       expect(result).toHaveProperty('id');
       expect(result).toHaveProperty('city');
       expect(result).toHaveProperty('zone');
+    });
+
+    it('returns a real ProfessionalEntity whose canOperate() does not throw — a plain object literal here previously made GET /professionals/:id 500 for every id ("entity.canOperate is not a function"), since that route had never been exercised until the client-detail popup started calling it', async () => {
+      const professional = createMockProfessional({
+        status: ProfessionalStatus.VERIFIED,
+      });
+
+      mockProfessionalRepository.findById.mockResolvedValue(professional);
+
+      const result = await service.findById('prof-123');
+
+      expect(result).toBeInstanceOf(ProfessionalEntity);
+      expect(() => result.canOperate()).not.toThrow();
+      expect(result.canOperate()).toBe(true);
+      expect(() => ProfessionalResponseDto.fromEntity(result)).not.toThrow();
+      expect(ProfessionalResponseDto.fromEntity(result).active).toBe(true);
+    });
+
+    it("strips the user's phone and email so the public whatsapp field and dto.user.email come out null, even though the same user data (minus those two) is still attached for display", async () => {
+      const professional = createMockProfessional();
+      (professional as any).user = {
+        id: 'user-123',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        profilePictureUrl: null,
+        phone: '+5492944000000',
+      };
+
+      mockProfessionalRepository.findById.mockResolvedValue(professional);
+
+      const result = await service.findById('prof-123');
+
+      expect((result as any).user).not.toHaveProperty('phone');
+      expect((result as any).user).not.toHaveProperty('email');
+      expect((result as any).user.firstName).toBe('John');
+      const dto = ProfessionalResponseDto.fromEntity(result);
+      expect(dto.whatsapp).toBeNull();
+      expect(dto.user?.email).toBeUndefined();
     });
 
     it('should throw NotFoundException if professional not found', async () => {

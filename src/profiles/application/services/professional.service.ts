@@ -71,9 +71,8 @@ export class ProfessionalService {
 
     // For public search, sanitize contact info and only return public gallery
     // Contact info (phone via user, website, address) requires an active request
-    return professionals.map(
-      (professional) =>
-        this.sanitizeForPublic(professional) as ProfessionalEntity,
+    return professionals.map((professional) =>
+      this.sanitizeForPublic(professional),
     );
   }
 
@@ -84,7 +83,7 @@ export class ProfessionalService {
     }
 
     // For public access, sanitize contact info
-    return this.sanitizeForPublic(professional) as ProfessionalEntity;
+    return this.sanitizeForPublic(professional);
   }
 
   /**
@@ -141,37 +140,49 @@ export class ProfessionalService {
   }
 
   /**
-   * Sanitize professional data for public access
-   * Removes contact info (phone via user, website, address)
-   * Contact info is only visible after creating a request
+   * Sanitize professional data for public access.
+   * Removes contact info (phone via user, website, address) — contact info is only visible
+   * after creating a request. Returns a real ProfessionalEntity (not a plain object) so methods
+   * like canOperate() — used by ProfessionalResponseDto.fromEntity()'s `active` field — keep
+   * working; a plain object literal here previously crashed GET /professionals/:id with
+   * "entity.canOperate is not a function" (TypeError, 500) for every id, since that route had
+   * never actually been exercised by any client until now.
    */
   private sanitizeForPublic(
     professional: ProfessionalEntity,
-  ): Partial<ProfessionalEntity> & { combinedGallery: string[]; user?: any } {
-    const sanitized: any = {
-      id: professional.id,
-      userId: professional.userId,
-      serviceProviderId: professional.serviceProviderId,
-      trades: professional.trades,
-      description: professional.description,
-      experienceYears: professional.experienceYears,
-      status: professional.status,
-      isVisible: professional.isVisible,
-      zone: professional.zone,
-      city: professional.city,
-      // address, phone (user), website are intentionally omitted for public access
-      averageRating: professional.averageRating,
-      totalReviews: professional.totalReviews,
-      profileImage: professional.profileImage,
-      gallery: professional.gallery,
-      createdAt: professional.createdAt,
-      updatedAt: professional.updatedAt,
-      combinedGallery: professional.gallery || [],
-    };
+  ): ProfessionalEntity {
+    const sanitized = new ProfessionalEntity(
+      professional.id,
+      professional.userId,
+      professional.serviceProviderId,
+      professional.trades,
+      professional.description,
+      professional.experienceYears,
+      professional.status,
+      professional.isVisible,
+      professional.zone,
+      professional.city,
+      null, // address — contact info, omitted for public access
+      null, // website — contact info, omitted for public access
+      professional.profileImage,
+      professional.gallery,
+      professional.createdAt,
+      professional.updatedAt,
+      professional.serviceProvider, // keeps averageRating/totalReviews getters working
+    );
 
-    // Include user data (name and profile picture are public)
-    if ((professional as any).user) {
-      sanitized.user = (professional as any).user;
+    // Include user data (name and profile picture are public). Explicitly allow-listed rather
+    // than spreading the whole attached user: it also carries phone and email (repository
+    // include selects both), and ProfessionalResponseDto reads `user.phone` into the public
+    // `whatsapp` field and `user.email` into `dto.user.email` — neither may survive sanitization.
+    const user = (professional as any).user;
+    if (user) {
+      (sanitized as any).user = {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profilePictureUrl: user.profilePictureUrl,
+      };
     }
 
     return sanitized;
