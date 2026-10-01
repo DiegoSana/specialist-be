@@ -49,8 +49,22 @@ model User {
   inAppNotifications      InAppNotification[]
   notificationPreferences NotificationPreferences?
   notifications           Notification[]
+  passwordResetTokens     PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model Client {
