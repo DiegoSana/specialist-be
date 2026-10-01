@@ -137,6 +137,8 @@ Query params: `search`, `tradeId`, `city`, `zone`, `providerType` (`PROFESSIONAL
 > **Note**: "Provider" = Professional or Company. Both can view available requests, express interest, and be assigned to jobs.
 >
 > **`GET`/`PATCH /requests/:id` and `POST /requests/:id/rate-client` responses** now include `myReview`/`counterpartReview` (see the Reputation section below) instead of relying on the deprecated flat `clientRating`/`clientRatingComment` fields, and `client: { averageRating, totalReviews, featuredReviews: [...] }` on the nested client object (populated on these single-request detail responses, not on list endpoints, to avoid a query per row) — the "client in context" view a provider sees on a request/interest, per the product decision not to ship a dedicated client profile page.
+>
+> **`GET /requests` (list)** also includes `myReview`/`counterpartReview` per item, but **only for `CLOSED`** requests — the one query pair (`ReviewService.getRequestReviewsForViewer`) runs per CLOSED row, not per row, so other statuses leave both fields `undefined`. Added so the client/specialist dashboards can show "ya calificaste" / "esperando la otra calificación" / the received rating instead of a static "dejá tu calificación" label regardless of review state. `client.featuredReviews` is still detail-only (not needed on the list).
 
 ### ⭐ Reputation (`/reviews`)
 

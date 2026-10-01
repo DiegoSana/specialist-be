@@ -13,6 +13,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { RequestStatus } from '@prisma/client';
 import {
   ApiTags,
   ApiOperation,
@@ -163,7 +164,17 @@ export class RequestsController {
     } else {
       entities = [];
     }
-    return RequestResponseDto.fromEntities(entities, ctx);
+    // myReview/counterpartReview are only needed for CLOSED requests (list-view badge reflects
+    // the viewer's review state there); skip the extra query pair for every other status.
+    return Promise.all(
+      entities.map(async (entity) => {
+        const extra =
+          entity.status === RequestStatus.CLOSED
+            ? await this.buildReviewExtra(entity, user.id)
+            : undefined;
+        return RequestResponseDto.fromEntity(entity, ctx, extra);
+      }),
+    );
   }
 
   @Get('available')
