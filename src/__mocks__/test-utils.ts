@@ -111,6 +111,7 @@ export const createMockProfessional = (
     experienceYears: number | null;
     status: ProfessionalStatus;
     isVisible: boolean;
+    notifyOnNewMatchingRequest: boolean;
     zone: string | null;
     city: string;
     address: string | null;
@@ -140,6 +141,7 @@ export const createMockProfessional = (
     experienceYears: 5,
     status: ProfessionalStatus.VERIFIED,
     isVisible: true,
+    notifyOnNewMatchingRequest: false,
     zone: 'Centro',
     city: 'Bariloche',
     address: 'Main Street 123',
@@ -160,6 +162,7 @@ export const createMockProfessional = (
     defaults.experienceYears,
     defaults.status,
     defaults.isVisible,
+    defaults.notifyOnNewMatchingRequest,
     defaults.zone,
     defaults.city,
     defaults.address,

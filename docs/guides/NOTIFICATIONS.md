@@ -189,6 +189,7 @@ A daily job deletes notifications older than:
 | `REQUEST_STATUS_CHANGED` | Request status update | Client & Service Provider |
 | `REQUEST_INTEREST_EXPRESSED` | Provider shows interest | Client |
 | `REQUEST_PROFESSIONAL_ASSIGNED` | Provider assigned | Service Provider |
+| `REQUEST_MATCHING_TRADE_CREATED` | A public Request is created with a trade (`requests.request.created`, `isPublic && tradeId`) | Every Professional with `notifyOnNewMatchingRequest=true` and `canOperate()`, in-app only (`includeExternal: false`) — WhatsApp is sent directly via `WhatsAppMessagingPort`, bypassing the generic dispatch pipeline (its WhatsApp branch isn't implemented yet) |
 | `REVIEW_APPROVED` | Admin approves review | Service Provider |
 | `REQUEST_ATTENTION_FLAGGED` | A request is flagged `AT_RISK`/`ABANDONED`/`ESCALATED` | Every admin |
 | `COMPANY_VERIFIED` / `COMPANY_REJECTED` / `COMPANY_SUSPENDED` | An admin moves a Company to ACTIVE/VERIFIED, REJECTED or SUSPENDED (`profiles.company.status_changed`, via verify or `PUT /admin/companies/:id/status`; only if the status changed) | The company owner, forced to `EMAIL` |

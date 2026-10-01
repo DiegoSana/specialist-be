@@ -34,6 +34,7 @@ import { AdminNotificationsController } from './presentation/admin-notifications
 
 // Shared
 import { PrismaModule } from '../shared/infrastructure/prisma/prisma.module';
+import { MessagingModule } from '../shared/infrastructure/messaging/messaging.module';
 
 // Cross-context dependencies
 import { ProfilesModule } from '../profiles/profiles.module';
@@ -42,6 +43,7 @@ import { IdentityModule } from '../identity/identity.module';
 @Module({
   imports: [
     PrismaModule,
+    MessagingModule,
     forwardRef(() => ProfilesModule),
     forwardRef(() => IdentityModule),
   ],

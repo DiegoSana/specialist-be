@@ -104,6 +104,10 @@ export class ProfessionalResponseDto {
   @ApiProperty()
   isVisible: boolean;
 
+  /** Whether to receive a WhatsApp notification when a new public request matching your trade is created. */
+  @ApiProperty()
+  notifyOnNewMatchingRequest: boolean;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -150,6 +154,7 @@ export class ProfessionalResponseDto {
     dto.gallery = entity.gallery;
     dto.active = entity.canOperate();
     dto.isVisible = entity.isVisible;
+    dto.notifyOnNewMatchingRequest = entity.notifyOnNewMatchingRequest;
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;
 

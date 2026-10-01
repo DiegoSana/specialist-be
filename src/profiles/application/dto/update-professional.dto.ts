@@ -21,6 +21,16 @@ export class UpdateProfessionalDto {
   isVisible?: boolean;
 
   @ApiProperty({
+    example: true,
+    required: false,
+    description:
+      'Whether to receive a WhatsApp notification when a new public request matching your trade is created',
+  })
+  @IsOptional()
+  @IsBoolean()
+  notifyOnNewMatchingRequest?: boolean;
+
+  @ApiProperty({
     example: ['uuid-of-trade-1', 'uuid-of-trade-2'],
     required: false,
     description: 'Array of trade IDs. First one will be primary.',

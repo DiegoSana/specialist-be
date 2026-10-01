@@ -3,6 +3,13 @@ import { RequestStatus } from '@prisma/client';
 import { EVENT_BUS } from '../../../shared/domain/events/event-bus';
 import { NotificationService } from '../services/notification.service';
 import { ProfessionalService } from '../../../profiles/application/services/professional.service';
+import { ProfessionalEntity } from '../../../profiles/domain/entities/professional.entity';
+import { UserService } from '../../../identity/application/services/user.service';
+import {
+  WHATSAPP_MESSAGING_PORT,
+  WhatsAppMessagingPort,
+} from '../../../shared/domain/ports/whatsapp-messaging.port';
+import { MessageTemplateService } from '../../../shared/infrastructure/messaging/message-template.service';
 import { RequestCreatedEvent } from '../../../requests/domain/events/request-created.event';
 import { RequestInterestExpressedEvent } from '../../../requests/domain/events/request-interest-expressed.event';
 import { RequestProfessionalAssignedEvent } from '../../../requests/domain/events/request-professional-assigned.event';
@@ -23,6 +30,10 @@ export class RequestsNotificationsHandler implements OnModuleInit {
     @Inject(EVENT_BUS) private readonly eventBus: any,
     private readonly notifications: NotificationService,
     private readonly professionalService: ProfessionalService,
+    private readonly userService: UserService,
+    @Inject(WHATSAPP_MESSAGING_PORT)
+    private readonly whatsAppMessaging: WhatsAppMessagingPort,
+    private readonly templateService: MessageTemplateService,
   ) {}
 
   onModuleInit(): void {
@@ -34,8 +45,9 @@ export class RequestsNotificationsHandler implements OnModuleInit {
       return;
     }
 
-    this.eventBus.on(RequestCreatedEvent.EVENT_NAME, () =>
-      this.onRequestCreated(),
+    this.eventBus.on(
+      RequestCreatedEvent.EVENT_NAME,
+      (event: RequestCreatedEvent) => this.onRequestCreated(event),
     );
     this.eventBus.on(
       RequestInterestExpressedEvent.EVENT_NAME,
@@ -52,9 +64,107 @@ export class RequestsNotificationsHandler implements OnModuleInit {
     );
   }
 
-  // RequestCreated should NOT notify, but we still subscribe so it's explicit.
-  private async onRequestCreated(): Promise<void> {
-    return;
+  // Fan out a "new matching request" notice to professionals who opted in via
+  // notifyOnNewMatchingRequest, scoped to public requests with a trade. Matching is trade-only
+  // by deliberate product decision (the app is scoped to Bariloche/Dina Huapi for now), so no
+  // zone/city filtering is applied here.
+  private async onRequestCreated(event: RequestCreatedEvent): Promise<void> {
+    const { requestId, isPublic, tradeId } = event.payload;
+    if (!isPublic || !tradeId) {
+      return;
+    }
+
+    let professionals: ProfessionalEntity[];
+    try {
+      professionals = await this.professionalService.findByTradeId(tradeId);
+    } catch (err) {
+      this.logger.error(
+        `Failed to look up professionals for trade ${tradeId} (requestId=${requestId})`,
+        err instanceof Error ? err.stack : String(err),
+      );
+      return;
+    }
+
+    const matching = professionals.filter(
+      (professional) =>
+        professional.notifyOnNewMatchingRequest && professional.canOperate(),
+    );
+
+    for (const professional of matching) {
+      try {
+        const trade = professional.trades.find((t) => t.id === tradeId);
+        const tradeName = trade?.name || 'tu rubro';
+
+        await this.notifications.createForUser({
+          userId: professional.userId,
+          type: 'REQUEST_MATCHING_TRADE_CREATED',
+          title: `Nuevo pedido de ${tradeName}`,
+          body: `Hay un nuevo pedido de ${tradeName} en Specialist. Mirá los detalles.`,
+          data: { requestId, tradeId },
+          idempotencyKey: `${event.name}:${requestId}:${professional.userId}`,
+          // In-app only here: the WhatsApp notice for this type is sent directly below,
+          // bypassing the generic external-dispatch pipeline (see sendMatchingRequestWhatsApp).
+          includeExternal: false,
+        });
+
+        await this.sendMatchingRequestWhatsApp(
+          professional,
+          tradeName,
+          requestId,
+        );
+      } catch (err) {
+        this.logger.error(
+          `Failed notifying professional ${professional.id} about matching request ${requestId}`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      }
+    }
+  }
+
+  /**
+   * Direct WhatsApp send for the "new matching request" notice.
+   *
+   * NotificationDispatchService.dispatchPending() only dispatches email today (its WhatsApp
+   * branch is unimplemented, see notification-dispatch.service.ts). Rather than completing that
+   * generic dispatcher (a bigger, unplanned change), this sends WhatsApp directly via
+   * WhatsAppMessagingPort, the same port the Request follow-up pipeline uses. This is known,
+   * approved tech debt: migrate to the generic dispatch pipeline once its WhatsApp branch lands.
+   */
+  private async sendMatchingRequestWhatsApp(
+    professional: ProfessionalEntity,
+    tradeName: string,
+    requestId: string,
+  ): Promise<void> {
+    const user = await this.userService.findById(professional.userId);
+    if (!user?.phone || !user.phoneVerified) {
+      this.logger.debug(
+        `Professional ${professional.id} has no verified phone, skipping WhatsApp notice for request ${requestId}`,
+      );
+      return;
+    }
+    if (user.whatsappOptedOut) {
+      this.logger.debug(
+        `Professional ${professional.id} opted out of WhatsApp, skipping notice for request ${requestId}`,
+      );
+      return;
+    }
+
+    const baseUrl = (
+      process.env.FRONTEND_URL || 'http://localhost:3001'
+    ).replace(/\/$/, '');
+    const link = `${baseUrl}/es/specialist/requests/${requestId}`;
+
+    const message = await this.templateService.getTemplate(
+      'notice_new_matching_request',
+      'es',
+      {
+        nombre: user.firstName || 'especialista',
+        rubro: tradeName,
+        link,
+      },
+    );
+
+    await this.whatsAppMessaging.sendMessage(user.phone, message);
   }
 
   private async onInterestExpressed(
