@@ -1,6 +1,8 @@
 import { RequestInterestStatus } from '@prisma/client';
 
 export type RequestInterestProviderInfo = {
+  /** The Professional/Company's own id (e.g. for GET /professionals/:id, /companies/:id) — NOT
+   *  the ServiceProvider id. Use the sibling `serviceProviderId` on RequestInterestEntity for that. */
   id: string;
   type: 'PROFESSIONAL' | 'COMPANY';
   displayName: string;
