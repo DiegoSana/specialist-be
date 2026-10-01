@@ -126,6 +126,7 @@ export class ProfessionalService {
         professional.experienceYears,
         status,
         professional.isVisible,
+        professional.notifyOnNewMatchingRequest,
         professional.zone,
         professional.city,
         professional.address,
@@ -160,6 +161,7 @@ export class ProfessionalService {
       professional.experienceYears,
       professional.status,
       professional.isVisible,
+      professional.notifyOnNewMatchingRequest,
       professional.zone,
       professional.city,
       null, // address — contact info, omitted for public access
@@ -274,6 +276,13 @@ export class ProfessionalService {
     );
   }
 
+  /**
+   * Find professionals matching a trade (cross-context passthrough for notification fan-out).
+   */
+  async findByTradeId(tradeId: string): Promise<ProfessionalEntity[]> {
+    return this.professionalRepository.findByTradeId(tradeId);
+  }
+
   async createProfile(
     userId: string,
     createDto: CreateProfessionalDto,
@@ -333,6 +342,7 @@ export class ProfessionalService {
         createDto.experienceYears || null,
         ProfessionalStatus.PENDING_VERIFICATION,
         true,
+        false, // notifyOnNewMatchingRequest defaults to opted-out
         createDto.zone || null,
         createDto.city || 'Bariloche',
         createDto.address || null,
@@ -424,6 +434,9 @@ export class ProfessionalService {
         updateDto.isVisible !== undefined
           ? updateDto.isVisible
           : professional.isVisible,
+        updateDto.notifyOnNewMatchingRequest !== undefined
+          ? updateDto.notifyOnNewMatchingRequest
+          : professional.notifyOnNewMatchingRequest,
         updateDto.zone !== undefined ? updateDto.zone : professional.zone,
         updateDto.city ? updateDto.city : professional.city,
         updateDto.address !== undefined
@@ -479,6 +492,7 @@ export class ProfessionalService {
         professional.experienceYears,
         professional.status,
         professional.isVisible,
+        professional.notifyOnNewMatchingRequest,
         professional.zone,
         professional.city,
         professional.address,
@@ -522,6 +536,7 @@ export class ProfessionalService {
         professional.experienceYears,
         professional.status,
         professional.isVisible,
+        professional.notifyOnNewMatchingRequest,
         professional.zone,
         professional.city,
         professional.address,

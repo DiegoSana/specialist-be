@@ -502,6 +502,33 @@ describe('ProfessionalService', () => {
         }),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('should update notifyOnNewMatchingRequest and round-trip it through ProfessionalResponseDto', async () => {
+      const professional = createMockProfessional({
+        id: 'prof-123',
+        userId: 'user-123',
+        notifyOnNewMatchingRequest: false,
+      });
+      const updatedProfessional = createMockProfessional({
+        ...professional,
+        notifyOnNewMatchingRequest: true,
+      });
+
+      mockProfessionalRepository.findById.mockResolvedValue(professional);
+      mockProfessionalRepository.save.mockResolvedValue(updatedProfessional);
+
+      const result = await service.updateProfile(mockUser, 'prof-123', {
+        notifyOnNewMatchingRequest: true,
+      });
+
+      expect(mockProfessionalRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ notifyOnNewMatchingRequest: true }),
+      );
+      expect(result.notifyOnNewMatchingRequest).toBe(true);
+      expect(
+        ProfessionalResponseDto.fromEntity(result).notifyOnNewMatchingRequest,
+      ).toBe(true);
+    });
   });
 
   describe('addGalleryItem', () => {

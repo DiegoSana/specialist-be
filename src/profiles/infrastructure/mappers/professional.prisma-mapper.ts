@@ -26,6 +26,7 @@ export class PrismaProfessionalMapper {
     experienceYears: number | null;
     status: ProfessionalStatus;
     isVisible: boolean;
+    notifyOnNewMatchingRequest: boolean;
     zone: string | null;
     city: string;
     address: string | null;
@@ -66,6 +67,7 @@ export class PrismaProfessionalMapper {
       professional.experienceYears,
       professional.status as ProfessionalStatus,
       professional.isVisible,
+      professional.notifyOnNewMatchingRequest,
       professional.zone,
       professional.city,
       professional.address,
@@ -133,6 +135,9 @@ export class PrismaProfessionalMapper {
       ...(partial.status !== undefined && { status: partial.status }),
       ...(partial.isVisible !== undefined && {
         isVisible: partial.isVisible,
+      }),
+      ...(partial.notifyOnNewMatchingRequest !== undefined && {
+        notifyOnNewMatchingRequest: partial.notifyOnNewMatchingRequest,
       }),
       ...(partial.zone !== undefined && { zone: partial.zone }),
       ...(partial.city !== undefined && { city: partial.city }),

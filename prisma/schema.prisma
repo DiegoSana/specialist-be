@@ -115,21 +115,22 @@ model ServiceProvider {
 }
 
 model Professional {
-  id                String             @id @default(uuid())
-  userId            String             @unique
-  serviceProviderId String             @unique
-  description       String?
-  experienceYears   Int?
-  status            ProfessionalStatus @default(PENDING_VERIFICATION)
-  isVisible         Boolean            @default(true)
-  zone              String?
-  city              String             @default("Bariloche")
-  address           String?
-  website           String?
-  profileImage      String?
-  gallery           String[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  id                         String             @id @default(uuid())
+  userId                     String             @unique
+  serviceProviderId          String             @unique
+  description                String?
+  experienceYears            Int?
+  status                     ProfessionalStatus @default(PENDING_VERIFICATION)
+  isVisible                  Boolean            @default(true)
+  notifyOnNewMatchingRequest Boolean            @default(false)
+  zone                       String?
+  city                       String             @default("Bariloche")
+  address                    String?
+  website                    String?
+  profileImage               String?
+  gallery                    String[]
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
 
   trades          ProfessionalTrade[]
   user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)

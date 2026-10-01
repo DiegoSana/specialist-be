@@ -43,9 +43,12 @@ describe('follow-up ladders (spec: Follow-up por WhatsApp)', () => {
       'question_satisfaction',
     ];
     codes.forEach((c) => expect(templates[c]).toBeDefined());
-    expect(
-      Object.keys(templates).filter((k) => /^(notice|question)_/.test(k)),
-    ).toHaveLength(10);
+    // Count templates actually used by the ladder rules, not a raw prefix match on the JSON
+    // file: notice_*/question_* keys outside the ladder system (e.g. one-off direct sends like
+    // notice_new_matching_request) are expected and shouldn't break this spec-fidelity check.
+    const ruleTemplateKeys = new Set(rules.map((r) => r.getTemplate()));
+    expect(ruleTemplateKeys.size).toBe(10);
+    codes.forEach((c) => expect(ruleTemplateKeys.has(c)).toBe(true));
   });
 
   it('sends at most 3 messages per ladder and has unique rule names', () => {
