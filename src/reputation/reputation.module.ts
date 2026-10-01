@@ -17,12 +17,12 @@ import { IdentityModule } from '../identity/identity.module';
 
 @Module({
   imports: [
-    ProfilesModule,
+    forwardRef(() => ProfilesModule),
     // Circular: RequestService.rateClient delegates Review creation to ReviewService, and
     // ReviewService reads requests via RequestService — see RequestsModule's forwardRef back to
     // this module for the other half of the cycle.
     forwardRef(() => RequestsModule),
-    IdentityModule,
+    forwardRef(() => IdentityModule),
   ],
   controllers: [
     ReviewsController,

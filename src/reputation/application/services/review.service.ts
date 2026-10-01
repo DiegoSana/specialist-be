@@ -39,6 +39,7 @@ export class ReviewService {
   constructor(
     @Inject(REVIEW_REPOSITORY)
     private readonly reviewRepository: ReviewRepository,
+    @Inject(forwardRef(() => ProfessionalService))
     private readonly professionalService: ProfessionalService,
     private readonly companyService: CompanyService,
     @Inject(forwardRef(() => RequestService))
