@@ -60,8 +60,11 @@ import { ProfilesModule } from '../profiles/profiles.module';
       }),
       inject: [ConfigService],
     }),
-    // Scoped only to the forgot/reset-password routes (@UseGuards(ThrottlerGuard) there) —
-    // deliberately NOT bound as a global APP_GUARD here.
+    // @Global (see library source), so this is the one ThrottlerModule.forRoot() call for the
+    // whole app — the resulting options/storage are injected by the APP_GUARD ThrottlerGuard
+    // registered in AppModule, which applies this default (20 req/min per route+IP) everywhere.
+    // Routes override it with @Throttle (stricter, e.g. login/register) or @SkipThrottle
+    // (routes with their own dedicated rate limiting, e.g. the Twilio webhook).
     ThrottlerModule.forRoot([{ ttl: 60 * 1000, limit: 20 }]),
   ],
   controllers: [

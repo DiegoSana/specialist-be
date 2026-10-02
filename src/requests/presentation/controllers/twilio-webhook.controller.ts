@@ -7,6 +7,7 @@ import {
   Logger,
   UseGuards,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { RequestInteractionService } from '../../application/services/request-interaction.service';
 import { TwilioWebhookDto } from '../dto/twilio-webhook.dto';
 import { TwilioWebhookGuard } from '../guards/twilio-webhook.guard';
@@ -18,6 +19,10 @@ import { TwilioRateLimitGuard } from '../guards/twilio-rate-limit.guard';
  */
 @Controller('webhooks/twilio')
 @UseGuards(TwilioWebhookGuard, TwilioRateLimitGuard)
+// Has its own dedicated, more permissive rate limiting (TwilioRateLimitGuard, configurable via
+// TWILIO_WEBHOOK_RATE_LIMIT_MAX/_WINDOW_MS) tuned for Twilio's delivery-status callback bursts —
+// skip the app-wide default (20 req/min/IP) so it doesn't become the stricter of the two.
+@SkipThrottle()
 export class TwilioWebhookController {
   private readonly logger = new Logger(TwilioWebhookController.name);
 
