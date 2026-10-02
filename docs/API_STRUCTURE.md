@@ -393,7 +393,8 @@ export class TwilioWebhookController { ... }
 | `ProfessionalGuard` | Verificar perfil profesional | Usuario con perfil profesional activo |
 | `RolesGuard` | Verificar roles específicos | Rol requerido en token |
 | `TwilioWebhookGuard` | Validar firma de Twilio | Firma válida en header |
-| `TwilioRateLimitGuard` | Rate limiting para webhooks | - |
+| `TwilioRateLimitGuard` | Rate limiting dedicado para el webhook de Twilio (más permisivo que el default global, ver abajo) | - |
+| `ThrottlerGuard` (`@nestjs/throttler`) | Rate limiting default de toda la API, registrado como `APP_GUARD` en `AppModule` (20 req/min por ruta+IP). Rutas lo ajustan con `@Throttle()` (ej. `login`/`register`) o lo saltean con `@SkipThrottle()` (webhook de Twilio, health checks) | - |
 | `FileAccessGuard` | Controlar acceso a archivos | Permisos según tipo de archivo |
 
 ### 4.2 Decoradores Disponibles

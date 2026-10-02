@@ -10,7 +10,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { AuthenticationService } from '../application/services/authentication.service';
 import { PasswordResetService } from '../application/services/password-reset.service';
@@ -32,6 +32,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user' })
@@ -46,6 +47,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60 * 1000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
@@ -60,7 +62,6 @@ export class AuthController {
   }
 
   @Public()
-  @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 15 * 60 * 1000 } })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
@@ -80,7 +81,6 @@ export class AuthController {
   }
 
   @Public()
-  @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 15 * 60 * 1000 } })
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)

@@ -51,8 +51,8 @@ Authorization: Bearer <token>
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/auth/register` | Register new user | ❌ |
-| `POST` | `/auth/login` | Login with email/password | ❌ |
+| `POST` | `/auth/register` | Register new user. Throttled: 5 req / min per IP | ❌ |
+| `POST` | `/auth/login` | Login with email/password. Throttled: 10 req / min per IP | ❌ |
 | `POST` | `/auth/forgot-password` | Request a password reset link by email. Always returns a generic `{ message }`, regardless of whether the email exists or is OAuth-only (anti-enumeration). Throttled: 5 req / 15 min per IP | ❌ |
 | `POST` | `/auth/reset-password` | Set a new password using the one-time token from the reset link (`{ token, newPassword }`). `400` if the token is invalid, expired or already used. Throttled: 10 req / 15 min per IP | ❌ |
 | `GET` | `/auth/google` | Initiate Google OAuth | ❌ |
@@ -411,7 +411,22 @@ Terminal alternates (never reach `CLOSED`): `EXPIRED` (bolsa, nobody chosen), `N
 
 ## Rate Limiting
 
-Currently no rate limiting is implemented. Consider adding for production.
+App-wide default via `@nestjs/throttler`'s `ThrottlerGuard`, bound globally as `APP_GUARD` in
+`AppModule`: **20 req/min per route per IP** (config in `IdentityModule`'s
+`ThrottlerModule.forRoot`). Specific routes override it:
+
+| Route | Limit | Why |
+|---|---|---|
+| `POST /auth/register` | 5 req / min | registration abuse |
+| `POST /auth/login` | 10 req / min | credential brute-forcing |
+| `POST /auth/forgot-password` | 5 req / 15 min | anti-enumeration/abuse |
+| `POST /auth/reset-password` | 10 req / 15 min | token brute-forcing |
+| `POST /webhooks/twilio` | 100 req / min (`@SkipThrottle`, own `TwilioRateLimitGuard`) | tuned separately for Twilio callback bursts, see `TWILIO_WEBHOOK_RATE_LIMIT_MAX`/`_WINDOW_MS` |
+| `GET /health*` | none (`@SkipThrottle`) | Fly.io/monitoring checks |
+
+Exceeding a limit returns `429 Too Many Requests` with `X-RateLimit-*` headers. The store is
+in-memory per instance (fine for the current single-VM Fly deploy; would need a shared store,
+e.g. Redis, if the app ever scales to multiple instances).
 
 ---
 

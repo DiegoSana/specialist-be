@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
 // Bounded Context Modules
 import { IdentityModule } from './identity/identity.module';
 import { ProfilesModule } from './profiles/profiles.module';
@@ -37,6 +39,15 @@ import { EventsModule } from './shared/infrastructure/events/events.module';
     ContactModule,
     AdminModule,
     StorageModule,
+  ],
+  providers: [
+    // Default rate-limit floor for every route (config lives in IdentityModule's
+    // ThrottlerModule.forRoot — @Global, so it's already available here). Routes needing a
+    // tighter or looser limit override it with @Throttle/@SkipThrottle.
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
