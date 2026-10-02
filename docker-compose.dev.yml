@@ -74,6 +74,8 @@ services:
       # WhatsApp provider: 'twilio' | 'local' (default: local, for zero-cost dev testing)
       WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-local}
       WHATSAPP_FOLLOWUP_ENABLED: ${WHATSAPP_FOLLOWUP_ENABLED:-true}
+      # Dev/CI-only opt-in for the specialist-e2e cleanup endpoint (see docs/guides/ENVIRONMENT_VARIABLES.md)
+      E2E_TEST_UTILS_ENABLED: ${E2E_TEST_UTILS_ENABLED:-false}
     depends_on:
       postgres:
         condition: service_healthy
