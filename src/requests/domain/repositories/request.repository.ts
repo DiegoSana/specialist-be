@@ -45,6 +45,15 @@ export interface RequestRepository {
    * La implementación decide create vs update.
    */
   save(request: RequestEntity): Promise<RequestEntity>;
+
+  /**
+   * Bulk-delete every Request whose title starts with `titlePrefix` (case-sensitive),
+   * cascading to RequestInterest/Review/RequestAttentionFlag/RequestInteraction at the DB
+   * level (all declare `onDelete: Cascade` on their `request` relation). Test-data cleanup
+   * only (specialist-e2e's global teardown) - not a single-aggregate mutation, so it's a
+   * deliberate exception to the `findBy*`/`save` shape. Returns the number of rows deleted.
+   */
+  deleteByTitlePrefix(titlePrefix: string): Promise<number>;
 }
 
 // Token for dependency injection

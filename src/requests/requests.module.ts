@@ -18,6 +18,7 @@ import { RequestInterestService } from './application/services/request-interest.
 import { RequestInteractionService } from './application/services/request-interaction.service';
 import { AdminWhatsAppService } from './application/services/admin-whatsapp.service';
 import { AdminRequestAttentionService } from './application/services/admin-request-attention.service';
+import { AdminE2eTestUtilsService } from './application/services/admin-e2e-test-utils.service';
 import { WhatsAppDispatchJob } from './application/jobs/whatsapp-dispatch.job';
 import { FollowUpSchedulerJob } from './application/jobs/follow-up-scheduler.job';
 import { RequestExpirationJob } from './application/jobs/request-expiration.job';
@@ -47,6 +48,7 @@ import { AdminWhatsAppController } from './presentation/controllers/admin-whatsa
 import { AdminWhatsAppDevController } from './presentation/controllers/admin-whatsapp-dev.controller';
 import { AdminRequestReviewController } from './presentation/controllers/admin-request-review.controller';
 import { AdminRequestAttentionController } from './presentation/controllers/admin-request-attention.controller';
+import { AdminE2eTestUtilsController } from './presentation/controllers/admin-e2e-test-utils.controller';
 import { TwilioWebhookGuard } from './presentation/guards/twilio-webhook.guard';
 import { TwilioRateLimitGuard } from './presentation/guards/twilio-rate-limit.guard';
 
@@ -82,6 +84,9 @@ import { ReputationModule } from '../reputation/reputation.module';
     process.env.WHATSAPP_DEV_MODE_ENABLED === 'true'
       ? [AdminWhatsAppDevController]
       : []),
+    ...(process.env.E2E_TEST_UTILS_ENABLED === 'true'
+      ? [AdminE2eTestUtilsController]
+      : []),
   ],
   providers: [
     RequestService,
@@ -89,6 +94,7 @@ import { ReputationModule } from '../reputation/reputation.module';
     RequestInteractionService,
     AdminWhatsAppService,
     AdminRequestAttentionService,
+    AdminE2eTestUtilsService,
     WhatsAppDispatchJob,
     FollowUpSchedulerJob,
     RequestExpirationJob,
