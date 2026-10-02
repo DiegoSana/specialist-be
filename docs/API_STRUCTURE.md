@@ -157,6 +157,7 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 | `/api/admin/whatsapp/conversations/:requestId` | `GET` | Hilo completo de mensajes de WhatsApp de una solicitud |
 | `/api/admin/whatsapp/conversations/:requestId/trigger-followup` | `POST` | Disparar una regla de follow-up ahora mismo (cualquier proveedor - el envío real sigue pasando por el dispatch job/adapter normal) |
 | `/api/admin/whatsapp/conversations/:requestId/simulate-reply` | `POST` | Simular una respuesta entrante de WhatsApp (solo dev mode, 404 si no) |
+| `/api/requests/test-utils/e2e-data?titlePrefix=` | `DELETE` | Solo dev/CI: borra en cascada todos los `Request` cuyo `title` empiece con `titlePrefix` (case-sensitive), junto con sus `RequestInterest`/`Review`/`RequestAttentionFlag`/`RequestInteraction` (cascade a nivel DB). Respalda el `global-teardown.ts` de `specialist-e2e`. Devuelve `{ deletedCount: number }`. Registrado solo cuando `E2E_TEST_UTILS_ENABLED=true`; 404 si no (nunca 403) |
 | `/api/admin/verification/config` | `GET` | `{ provider, devCode? }` - proveedor activo de verificación telefónica/email por OTP (`twilio`/`local`, `VERIFICATION_PROVIDER`) y el código OTP fijo de dev cuando el proveedor es `local` |
 | `/api/admin/requests/:id/resolve-review` | `POST` | Soporte: resolver un request `UNDER_REVIEW` -> `CLOSED` (body opcional `{ note }`, guardada en `statusReason`). Listar con `GET /api/admin/requests?status=UNDER_REVIEW`. 400 si no está en revisión. MVP: solo admin |
 | `/api/admin/requests/attention` | `GET` | Listar `RequestAttentionFlag`s abiertos (paginado, `?page=&limit=`), con título/status del request. Razones: `AT_RISK` (escalera de follow-up agotada sin respuesta), `ABANDONED`/`ESCALATED` (señal del clasificador LLM) |
@@ -172,6 +173,12 @@ Estos endpoints requieren **token JWT** en el header `Authorization: Bearer <tok
 el controller separado `AdminWhatsAppDevController`, que se registra únicamente cuando
 `NODE_ENV !== 'production'`, y además valida `isWhatsAppDevMode()` en runtime; ambas capas
 devuelven 404, nunca 403, cuando el modo dev está apagado.
+
+El endpoint de limpieza E2E (`DELETE /requests/test-utils/e2e-data`) vive en su propio
+`AdminE2eTestUtilsController`, registrado únicamente cuando `E2E_TEST_UTILS_ENABLED === 'true'`
+(variable separada de `NODE_ENV`/`WHATSAPP_DEV_MODE_ENABLED`, pensada para quedar sin setear en
+todo deploy salvo local/CI); el handler también revalida el flag vía `AdminE2eTestUtilsService` y
+devuelve 404 (nunca 403) cuando está apagado.
 
 ---
 

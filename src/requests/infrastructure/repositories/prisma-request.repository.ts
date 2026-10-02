@@ -275,4 +275,12 @@ export class PrismaRequestRepository implements RequestRepository {
 
     return PrismaRequestMapper.toDomain(saved);
   }
+
+  async deleteByTitlePrefix(titlePrefix: string): Promise<number> {
+    const { count } = await this.prisma.request.deleteMany({
+      where: { title: { startsWith: titlePrefix } },
+    });
+
+    return count;
+  }
 }
