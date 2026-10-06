@@ -30,7 +30,6 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "npx tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && npx tsx prisma/seed.ts",
     "db:seed": "npx tsx prisma/seed.ts"
   },
