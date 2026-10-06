@@ -36,8 +36,9 @@ export class TwilioRateLimitGuard implements CanActivate {
       10,
     );
 
-    // Clean up old entries every 5 minutes
-    setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    // Clean up old entries every 5 minutes. unref() so the timer alone never
+    // keeps the process alive (tests, scripts that close the Nest context).
+    setInterval(() => this.cleanup(), 5 * 60 * 1000).unref();
   }
 
   canActivate(context: ExecutionContext): boolean {

@@ -190,7 +190,6 @@ async function testFollowUpFlow(
         companyService,
       );
       if (!prepared) {
-        await app.close();
         return;
       }
     }
@@ -212,7 +211,6 @@ async function testFollowUpFlow(
         `   - El request no cumple las condiciones (debe estar ACCEPTED y updated_at hace 3+ días)`,
       );
       console.log(`   - El provider no tiene teléfono verificado`);
-      await app.close();
       return;
     }
 
